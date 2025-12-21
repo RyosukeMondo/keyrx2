@@ -3,7 +3,7 @@ use rhai::{Engine, EvalAltResult};
 use std::sync::{Arc, Mutex};
 
 use crate::parser::core::ParserState;
-use crate::parser::validators::{parse_key_name, parse_modifier_id, parse_virtual_key};
+use crate::parser::validators::{parse_modifier_id, parse_physical_key, parse_virtual_key};
 
 pub fn register_tap_hold_function(engine: &mut Engine, state: Arc<Mutex<ParserState>>) {
     let state_clone = Arc::clone(&state);
@@ -15,7 +15,7 @@ pub fn register_tap_hold_function(engine: &mut Engine, state: Arc<Mutex<ParserSt
               threshold_ms: i64|
               -> Result<(), Box<EvalAltResult>> {
             let mut state = state_clone.lock().unwrap();
-            let from_key = parse_key_name(key).map_err(|e| format!("Invalid key: {}", e))?;
+            let from_key = parse_physical_key(key).map_err(|e| format!("Invalid key: {}", e))?;
 
             if !tap.starts_with("VK_") {
                 return Err(

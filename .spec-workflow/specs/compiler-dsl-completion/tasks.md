@@ -56,7 +56,7 @@
   - _Requirements: 1.1, 1.2, 1.3_
   - _Prompt: Role: Rust Developer with Rhai scripting expertise | Task: Implement map() function that detects output key prefix and creates Simple (VK_), Modifier (MD_), or Lock (LK_) mapping using validators and KeyMapping helpers, following requirements 1.1, 1.2, and 1.3, leveraging validators.rs and KeyMapping helper functions from keyrx_core | Restrictions: Must call parse_physical_key for from parameter, dispatch on to.starts_with("VK_"/"MD_"/"LK_"), return MissingPrefix error if no valid prefix, add to state.current_device.mappings, return error if current_device is None | Success: map("VK_A", "VK_B") creates Simple mapping, map("VK_CapsLock", "MD_00") creates Modifier mapping, map("VK_ScrollLock", "LK_01") creates Lock mapping, missing prefix returns actionable error_
 
-- [ ] 6. Implement tap_hold() function with validation
+- [x] 6. Implement tap_hold() function with validation
   - File: `keyrx_compiler/src/parser/functions/tap_hold.rs` (ENHANCED)
   - Register `tap_hold(key, tap, hold, threshold_ms)` in Rhai engine
   - Validate tap parameter has VK_ prefix (reject others)
