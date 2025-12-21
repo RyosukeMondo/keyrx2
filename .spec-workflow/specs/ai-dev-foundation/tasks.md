@@ -371,7 +371,7 @@
   - _Requirements: All requirements_
   - _Prompt: Role: QA Engineer with expertise in integration testing and release validation | Task: Perform final verification of entire workspace, ensuring all crates build, tests pass, and quality checks succeed | Restrictions: Must start from clean state (make clean), verify each step independently, document any issues found, do not skip steps | Success: All crates build successfully, all tests pass, all quality checks pass (clippy, fmt, coverage ≥80%), no errors or warnings_
 
-- [ ] 9.1 Test on fresh clone (simulate new developer)
+- [x] 9.1 Test on fresh clone (simulate new developer)
   - Clone repository to new location (or use fresh VM/container)
   - Follow AI-Agent Quick Start from .claude/CLAUDE.md:
     1. Verify Rust and Node.js installed
