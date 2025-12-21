@@ -12,7 +12,7 @@
   - _Requirements: 1.1_
   - _Prompt: Role: Rust Systems Programmer with expertise in binary serialization and versioning | Task: Define Version struct in keyrx_core/src/config.rs following requirement 1.1, using rkyv traits and #[repr(C)] for stable binary layout | Restrictions: Must use u8 for all version fields, derive all required rkyv traits, implement current() to return Version { major: 1, minor: 0, patch: 0 } | Success: Struct compiles, derives rkyv traits correctly, Display trait shows "1.0.0" format, current() returns correct version_
 
-- [ ] 2. Define KeyCode enum with 100+ key codes
+- [x] 2. Define KeyCode enum with 100+ key codes
   - File: keyrx_core/src/config.rs (same file as task 1)
   - Create KeyCode enum with #[repr(u16)]
   - Define all standard keys: A-Z (0x00-0x19), 0-9 (0x20-0x29), F1-F12 (0x30-0x3B)
