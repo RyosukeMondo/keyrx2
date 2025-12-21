@@ -3,6 +3,9 @@
 //! This module defines all configuration types using rkyv for zero-copy deserialization.
 //! All types use #[repr(C)] for stable binary layout.
 
+extern crate alloc;
+
+use alloc::vec::Vec;
 use core::fmt;
 use rkyv::{Archive, Deserialize, Serialize};
 
@@ -214,6 +217,35 @@ pub enum KeyCode {
     Copy = 0x297,
     Paste = 0x298,
     Find = 0x299,
+}
+
+/// Basic condition check for a single modifier or lock
+///
+/// Used in composite conditions.
+#[derive(Archive, Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+pub enum ConditionItem {
+    /// Custom modifier is active (MD_XX)
+    ModifierActive(u8),
+    /// Custom lock is active (LK_XX)
+    LockActive(u8),
+}
+
+/// Conditional mapping support for when/when_not blocks
+///
+/// Supports single conditions, AND combinations, and negation.
+/// To avoid recursive Box issues with rkyv, NotActive contains a Vec
+/// of conditions which must ALL be false (implemented as NOT(AND(...))).
+#[derive(Archive, Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+pub enum Condition {
+    /// Single custom modifier active (MD_XX)
+    ModifierActive(u8),
+    /// Single custom lock active (LK_XX)
+    LockActive(u8),
+    /// All conditions must be true (AND logic) - for when() with multiple conditions
+    AllActive(Vec<ConditionItem>),
+    /// All conditions must be false (when_not with AND logic) - negated AllActive
+    /// For single condition negation, use vec with one item
+    NotActive(Vec<ConditionItem>),
 }
 
 #[cfg(test)]
