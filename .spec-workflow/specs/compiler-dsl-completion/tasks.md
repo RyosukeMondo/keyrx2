@@ -67,7 +67,7 @@
   - _Requirements: 1.4_
   - _Prompt: Role: Rust Developer with input validation expertise | Task: Implement tap_hold() function that validates tap has VK_ prefix and hold has MD_ prefix (rejecting physical names), then creates TapHold mapping, following requirement 1.4, using validators and KeyMapping::tap_hold helper | Restrictions: Must call parse_physical_key for key parameter, enforce tap.starts_with("VK_") else return InvalidTapPrefix error, enforce hold.starts_with("MD_") else return InvalidHoldPrefix error, parse_modifier_id will reject physical names, convert threshold_ms from i64 to u16, add to current device | Success: tap_hold("VK_Space", "VK_Space", "MD_00", 200) creates TapHold mapping, tap_hold("VK_Space", "MD_00", "VK_Space", 200) returns InvalidTapPrefix error, tap_hold("VK_Space", "VK_Space", "MD_LShift", 200) returns PhysicalModifierInMD error_
 
-- [ ] 7. Implement helper functions (with_shift, with_ctrl, with_alt, with_mods)
+- [x] 7. Implement helper functions (with_shift, with_ctrl, with_alt, with_mods)
   - File: `keyrx_compiler/src/parser/functions/modifiers.rs` (NEW)
   - Define `ModifiedKey` struct (temporary builder type)
   - Register `with_shift(key)`, `with_ctrl(key)`, `with_alt(key)`, `with_win(key)` functions

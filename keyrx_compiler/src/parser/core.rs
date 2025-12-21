@@ -43,10 +43,7 @@ impl Parser {
             &mut engine,
             Arc::clone(&state),
         );
-        crate::parser::functions::modifiers::register_modifier_functions(
-            &mut engine,
-            Arc::clone(&state),
-        );
+        crate::parser::functions::modifiers::register_modifier_functions(&mut engine);
         crate::parser::functions::device::register_device_function(&mut engine, Arc::clone(&state));
 
         Self { engine, state }

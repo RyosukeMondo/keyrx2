@@ -3,6 +3,7 @@ use rhai::{Engine, EvalAltResult};
 use std::sync::{Arc, Mutex};
 
 use crate::parser::core::ParserState;
+use crate::parser::functions::modifiers::ModifiedKey;
 use crate::parser::validators::{
     parse_lock_id, parse_modifier_id, parse_physical_key, parse_virtual_key,
 };
@@ -34,6 +35,27 @@ pub fn register_map_function(engine: &mut Engine, state: Arc<Mutex<ParserState>>
                 )
                 .into());
             };
+
+            if let Some(ref mut device) = state.current_device {
+                device.mappings.push(mapping);
+                Ok(())
+            } else {
+                Err("map() must be called inside a device() block".into())
+            }
+        },
+    );
+
+    // map(from, ModifiedKey) overload - creates ModifiedOutput mapping
+    let state_clone = Arc::clone(&state);
+    engine.register_fn(
+        "map",
+        move |from: &str, to: ModifiedKey| -> Result<(), Box<EvalAltResult>> {
+            let mut state = state_clone.lock().unwrap();
+            let from_key =
+                parse_physical_key(from).map_err(|e| format!("Invalid 'from' key: {}", e))?;
+
+            let mapping =
+                KeyMapping::modified_output(from_key, to.key, to.shift, to.ctrl, to.alt, to.win);
 
             if let Some(ref mut device) = state.current_device {
                 device.mappings.push(mapping);

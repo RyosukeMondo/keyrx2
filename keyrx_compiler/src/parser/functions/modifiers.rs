@@ -1,128 +1,106 @@
-use keyrx_core::config::{KeyCode, KeyMapping};
-use rhai::{Engine, EvalAltResult};
-use std::sync::{Arc, Mutex};
+use keyrx_core::config::KeyCode;
+use rhai::Engine;
 
-use crate::parser::core::ParserState;
-use crate::parser::validators::{parse_key_name, parse_virtual_key};
+use crate::parser::validators::parse_virtual_key;
 
-pub fn register_modifier_functions(engine: &mut Engine, state: Arc<Mutex<ParserState>>) {
-    register_single_mod_fn(
-        engine,
-        Arc::clone(&state),
+/// Temporary builder struct for physical modifier output.
+/// Returned by with_shift(), with_ctrl(), etc.
+/// Consumed by map() overload to create ModifiedOutput mapping.
+#[derive(Clone, Debug)]
+pub struct ModifiedKey {
+    pub key: KeyCode,
+    pub shift: bool,
+    pub ctrl: bool,
+    pub alt: bool,
+    pub win: bool,
+}
+
+pub fn register_modifier_functions(engine: &mut Engine) {
+    // Register ModifiedKey as Rhai type
+    engine.register_type::<ModifiedKey>();
+
+    // with_shift(key) - returns ModifiedKey with shift=true
+    engine.register_fn(
         "with_shift",
-        true,
-        false,
-        false,
-        false,
-    );
-    register_single_mod_fn(
-        engine,
-        Arc::clone(&state),
-        "with_ctrl",
-        false,
-        true,
-        false,
-        false,
-    );
-    register_single_mod_fn(
-        engine,
-        Arc::clone(&state),
-        "with_alt",
-        false,
-        false,
-        true,
-        false,
+        |key: &str| -> Result<ModifiedKey, Box<rhai::EvalAltResult>> {
+            let vk = parse_virtual_key(key)
+                .map_err(|e| format!("Invalid key in with_shift(): {}", e))?;
+            Ok(ModifiedKey {
+                key: vk,
+                shift: true,
+                ctrl: false,
+                alt: false,
+                win: false,
+            })
+        },
     );
 
-    let state_clone = Arc::clone(&state);
+    // with_ctrl(key) - returns ModifiedKey with ctrl=true
+    engine.register_fn(
+        "with_ctrl",
+        |key: &str| -> Result<ModifiedKey, Box<rhai::EvalAltResult>> {
+            let vk =
+                parse_virtual_key(key).map_err(|e| format!("Invalid key in with_ctrl(): {}", e))?;
+            Ok(ModifiedKey {
+                key: vk,
+                shift: false,
+                ctrl: true,
+                alt: false,
+                win: false,
+            })
+        },
+    );
+
+    // with_alt(key) - returns ModifiedKey with alt=true
+    engine.register_fn(
+        "with_alt",
+        |key: &str| -> Result<ModifiedKey, Box<rhai::EvalAltResult>> {
+            let vk =
+                parse_virtual_key(key).map_err(|e| format!("Invalid key in with_alt(): {}", e))?;
+            Ok(ModifiedKey {
+                key: vk,
+                shift: false,
+                ctrl: false,
+                alt: true,
+                win: false,
+            })
+        },
+    );
+
+    // with_win(key) - returns ModifiedKey with win=true
+    engine.register_fn(
+        "with_win",
+        |key: &str| -> Result<ModifiedKey, Box<rhai::EvalAltResult>> {
+            let vk =
+                parse_virtual_key(key).map_err(|e| format!("Invalid key in with_win(): {}", e))?;
+            Ok(ModifiedKey {
+                key: vk,
+                shift: false,
+                ctrl: false,
+                alt: false,
+                win: true,
+            })
+        },
+    );
+
+    // with_mods(key, shift, ctrl, alt, win) - returns ModifiedKey with all specified modifiers
     engine.register_fn(
         "with_mods",
-        move |from: &str,
-              to: &str,
-              shift: bool,
-              ctrl: bool,
-              alt: bool,
-              win: bool|
-              -> Result<(), Box<EvalAltResult>> {
-            let mut state = state_clone.lock().unwrap();
-            let from_key =
-                parse_key_name(from).map_err(|e| format!("Invalid 'from' key: {}", e))?;
-            if !to.starts_with("VK_") {
-                return Err(format!("with_mods 'to' must have VK_ prefix, got: {}", to).into());
-            }
-            let to_key = parse_virtual_key(to).map_err(|e| format!("Invalid 'to' key: {}", e))?;
-            add_modified_output(
-                &mut state,
-                from_key,
-                to_key,
-                ModifierFlags {
-                    shift,
-                    ctrl,
-                    alt,
-                    win,
-                },
-                "with_mods",
-            )
+        |key: &str,
+         shift: bool,
+         ctrl: bool,
+         alt: bool,
+         win: bool|
+         -> Result<ModifiedKey, Box<rhai::EvalAltResult>> {
+            let vk =
+                parse_virtual_key(key).map_err(|e| format!("Invalid key in with_mods(): {}", e))?;
+            Ok(ModifiedKey {
+                key: vk,
+                shift,
+                ctrl,
+                alt,
+                win,
+            })
         },
     );
-}
-
-fn register_single_mod_fn(
-    engine: &mut Engine,
-    state: Arc<Mutex<ParserState>>,
-    name: &'static str,
-    shift: bool,
-    ctrl: bool,
-    alt: bool,
-    win: bool,
-) {
-    let state_clone = Arc::clone(&state);
-    engine.register_fn(
-        name,
-        move |from: &str, to: &str| -> Result<(), Box<EvalAltResult>> {
-            let mut state = state_clone.lock().unwrap();
-            let from_key =
-                parse_key_name(from).map_err(|e| format!("Invalid 'from' key: {}", e))?;
-            if !to.starts_with("VK_") {
-                return Err(format!("{} 'to' must have VK_ prefix, got: {}", name, to).into());
-            }
-            let to_key = parse_virtual_key(to).map_err(|e| format!("Invalid 'to' key: {}", e))?;
-            add_modified_output(
-                &mut state,
-                from_key,
-                to_key,
-                ModifierFlags {
-                    shift,
-                    ctrl,
-                    alt,
-                    win,
-                },
-                name,
-            )
-        },
-    );
-}
-
-struct ModifierFlags {
-    shift: bool,
-    ctrl: bool,
-    alt: bool,
-    win: bool,
-}
-
-fn add_modified_output(
-    state: &mut ParserState,
-    from: KeyCode,
-    to: KeyCode,
-    flags: ModifierFlags,
-    fn_name: &str,
-) -> Result<(), Box<EvalAltResult>> {
-    let mapping =
-        KeyMapping::modified_output(from, to, flags.shift, flags.ctrl, flags.alt, flags.win);
-    if let Some(ref mut device) = state.current_device {
-        device.mappings.push(mapping);
-        Ok(())
-    } else {
-        Err(format!("{}() must be called inside a device() block", fn_name).into())
-    }
 }
