@@ -342,7 +342,7 @@
   - _Requirements: All requirements (integration test)_
   - _Prompt: Role: Integration Test Engineer with expertise in workflow validation | Task: Create comprehensive integration test following design.md Testing Strategy, validating full development workflow from workspace init to pre-commit hooks | Restrictions: Must test real workflow (not mocked), restore state after tests, verify each step succeeds/fails as expected, document test scenario | Success: Integration test covers full workflow, all steps are verified, test is reproducible, passes on clean workspace_
 
-- [ ] 8.2 Validate AI agent autonomous workflow
+- [x] 8.2 Validate AI agent autonomous workflow
   - File: scripts/tests/ai_agent_simulation.sh
   - Simulate AI agent development cycle:
     1. AI reads .claude/CLAUDE.md
