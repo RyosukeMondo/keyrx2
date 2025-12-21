@@ -94,7 +94,7 @@ if [[ "$UNIT_MODE" == "true" ]]; then
     log_info "Running unit tests..."
     TEST_COMMAND="cargo test --lib --workspace"
 
-    if [[ "$QUIET_MODE" == "true" ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
         TEST_OUTPUT=$($TEST_COMMAND 2>&1)
     else
         TEST_OUTPUT=$($TEST_COMMAND 2>&1 | tee /dev/tty)
@@ -109,7 +109,7 @@ elif [[ "$INTEGRATION_MODE" == "true" ]]; then
     log_info "Running integration tests..."
     TEST_COMMAND="cargo test --test '*' --workspace"
 
-    if [[ "$QUIET_MODE" == "true" ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
         TEST_OUTPUT=$($TEST_COMMAND 2>&1)
     else
         TEST_OUTPUT=$($TEST_COMMAND 2>&1 | tee /dev/tty)
@@ -137,7 +137,7 @@ elif [[ -n "$FUZZ_DURATION" ]]; then
         exit 1
     }
 
-    if [[ "$QUIET_MODE" == "true" ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
         TEST_OUTPUT=$(cargo fuzz run fuzz_target_1 -- -max_total_time="$FUZZ_DURATION" 2>&1)
     else
         TEST_OUTPUT=$(cargo fuzz run fuzz_target_1 -- -max_total_time="$FUZZ_DURATION" 2>&1 | tee /dev/tty)
@@ -154,7 +154,7 @@ elif [[ "$BENCH_MODE" == "true" ]]; then
     log_info "Running benchmarks..."
     TEST_COMMAND="cargo +nightly bench --workspace"
 
-    if [[ "$QUIET_MODE" == "true" ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
         TEST_OUTPUT=$(cargo +nightly bench --workspace 2>&1)
     else
         TEST_OUTPUT=$(cargo +nightly bench --workspace 2>&1 | tee /dev/tty)
@@ -170,7 +170,7 @@ else
     log_info "Running all tests..."
     TEST_COMMAND="cargo test --workspace"
 
-    if [[ "$QUIET_MODE" == "true" ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
         TEST_OUTPUT=$($TEST_COMMAND 2>&1)
     else
         TEST_OUTPUT=$($TEST_COMMAND 2>&1 | tee /dev/tty)
