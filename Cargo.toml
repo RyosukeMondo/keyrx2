@@ -1,0 +1,67 @@
+[workspace]
+resolver = "2"
+members = [
+    "keyrx_core",
+    "keyrx_compiler",
+    "keyrx_daemon",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["keyrx contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/keyrx"
+
+[workspace.dependencies]
+# Core runtime dependencies (no_std compatible)
+rkyv = { version = "0.7", features = ["validation"] }
+boomphf = "0.6"
+fixedbitset = "0.4"
+arrayvec = "0.7"
+
+# Scripting and serialization
+rhai = "1.15"
+serde = { version = "1.0", features = ["derive"] }
+
+# CLI tools
+clap = { version = "4", features = ["derive"] }
+
+# OS integration (Linux)
+evdev = "0.12"
+uinput = "0.1"
+nix = { version = "0.26", features = ["ioctl", "poll"] }
+
+# OS integration (Windows)
+windows-sys = { version = "0.48", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+# Web server
+axum = "0.7"
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+tokio = { version = "1.35", features = ["full"] }
+
+# Concurrency
+crossbeam-channel = "0.5"
+memmap2 = "0.7"
+parking_lot = "0.12"
+
+# Testing and benchmarking
+proptest = "1.2"
+criterion = "0.5"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+[profile.bench]
+inherits = "release"
