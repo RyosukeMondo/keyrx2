@@ -78,6 +78,15 @@ impl Parser {
             searched_paths: vec![path.to_path_buf()],
         })?;
 
+        self.parse_string(&script, path)
+    }
+
+    /// Parse a Rhai script from a string (used for fuzzing and testing)
+    pub fn parse_string(
+        &mut self,
+        script: &str,
+        source_path: &Path,
+    ) -> Result<ConfigRoot, ParseError> {
         // Set up timeout
         let start_time = SystemTime::now();
         let timeout = Duration::from_secs(10);
@@ -85,8 +94,8 @@ impl Parser {
         // Execute the script
         let mut scope = Scope::new();
         self.engine
-            .run_with_scope(&mut scope, &script)
-            .map_err(|e| Self::convert_rhai_error(e, path))?;
+            .run_with_scope(&mut scope, script)
+            .map_err(|e| Self::convert_rhai_error(e, source_path))?;
 
         // Check timeout
         if SystemTime::now()
@@ -105,7 +114,7 @@ impl Parser {
         // If there's a current device, it wasn't properly finalized
         if state.current_device.is_some() {
             return Err(ParseError::SyntaxError {
-                file: path.to_path_buf(),
+                file: source_path.to_path_buf(),
                 line: 0,
                 column: 0,
                 message: "Unclosed device() block".to_string(),

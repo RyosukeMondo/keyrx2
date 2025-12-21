@@ -322,7 +322,7 @@
   - _Requirements: 7.4_
   - _Prompt: Role: Rust Test Engineer with expertise in property-based testing and formal verification | Task: Write property-based tests for serialization in keyrx_compiler/tests/property_tests.rs following requirement 7.4 | Restrictions: Must use proptest or quickcheck, test determinism and round-trip properties, run 1000+ iterations, generate random valid configs with all mapping variants | Success: All property tests pass with 1000+ iterations, deterministic serialization verified statistically_
 
-- [ ] 22. Set up fuzzing for parser
+- [x] 22. Set up fuzzing for parser
   - File: keyrx_core/fuzz/fuzz_targets/fuzz_parser.rs
   - Initialize cargo-fuzz if not already set up
   - Create fuzz target that feeds random bytes to Rhai parser
