@@ -323,6 +323,36 @@ pub struct DeviceConfig {
     pub mappings: Vec<KeyMapping>,
 }
 
+/// Metadata about the compiled configuration
+///
+/// Contains information about when and how the configuration was compiled.
+/// This is useful for debugging and verification purposes.
+#[derive(Archive, Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+#[repr(C)]
+pub struct Metadata {
+    /// Unix timestamp (seconds since epoch) when the config was compiled
+    pub compilation_timestamp: u64,
+    /// Version of the compiler that created this file
+    pub compiler_version: alloc::string::String,
+    /// SHA256 hash of the source Rhai script(s)
+    pub source_hash: alloc::string::String,
+}
+
+/// Root configuration structure
+///
+/// This is the top-level structure that gets serialized to .krx binary format.
+/// Contains all device configurations and metadata.
+#[derive(Archive, Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+#[repr(C)]
+pub struct ConfigRoot {
+    /// Binary format version
+    pub version: Version,
+    /// List of device-specific configurations
+    pub devices: Vec<DeviceConfig>,
+    /// Compilation metadata
+    pub metadata: Metadata,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
