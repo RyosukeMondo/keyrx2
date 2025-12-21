@@ -31,7 +31,7 @@
   - _Requirements: 1.8, 1.10_
   - _Prompt: Role: Rust Parser Developer with expertise in enum conversion | Task: Implement parse_condition_string() that converts user strings like "MD_00" to Condition::ModifierActive(0x00) and "LK_01" to Condition::LockActive(0x01), and parse_condition_item() for ConditionItem enum, following requirements 1.8 and 1.10, using Condition and ConditionItem enums from keyrx_core | Restrictions: Must detect prefix (MD_ or LK_), call appropriate validator (parse_modifier_id or parse_lock_id), return ParseError for invalid format, support only single modifiers/locks (no complex conditions here) | Success: "MD_00" → Condition::ModifierActive(0x00), "LK_01" → Condition::LockActive(0x01), invalid strings rejected, supports all 255 modifier/lock IDs_
 
-- [ ] 4. Write validator unit tests
+- [x] 4. Write validator unit tests
   - File: `keyrx_compiler/tests/validators_tests.rs` (NEW)
   - Test parse_physical_key() with all KeyCode variants
   - Test parse_modifier_id() success cases (MD_00 through MD_FE)
