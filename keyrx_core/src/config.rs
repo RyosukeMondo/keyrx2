@@ -190,3 +190,36 @@ pub enum KeyCode {
     MediaPrevious = 0x305,
     MediaNext = 0x306,
 }
+
+/// Key mapping types enumeration.
+///
+/// Defines the different types of key mappings supported by the remapping engine.
+/// Currently only Simple mapping is implemented, with placeholders for future features.
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, Clone, PartialEq, Eq, Debug)]
+#[repr(C)]
+pub enum KeyMapping {
+    /// Simple 1:1 key mapping (from -> to).
+    ///
+    /// Maps a single key press directly to another key.
+    /// Example: CapsLock -> Escape
+    Simple {
+        /// The source key to remap from
+        from: KeyCode,
+        /// The target key to remap to
+        to: KeyCode,
+    },
+
+    // Future variants (placeholders):
+    // TapHold {
+    //     key: KeyCode,
+    //     tap_action: KeyCode,
+    //     hold_action: KeyCode,
+    //     hold_timeout_ms: u16,
+    // },
+    //
+    // Layer {
+    //     key: KeyCode,
+    //     layer_id: u8,
+    //     mappings: Vec<KeyMapping>,
+    // },
+}

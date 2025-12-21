@@ -26,7 +26,7 @@
   - _Requirements: 1.4_
   - _Prompt: Role: Input Systems Engineer with expertise in keyboard scancode mappings | Task: Define comprehensive KeyCode enum in keyrx_core/src/config.rs with 100+ keys following requirement 1.4 and design.md specifications | Restrictions: Must use #[repr(u16)], explicitly number all variants, cover all standard keyboard keys, derive all required traits, organize keys by category (letters, numbers, modifiers, special) | Success: Enum compiles with all traits, includes A-Z, 0-9, F1-F12, modifiers, special keys, arrows, all variants have explicit numbers_
 
-- [ ] 3. Define KeyMapping enum
+- [x] 3. Define KeyMapping enum
   - File: keyrx_core/src/config.rs (same file as tasks 1-2)
   - Create KeyMapping enum with #[repr(C)]
   - Define Simple variant: { from: KeyCode, to: KeyCode }
