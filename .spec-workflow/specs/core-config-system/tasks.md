@@ -344,7 +344,7 @@
   - _Requirements: 7.5_
   - _Prompt: Role: Security Engineer with expertise in binary format fuzzing and memory safety | Task: Set up fuzzing for binary deserializer in keyrx_core/fuzz/fuzz_targets/fuzz_deserialize.rs following requirement 7.5 | Restrictions: Must use cargo-fuzz, deserializer must never panic or exhibit UB, all invalid inputs must return errors, run for 60+ seconds | Success: Fuzz target runs without crashes/UB, deserializer handles all inputs safely, no vulnerabilities discovered_
 
-- [ ] 24. Add integration test for multi-file imports
+- [x] 24. Add integration test for multi-file imports
   - File: keyrx_compiler/tests/integration/import_tests.rs
   - Create test with 3+ Rhai files importing each other
   - Test successful import resolution and merging
