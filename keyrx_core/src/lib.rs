@@ -13,6 +13,12 @@ pub mod lookup;
 pub mod simulator;
 pub mod state;
 
+// Re-export public types from config module
+pub use config::{
+    BaseKeyMapping, Condition, ConditionItem, ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode,
+    KeyMapping, Metadata, Version,
+};
+
 #[cfg(test)]
 mod tests {
     #[test]

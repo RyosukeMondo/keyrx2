@@ -356,7 +356,7 @@
   - _Requirements: 7.3, 4.1-4.5_
   - _Prompt: Role: QA Engineer with expertise in integration testing and file system testing | Task: Write integration tests for multi-file imports in keyrx_compiler/tests/integration/import_tests.rs following requirements 7.3 and 4.1-4.5 | Restrictions: Must test all import scenarios, use temporary files, verify merged configuration, test error cases | Success: All import scenarios work correctly, circular imports detected, errors are clear, configurations merge properly_
 
-- [ ] 25. Update keyrx_core/src/lib.rs to export config module
+- [x] 25. Update keyrx_core/src/lib.rs to export config module
   - File: keyrx_core/src/lib.rs
   - Add pub mod config; to export config module
   - Add re-exports: pub use config::{ConfigRoot, DeviceConfig, KeyMapping, KeyCode, Version, Condition};
