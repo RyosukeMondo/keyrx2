@@ -214,7 +214,7 @@
   - _Requirements: 5.1, 5.2_
   - _Prompt: Role: CI/CD Engineer with expertise in GitHub Actions and Rust workflows | Task: Create comprehensive CI workflow following requirements 5.1-5.2 and design.md Component 7, running on Linux and Windows with caching | Restrictions: Must use stable Rust toolchain, cache dependencies correctly, upload coverage only on Ubuntu, set reasonable timeouts | Success: Workflow runs on push and PR, completes successfully on both platforms, caching speeds up builds, coverage reports are uploaded_
 
-- [ ] 5.1 Create GitHub Actions release workflow
+- [x] 5.1 Create GitHub Actions release workflow
   - File: .github/workflows/release.yml
   - Define workflow:
     - Name: "Release"
