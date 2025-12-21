@@ -9,6 +9,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
 
+# Check if TTY is available for interactive output
+HAS_TTY=false
+if [[ -t 1 ]] && [[ -w /dev/tty ]]; then
+    HAS_TTY=true
+fi
+
 # Test mode flags
 UNIT_MODE=false
 INTEGRATION_MODE=false
@@ -94,7 +100,7 @@ if [[ "$UNIT_MODE" == "true" ]]; then
     log_info "Running unit tests..."
     TEST_COMMAND="cargo test --lib --workspace"
 
-    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ "$HAS_TTY" == "false" ]]; then
         TEST_OUTPUT=$($TEST_COMMAND 2>&1)
     else
         TEST_OUTPUT=$($TEST_COMMAND 2>&1 | tee /dev/tty)
@@ -109,7 +115,7 @@ elif [[ "$INTEGRATION_MODE" == "true" ]]; then
     log_info "Running integration tests..."
     TEST_COMMAND="cargo test --test '*' --workspace"
 
-    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ "$HAS_TTY" == "false" ]]; then
         TEST_OUTPUT=$($TEST_COMMAND 2>&1)
     else
         TEST_OUTPUT=$($TEST_COMMAND 2>&1 | tee /dev/tty)
@@ -137,7 +143,7 @@ elif [[ -n "$FUZZ_DURATION" ]]; then
         exit 1
     }
 
-    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ "$HAS_TTY" == "false" ]]; then
         TEST_OUTPUT=$(cargo fuzz run fuzz_target_1 -- -max_total_time="$FUZZ_DURATION" 2>&1)
     else
         TEST_OUTPUT=$(cargo fuzz run fuzz_target_1 -- -max_total_time="$FUZZ_DURATION" 2>&1 | tee /dev/tty)
@@ -154,7 +160,7 @@ elif [[ "$BENCH_MODE" == "true" ]]; then
     log_info "Running benchmarks..."
     TEST_COMMAND="cargo +nightly bench --workspace"
 
-    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ "$HAS_TTY" == "false" ]]; then
         TEST_OUTPUT=$(cargo +nightly bench --workspace 2>&1)
     else
         TEST_OUTPUT=$(cargo +nightly bench --workspace 2>&1 | tee /dev/tty)
@@ -170,7 +176,7 @@ else
     log_info "Running all tests..."
     TEST_COMMAND="cargo test --workspace"
 
-    if [[ "$QUIET_MODE" == "true" ]] || [[ ! -e /dev/tty ]]; then
+    if [[ "$QUIET_MODE" == "true" ]] || [[ "$HAS_TTY" == "false" ]]; then
         TEST_OUTPUT=$($TEST_COMMAND 2>&1)
     else
         TEST_OUTPUT=$($TEST_COMMAND 2>&1 | tee /dev/tty)
