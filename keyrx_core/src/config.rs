@@ -372,4 +372,375 @@ mod tests {
         let version = Version::current();
         assert_eq!(version.to_string(), "1.0.0");
     }
+
+    #[test]
+    fn test_keycode_has_all_expected_variants() {
+        // Test letters
+        assert_eq!(KeyCode::A as u16, 0x00);
+        assert_eq!(KeyCode::Z as u16, 0x19);
+
+        // Test numbers
+        assert_eq!(KeyCode::Num0 as u16, 0x20);
+        assert_eq!(KeyCode::Num9 as u16, 0x29);
+
+        // Test function keys
+        assert_eq!(KeyCode::F1 as u16, 0x30);
+        assert_eq!(KeyCode::F12 as u16, 0x3B);
+
+        // Test modifiers
+        assert_eq!(KeyCode::LShift as u16, 0x100);
+        assert_eq!(KeyCode::RMeta as u16, 0x107);
+
+        // Test special keys
+        assert_eq!(KeyCode::Escape as u16, 0x200);
+        assert_eq!(KeyCode::Enter as u16, 0x201);
+
+        // Test arrow keys
+        assert_eq!(KeyCode::Left as u16, 0x210);
+        assert_eq!(KeyCode::Down as u16, 0x213);
+    }
+
+    #[test]
+    fn test_condition_variants() {
+        // Test ModifierActive variant
+        let cond1 = Condition::ModifierActive(0x01);
+        assert_eq!(cond1, Condition::ModifierActive(0x01));
+
+        // Test LockActive variant
+        let cond2 = Condition::LockActive(0x02);
+        assert_eq!(cond2, Condition::LockActive(0x02));
+
+        // Test AllActive variant with multiple conditions
+        let cond3 = Condition::AllActive(alloc::vec![
+            ConditionItem::ModifierActive(0x01),
+            ConditionItem::LockActive(0x02),
+        ]);
+        if let Condition::AllActive(items) = &cond3 {
+            assert_eq!(items.len(), 2);
+        } else {
+            panic!("Expected AllActive variant");
+        }
+
+        // Test NotActive variant (negation)
+        let cond4 = Condition::NotActive(alloc::vec![ConditionItem::ModifierActive(0x01),]);
+        if let Condition::NotActive(items) = &cond4 {
+            assert_eq!(items.len(), 1);
+        } else {
+            panic!("Expected NotActive variant");
+        }
+    }
+
+    #[test]
+    fn test_base_key_mapping_variants() {
+        // Test Simple mapping
+        let mapping1 = BaseKeyMapping::Simple {
+            from: KeyCode::A,
+            to: KeyCode::B,
+        };
+        assert_eq!(
+            mapping1,
+            BaseKeyMapping::Simple {
+                from: KeyCode::A,
+                to: KeyCode::B,
+            }
+        );
+
+        // Test Modifier mapping
+        let mapping2 = BaseKeyMapping::Modifier {
+            from: KeyCode::CapsLock,
+            modifier_id: 0x01,
+        };
+        if let BaseKeyMapping::Modifier { from, modifier_id } = mapping2 {
+            assert_eq!(from, KeyCode::CapsLock);
+            assert_eq!(modifier_id, 0x01);
+        } else {
+            panic!("Expected Modifier variant");
+        }
+
+        // Test Lock mapping
+        let mapping3 = BaseKeyMapping::Lock {
+            from: KeyCode::ScrollLock,
+            lock_id: 0x02,
+        };
+        if let BaseKeyMapping::Lock { from, lock_id } = mapping3 {
+            assert_eq!(from, KeyCode::ScrollLock);
+            assert_eq!(lock_id, 0x02);
+        } else {
+            panic!("Expected Lock variant");
+        }
+
+        // Test TapHold mapping
+        let mapping4 = BaseKeyMapping::TapHold {
+            from: KeyCode::Space,
+            tap: KeyCode::Space,
+            hold_modifier: 0x00,
+            threshold_ms: 200,
+        };
+        if let BaseKeyMapping::TapHold {
+            from,
+            tap,
+            hold_modifier,
+            threshold_ms,
+        } = mapping4
+        {
+            assert_eq!(from, KeyCode::Space);
+            assert_eq!(tap, KeyCode::Space);
+            assert_eq!(hold_modifier, 0x00);
+            assert_eq!(threshold_ms, 200);
+        } else {
+            panic!("Expected TapHold variant");
+        }
+
+        // Test ModifiedOutput mapping
+        let mapping5 = BaseKeyMapping::ModifiedOutput {
+            from: KeyCode::A,
+            to: KeyCode::A,
+            shift: true,
+            ctrl: false,
+            alt: false,
+            win: false,
+        };
+        if let BaseKeyMapping::ModifiedOutput {
+            shift,
+            ctrl,
+            alt,
+            win,
+            ..
+        } = mapping5
+        {
+            assert!(shift);
+            assert!(!ctrl);
+            assert!(!alt);
+            assert!(!win);
+        } else {
+            panic!("Expected ModifiedOutput variant");
+        }
+    }
+
+    #[test]
+    fn test_key_mapping_variants() {
+        // Test Base mapping
+        let mapping1 = KeyMapping::Base(BaseKeyMapping::Simple {
+            from: KeyCode::A,
+            to: KeyCode::B,
+        });
+        assert!(matches!(mapping1, KeyMapping::Base(_)));
+
+        // Test Conditional mapping
+        let mapping2 = KeyMapping::Conditional {
+            condition: Condition::ModifierActive(0x01),
+            mappings: alloc::vec![BaseKeyMapping::Simple {
+                from: KeyCode::H,
+                to: KeyCode::Left,
+            },],
+        };
+        if let KeyMapping::Conditional {
+            condition,
+            mappings,
+        } = &mapping2
+        {
+            assert_eq!(*condition, Condition::ModifierActive(0x01));
+            assert_eq!(mappings.len(), 1);
+        } else {
+            panic!("Expected Conditional variant");
+        }
+    }
+
+    #[test]
+    fn test_device_config_creation() {
+        use alloc::string::String;
+
+        let device_config = DeviceConfig {
+            identifier: DeviceIdentifier {
+                pattern: String::from("*"),
+            },
+            mappings: alloc::vec![
+                KeyMapping::Base(BaseKeyMapping::Simple {
+                    from: KeyCode::A,
+                    to: KeyCode::B,
+                }),
+                KeyMapping::Base(BaseKeyMapping::Modifier {
+                    from: KeyCode::CapsLock,
+                    modifier_id: 0x01,
+                }),
+            ],
+        };
+
+        assert_eq!(device_config.identifier.pattern, "*");
+        assert_eq!(device_config.mappings.len(), 2);
+    }
+
+    #[test]
+    fn test_config_root_serialization_round_trip() {
+        use alloc::string::String;
+
+        // Create a complete ConfigRoot
+        let config = ConfigRoot {
+            version: Version::current(),
+            devices: alloc::vec![DeviceConfig {
+                identifier: DeviceIdentifier {
+                    pattern: String::from("*"),
+                },
+                mappings: alloc::vec![KeyMapping::Base(BaseKeyMapping::Simple {
+                    from: KeyCode::A,
+                    to: KeyCode::B,
+                }),],
+            },],
+            metadata: Metadata {
+                compilation_timestamp: 1234567890,
+                compiler_version: String::from("1.0.0"),
+                source_hash: String::from("abc123"),
+            },
+        };
+
+        // Serialize
+        let bytes = rkyv::to_bytes::<_, 1024>(&config).expect("Serialization failed");
+
+        // Deserialize
+        let archived = unsafe { rkyv::archived_root::<ConfigRoot>(&bytes[..]) };
+
+        // Verify round-trip
+        assert_eq!(archived.version.major, 1);
+        assert_eq!(archived.version.minor, 0);
+        assert_eq!(archived.version.patch, 0);
+        assert_eq!(archived.devices.len(), 1);
+        assert_eq!(archived.metadata.compilation_timestamp, 1234567890);
+    }
+
+    #[test]
+    fn test_deterministic_serialization() {
+        use alloc::string::String;
+
+        // Create the same config twice
+        let create_config = || ConfigRoot {
+            version: Version::current(),
+            devices: alloc::vec![DeviceConfig {
+                identifier: DeviceIdentifier {
+                    pattern: String::from("USB Keyboard"),
+                },
+                mappings: alloc::vec![
+                    KeyMapping::Base(BaseKeyMapping::Simple {
+                        from: KeyCode::A,
+                        to: KeyCode::B,
+                    }),
+                    KeyMapping::Conditional {
+                        condition: Condition::ModifierActive(0x01),
+                        mappings: alloc::vec![BaseKeyMapping::Simple {
+                            from: KeyCode::H,
+                            to: KeyCode::Left,
+                        },],
+                    },
+                ],
+            },],
+            metadata: Metadata {
+                compilation_timestamp: 9999999999,
+                compiler_version: String::from("1.0.0"),
+                source_hash: String::from("test_hash_123"),
+            },
+        };
+
+        let config1 = create_config();
+        let config2 = create_config();
+
+        // Serialize both
+        let bytes1 = rkyv::to_bytes::<_, 2048>(&config1).expect("Serialization 1 failed");
+        let bytes2 = rkyv::to_bytes::<_, 2048>(&config2).expect("Serialization 2 failed");
+
+        // Verify deterministic output (same struct → same bytes)
+        assert_eq!(bytes1.len(), bytes2.len());
+        assert_eq!(&bytes1[..], &bytes2[..]);
+    }
+
+    #[test]
+    fn test_complex_config_serialization() {
+        use alloc::string::String;
+
+        // Create a complex configuration with all mapping types
+        let config = ConfigRoot {
+            version: Version::current(),
+            devices: alloc::vec![DeviceConfig {
+                identifier: DeviceIdentifier {
+                    pattern: String::from("*"),
+                },
+                mappings: alloc::vec![
+                    // Simple mapping
+                    KeyMapping::Base(BaseKeyMapping::Simple {
+                        from: KeyCode::A,
+                        to: KeyCode::B,
+                    }),
+                    // Modifier mapping
+                    KeyMapping::Base(BaseKeyMapping::Modifier {
+                        from: KeyCode::CapsLock,
+                        modifier_id: 0x01,
+                    }),
+                    // Lock mapping
+                    KeyMapping::Base(BaseKeyMapping::Lock {
+                        from: KeyCode::ScrollLock,
+                        lock_id: 0x02,
+                    }),
+                    // TapHold mapping
+                    KeyMapping::Base(BaseKeyMapping::TapHold {
+                        from: KeyCode::Space,
+                        tap: KeyCode::Space,
+                        hold_modifier: 0x00,
+                        threshold_ms: 200,
+                    }),
+                    // ModifiedOutput mapping
+                    KeyMapping::Base(BaseKeyMapping::ModifiedOutput {
+                        from: KeyCode::A,
+                        to: KeyCode::A,
+                        shift: true,
+                        ctrl: false,
+                        alt: false,
+                        win: false,
+                    }),
+                    // Conditional mapping with single condition
+                    KeyMapping::Conditional {
+                        condition: Condition::ModifierActive(0x01),
+                        mappings: alloc::vec![BaseKeyMapping::Simple {
+                            from: KeyCode::H,
+                            to: KeyCode::Left,
+                        },],
+                    },
+                    // Conditional mapping with AllActive
+                    KeyMapping::Conditional {
+                        condition: Condition::AllActive(alloc::vec![
+                            ConditionItem::ModifierActive(0x01),
+                            ConditionItem::LockActive(0x02),
+                        ]),
+                        mappings: alloc::vec![BaseKeyMapping::Simple {
+                            from: KeyCode::J,
+                            to: KeyCode::Down,
+                        },],
+                    },
+                    // Conditional mapping with NotActive
+                    KeyMapping::Conditional {
+                        condition: Condition::NotActive(alloc::vec![
+                            ConditionItem::ModifierActive(0x01),
+                        ]),
+                        mappings: alloc::vec![BaseKeyMapping::Simple {
+                            from: KeyCode::K,
+                            to: KeyCode::Up,
+                        },],
+                    },
+                ],
+            },],
+            metadata: Metadata {
+                compilation_timestamp: 1234567890,
+                compiler_version: String::from("1.0.0"),
+                source_hash: String::from("complex_test_hash"),
+            },
+        };
+
+        // Serialize
+        let bytes = rkyv::to_bytes::<_, 4096>(&config).expect("Serialization failed");
+
+        // Deserialize
+        let archived = unsafe { rkyv::archived_root::<ConfigRoot>(&bytes[..]) };
+
+        // Verify all mappings are preserved
+        assert_eq!(archived.devices.len(), 1);
+        assert_eq!(archived.devices[0].mappings.len(), 8);
+        assert_eq!(archived.metadata.compilation_timestamp, 1234567890);
+    }
 }
