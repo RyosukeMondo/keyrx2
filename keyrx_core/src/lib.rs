@@ -7,6 +7,7 @@
 
 extern crate alloc;
 
+pub mod config;
 pub mod dfa;
 pub mod lookup;
 pub mod simulator;

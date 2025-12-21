@@ -1,6 +1,6 @@
 # Tasks Document
 
-- [ ] 1. Define Version struct in keyrx_core/src/config.rs
+- [x] 1. Define Version struct in keyrx_core/src/config.rs
   - File: keyrx_core/src/config.rs
   - Create Version struct with major, minor, patch fields (u8 types)
   - Derive rkyv traits: Archive, Serialize, Deserialize
