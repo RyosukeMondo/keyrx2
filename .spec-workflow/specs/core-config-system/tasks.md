@@ -1,0 +1,320 @@
+# Tasks Document
+
+- [x] 1. Define Version struct in keyrx_core/src/config.rs
+  - File: keyrx_core/src/config.rs
+  - Create Version struct with major, minor, patch fields (u8 types)
+  - Derive rkyv traits: Archive, Serialize, Deserialize
+  - Add #[repr(C)] for stable binary layout
+  - Implement Version::current() -> Version returning 1.0.0
+  - Implement Display trait for version formatting
+  - Purpose: Version information for binary compatibility checking
+  - _Leverage: tech.md specifications for rkyv usage_
+  - _Requirements: 1.1_
+  - _Prompt: Role: Rust Systems Programmer with expertise in binary serialization and versioning | Task: Define Version struct in keyrx_core/src/config.rs following requirement 1.1, using rkyv traits and #[repr(C)] for stable binary layout | Restrictions: Must use u8 for all version fields, derive all required rkyv traits, implement current() to return Version { major: 1, minor: 0, patch: 0 } | Success: Struct compiles, derives rkyv traits correctly, Display trait shows "1.0.0" format, current() returns correct version_
+
+- [ ] 2. Define KeyCode enum with 100+ key codes
+  - File: keyrx_core/src/config.rs (same file as task 1)
+  - Create KeyCode enum with #[repr(u16)]
+  - Define all standard keys: A-Z (0x00-0x19), 0-9 (0x20-0x29), F1-F12 (0x30-0x3B)
+  - Define modifiers: LShift, RShift, LCtrl, RCtrl, LAlt, RAlt, LMeta, RMeta (0x100-0x107)
+  - Define special keys: Escape, Enter, Backspace, Tab, Space, CapsLock, etc. (0x200+)
+  - Define arrow keys: Left, Right, Up, Down (0x210-0x213)
+  - Derive: Archive, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash, Debug
+  - Explicitly number all variants to prevent reordering issues
+  - Purpose: Complete keyboard key code enumeration
+  - _Leverage: design.md KeyCode enum specification_
+  - _Requirements: 1.4_
+  - _Prompt: Role: Input Systems Engineer with expertise in keyboard scancode mappings | Task: Define comprehensive KeyCode enum in keyrx_core/src/config.rs with 100+ keys following requirement 1.4 and design.md specifications | Restrictions: Must use #[repr(u16)], explicitly number all variants, cover all standard keyboard keys, derive all required traits, organize keys by category (letters, numbers, modifiers, special) | Success: Enum compiles with all traits, includes A-Z, 0-9, F1-F12, modifiers, special keys, arrows, all variants have explicit numbers_
+
+- [ ] 3. Define KeyMapping enum
+  - File: keyrx_core/src/config.rs (same file as tasks 1-2)
+  - Create KeyMapping enum with #[repr(C)]
+  - Define Simple variant: { from: KeyCode, to: KeyCode }
+  - Add placeholder comments for future variants (TapHold, Layer)
+  - Derive: Archive, Serialize, Deserialize, Clone, PartialEq, Eq, Debug
+  - Purpose: Enumeration of different mapping types
+  - _Leverage: design.md KeyMapping specification_
+  - _Requirements: 1.3_
+  - _Prompt: Role: Rust Developer with expertise in enum design and binary serialization | Task: Define KeyMapping enum in keyrx_core/src/config.rs following requirement 1.3 with Simple variant and placeholders for future variants | Restrictions: Must use #[repr(C)], include only Simple variant for now, add comments for future TapHold and Layer variants, derive all required rkyv traits | Success: Enum compiles, Simple variant works with two KeyCode fields, serialization works, comments indicate future expansion points_
+
+- [ ] 4. Define DeviceIdentifier and DeviceConfig structs
+  - File: keyrx_core/src/config.rs (same file as tasks 1-3)
+  - Create DeviceIdentifier struct with pattern field (String)
+  - Create DeviceConfig struct with identifier (DeviceIdentifier) and mappings (Vec<KeyMapping>)
+  - Add #[repr(C)] to both structs
+  - Derive rkyv traits: Archive, Serialize, Deserialize
+  - Add documentation explaining device identifier pattern format
+  - Purpose: Device-specific configuration storage
+  - _Leverage: design.md DeviceConfig specification_
+  - _Requirements: 1.2_
+  - _Prompt: Role: Rust Developer with expertise in data modeling and serialization | Task: Define DeviceIdentifier and DeviceConfig structs in keyrx_core/src/config.rs following requirement 1.2 | Restrictions: Must use #[repr(C)], derive all rkyv traits, DeviceIdentifier contains String pattern, DeviceConfig contains identifier and Vec<KeyMapping> | Success: Both structs compile correctly, rkyv traits work, DeviceConfig can store multiple mappings_
+
+- [ ] 5. Define Metadata and ConfigRoot structs
+  - File: keyrx_core/src/config.rs (same file as tasks 1-4)
+  - Create Metadata struct with compilation_timestamp (u64), compiler_version (String), source_hash (String)
+  - Create ConfigRoot struct with version (Version), devices (Vec<DeviceConfig>), metadata (Metadata)
+  - Add #[repr(C)] to both structs
+  - Derive rkyv traits: Archive, Serialize, Deserialize
+  - Purpose: Root configuration structure
+  - _Leverage: design.md ConfigRoot specification_
+  - _Requirements: 1.1_
+  - _Prompt: Role: Rust Systems Programmer with expertise in data structures and serialization | Task: Define Metadata and ConfigRoot structs in keyrx_core/src/config.rs following requirement 1.1 | Restrictions: Must use #[repr(C)], derive all rkyv traits, ConfigRoot is the top-level structure containing all config data | Success: Structs compile, rkyv serialization works, ConfigRoot can be serialized and deserialized_
+
+- [ ] 6. Write unit tests for config data structures
+  - File: keyrx_core/src/config.rs (add #[cfg(test)] mod tests at end)
+  - Test Version::current() returns 1.0.0
+  - Test Version Display formatting
+  - Test KeyCode has all expected variants
+  - Test KeyMapping::Simple creation
+  - Test DeviceConfig creation with mappings
+  - Test ConfigRoot serialization/deserialization round-trip
+  - Test deterministic serialization (same struct → same bytes)
+  - Purpose: Verify all data structures work correctly
+  - _Leverage: ai-dev-foundation test patterns_
+  - _Requirements: 7.1, 7.2_
+  - _Prompt: Role: Rust Test Engineer with expertise in unit testing and property-based testing | Task: Write comprehensive unit tests for all config data structures in keyrx_core/src/config.rs following requirements 7.1 and 7.2 | Restrictions: Must test all structs/enums, verify rkyv serialization round-trips, test determinism, use #[cfg(test)] module | Success: All tests pass, coverage >90% for config.rs, deterministic serialization verified_
+
+- [ ] 7. Create error types module
+  - File: keyrx_compiler/src/error.rs
+  - Define ParseError enum with variants: SyntaxError, ImportNotFound, CircularImport, ResourceLimitExceeded
+  - Define SerializeError enum with variants: RkyvError, IoError
+  - Define DeserializeError enum with variants: InvalidMagic, VersionMismatch, HashMismatch, RkyvError
+  - Implement Display and std::error::Error traits for all error types
+  - Add context fields (file path, line, column) to ParseError variants
+  - Purpose: Structured error handling for compiler
+  - _Leverage: Rust error handling patterns from tech.md_
+  - _Requirements: 6.1, 6.2_
+  - _Prompt: Role: Rust Developer with expertise in error handling and type design | Task: Create comprehensive error types in keyrx_compiler/src/error.rs following requirements 6.1 and 6.2 | Restrictions: Must define all error enums with proper context fields, implement Display and Error traits, errors must be actionable for users | Success: Error types compile, Display shows user-friendly messages, all error scenarios covered_
+
+- [ ] 8. Implement import resolver module
+  - File: keyrx_compiler/src/import_resolver.rs
+  - Create ImportResolver struct with visited_files (HashSet<PathBuf>) field
+  - Implement resolve_imports(path: &Path) -> Result<Vec<PathBuf>, ParseError>
+  - Implement detect_circular_imports(chain: &[PathBuf]) -> Result<(), ParseError>
+  - Resolve paths relative to current file's directory
+  - Detect circular imports using visited_files tracking
+  - Purpose: Handle multi-file configuration imports
+  - _Leverage: error.rs for ParseError types_
+  - _Requirements: 4.1, 4.2, 4.3_
+  - _Prompt: Role: Rust Developer with expertise in file I/O and graph algorithms | Task: Implement import resolver in keyrx_compiler/src/import_resolver.rs following requirements 4.1-4.3 | Restrictions: Must detect circular imports, resolve relative paths correctly, return ParseError on failures, use HashSet for cycle detection | Success: Resolver handles recursive imports, detects cycles, resolves paths correctly, all error cases covered_
+
+- [ ] 9. Write unit tests for import resolver
+  - File: keyrx_compiler/src/import_resolver.rs (add #[cfg(test)] mod tests)
+  - Test simple import resolution
+  - Test recursive imports (3+ levels deep)
+  - Test circular import detection (A→B→C→A)
+  - Test file not found error
+  - Test relative path resolution
+  - Purpose: Verify import system correctness
+  - _Leverage: ai-dev-foundation test patterns_
+  - _Requirements: 7.2_
+  - _Prompt: Role: Rust Test Engineer with expertise in unit testing and file system testing | Task: Write comprehensive unit tests for import resolver following requirement 7.2 | Restrictions: Must test all import scenarios, use temporary files for testing, verify error messages, use #[cfg(test)] module | Success: All tests pass, coverage >90%, all import scenarios verified_
+
+- [ ] 10. Implement Rhai DSL parser
+  - File: keyrx_compiler/src/parser.rs
+  - Create Parser struct with engine (rhai::Engine) and current_config (ConfigRoot) fields
+  - Implement new() to initialize Rhai engine with custom functions
+  - Register device(pattern: String) custom function that creates DeviceConfig
+  - Register map(from: String, to: String) custom function that creates KeyMapping
+  - Implement parse_script(path: &Path) -> Result<ConfigRoot, ParseError>
+  - Set resource limits: max_operations(10_000), max_expr_depth(100), set_max_call_levels(100)
+  - Add 10-second timeout using std::time
+  - Purpose: Parse Rhai scripts into ConfigRoot
+  - _Leverage: Rhai documentation, error.rs for ParseError, import_resolver.rs_
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - _Prompt: Role: Rust Developer with expertise in Rhai scripting and DSL design | Task: Implement Rhai DSL parser in keyrx_compiler/src/parser.rs following requirements 2.1-2.5 | Restrictions: Must register device() and map() functions, enforce resource limits, handle syntax errors gracefully, integrate with import resolver | Success: Parser evaluates Rhai scripts correctly, custom functions work, resource limits enforced, error messages include line/column_
+
+- [ ] 11. Write unit tests for parser
+  - File: keyrx_compiler/src/parser.rs (add #[cfg(test)] mod tests)
+  - Test device() function creates DeviceConfig
+  - Test map() function creates KeyMapping
+  - Test complete script parsing (device + map calls)
+  - Test syntax error handling with line numbers
+  - Test resource limit enforcement (infinite loop detection)
+  - Test timeout handling
+  - Purpose: Verify parser correctness and error handling
+  - _Leverage: ai-dev-foundation test patterns_
+  - _Requirements: 7.2_
+  - _Prompt: Role: Rust Test Engineer with expertise in Rhai testing and DSL validation | Task: Write comprehensive unit tests for Rhai parser following requirement 7.2 | Restrictions: Must test all custom functions, verify error messages, test resource limits, use temporary Rhai scripts for testing | Success: All tests pass, coverage >90%, all parser scenarios verified_
+
+- [ ] 12. Implement binary serializer
+  - File: keyrx_compiler/src/serialize.rs
+  - Define KRX_MAGIC constant: [0x4B, 0x52, 0x58, 0x0A] ("KRX\n")
+  - Define KRX_VERSION constant: 1u32
+  - Implement serialize(config: &ConfigRoot) -> Result<Vec<u8>, SerializeError>
+  - Build 48-byte header: magic (4 bytes), version (4 bytes), hash (32 bytes), size (8 bytes)
+  - Serialize ConfigRoot using rkyv::to_bytes()
+  - Compute SHA256 hash of serialized data
+  - Embed hash in header
+  - Return complete binary (header + data)
+  - Purpose: Serialize ConfigRoot to .krx binary format
+  - _Leverage: rkyv documentation, sha2 crate for hashing, error.rs_
+  - _Requirements: 3.1, 3.2, 3.3_
+  - _Prompt: Role: Rust Systems Programmer with expertise in binary formats and cryptographic hashing | Task: Implement binary serializer in keyrx_compiler/src/serialize.rs following requirements 3.1-3.3 | Restrictions: Must use rkyv for serialization, compute SHA256 hash, create 48-byte header with magic/version/hash/size, ensure deterministic output | Success: Serializer produces valid .krx files, hash is correct, same input produces identical output_
+
+- [ ] 13. Implement binary deserializer
+  - File: keyrx_compiler/src/serialize.rs (same file as task 12)
+  - Implement deserialize(bytes: &[u8]) -> Result<&ArchivedConfigRoot, DeserializeError>
+  - Verify magic bytes (first 4 bytes == KRX_MAGIC)
+  - Verify version (bytes 4-8 == KRX_VERSION)
+  - Extract embedded hash (bytes 8-40)
+  - Compute SHA256 hash of data (bytes 48+)
+  - Compare computed hash vs embedded hash
+  - Deserialize using rkyv::check_archived_root() for validation
+  - Return zero-copy reference to ArchivedConfigRoot
+  - Purpose: Deserialize and validate .krx files
+  - _Leverage: rkyv validation features, sha2 crate_
+  - _Requirements: 3.4, 3.5, 3.6_
+  - _Prompt: Role: Rust Systems Programmer with expertise in binary deserialization and validation | Task: Implement binary deserializer in keyrx_compiler/src/serialize.rs following requirements 3.4-3.6 | Restrictions: Must verify magic bytes, version, and hash, use rkyv validation features, provide zero-copy access, return detailed errors on failures | Success: Deserializer validates .krx files correctly, rejects corrupted files, provides zero-copy access, all error cases handled_
+
+- [ ] 14. Write unit tests for serializer/deserializer
+  - File: keyrx_compiler/src/serialize.rs (add #[cfg(test)] mod tests)
+  - Test serialize produces valid binary format
+  - Test deserialize validates magic bytes
+  - Test deserialize validates version
+  - Test deserialize validates hash
+  - Test round-trip: deserialize(serialize(config)) works
+  - Test deterministic serialization: serialize(config) == serialize(config)
+  - Test corrupted file rejection (invalid magic, hash, version)
+  - Purpose: Verify serialization correctness and validation
+  - _Leverage: ai-dev-foundation test patterns_
+  - _Requirements: 7.2, 7.4_
+  - _Prompt: Role: Rust Test Engineer with expertise in binary format testing and property-based testing | Task: Write comprehensive tests for serializer/deserializer following requirements 7.2 and 7.4 | Restrictions: Must test all validation paths, verify determinism, test error cases, use property-based tests for determinism | Success: All tests pass, coverage >90%, deterministic serialization verified, all error scenarios tested_
+
+- [ ] 15. Implement CLI interface
+  - File: keyrx_compiler/src/main.rs
+  - Use clap derive macros for CLI definition
+  - Define subcommands: compile, verify, hash, parse
+  - compile: Takes input.rhai and -o output.krx, calls parser and serializer
+  - verify: Takes config.krx, calls deserializer and prints validation result
+  - hash: Takes config.krx, extracts and prints SHA256 hash
+  - parse: Takes input.rhai and --json flag, parses and outputs JSON
+  - Implement --help for all commands
+  - Exit with 0 on success, 1 on error
+  - Purpose: User-facing command-line interface
+  - _Leverage: clap documentation, parser.rs, serialize.rs, error.rs_
+  - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
+  - _Prompt: Role: Rust CLI Developer with expertise in clap and user experience design | Task: Implement complete CLI interface in keyrx_compiler/src/main.rs following requirements 5.1-5.6 | Restrictions: Must use clap derive macros, implement all subcommands, provide helpful error messages, support --help, exit with correct codes | Success: All subcommands work correctly, help text is clear, errors are user-friendly, exit codes correct_
+
+- [ ] 16. Implement error formatting (user-friendly and JSON)
+  - File: keyrx_compiler/src/error.rs (extend from task 7)
+  - Implement format_error_user_friendly(error: &ParseError) -> String
+  - Implement format_error_json(error: &ParseError) -> String
+  - User-friendly format: file:line:column: error message with code snippet
+  - JSON format: {"error_code": "...", "message": "...", "file": "...", "line": ..., "column": ..., "suggestion": "..."}
+  - Add "did you mean" suggestions for unknown key names
+  - Purpose: Clear error messages for users and machines
+  - _Leverage: error.rs error types_
+  - _Requirements: 6.2, 6.3, 6.4_
+  - _Prompt: Role: Rust Developer with expertise in error formatting and UX | Task: Implement error formatting functions in keyrx_compiler/src/error.rs following requirements 6.2-6.4 | Restrictions: Must format errors for both human and machine consumption, include context (file/line/column), provide suggestions, JSON must be parseable | Success: Error messages are clear and actionable, JSON format is valid, suggestions are helpful_
+
+- [ ] 17. Write integration tests for CLI
+  - File: keyrx_compiler/tests/integration/cli_tests.rs
+  - Test compile command: Rhai → .krx file
+  - Test verify command: valid .krx → success, corrupted → error
+  - Test hash command: .krx → SHA256 hash output
+  - Test parse command: Rhai → JSON output
+  - Test --help for all commands
+  - Test error scenarios: missing files, invalid syntax, etc.
+  - Purpose: End-to-end verification of CLI functionality
+  - _Leverage: ai-dev-foundation integration test patterns_
+  - _Requirements: 7.3_
+  - _Prompt: Role: QA Engineer with expertise in integration testing and CLI testing | Task: Write comprehensive integration tests for CLI in keyrx_compiler/tests/integration/cli_tests.rs following requirement 7.3 | Restrictions: Must test all subcommands end-to-end, use temporary files, verify output formats, test error scenarios | Success: All integration tests pass, all CLI workflows verified, error handling tested_
+
+- [ ] 18. Write property-based tests for deterministic serialization
+  - File: keyrx_compiler/tests/property_tests.rs
+  - Use proptest or quickcheck crate
+  - Generate arbitrary ConfigRoot instances
+  - Test property: serialize(config) == serialize(config)
+  - Test property: deserialize(serialize(config)) == config (round-trip)
+  - Test property: hash(serialize(config1)) != hash(serialize(config2)) if config1 != config2
+  - Run 1000+ iterations
+  - Purpose: Verify deterministic serialization with random inputs
+  - _Leverage: proptest/quickcheck documentation_
+  - _Requirements: 7.4_
+  - _Prompt: Role: Rust Test Engineer with expertise in property-based testing and formal verification | Task: Write property-based tests for serialization in keyrx_compiler/tests/property_tests.rs following requirement 7.4 | Restrictions: Must use proptest or quickcheck, test determinism and round-trip properties, run 1000+ iterations, generate random valid configs | Success: All property tests pass with 1000+ iterations, deterministic serialization verified statistically_
+
+- [ ] 19. Set up fuzzing for parser
+  - File: keyrx_core/fuzz/fuzz_targets/fuzz_parser.rs
+  - Initialize cargo-fuzz if not already set up
+  - Create fuzz target that feeds random bytes to Rhai parser
+  - Ensure parser never panics on arbitrary input
+  - Run for 60+ seconds in CI
+  - Purpose: Discover parser edge cases and crashes
+  - _Leverage: cargo-fuzz documentation from ai-dev-foundation_
+  - _Requirements: 7.5_
+  - _Prompt: Role: Security Engineer with expertise in fuzzing and vulnerability discovery | Task: Set up fuzzing for Rhai parser in keyrx_core/fuzz/fuzz_targets/fuzz_parser.rs following requirement 7.5 | Restrictions: Must use cargo-fuzz, parser must never panic, run for 60+ seconds minimum, test arbitrary inputs | Success: Fuzz target runs without crashes, parser handles all inputs gracefully, no panics discovered_
+
+- [ ] 20. Set up fuzzing for deserializer
+  - File: keyrx_core/fuzz/fuzz_targets/fuzz_deserialize.rs
+  - Create fuzz target that feeds random bytes to deserializer
+  - Ensure deserializer never panics on arbitrary input
+  - Verify all invalid inputs return errors (not crashes)
+  - Run for 60+ seconds in CI
+  - Purpose: Discover deserialization edge cases and potential security issues
+  - _Leverage: cargo-fuzz documentation_
+  - _Requirements: 7.5_
+  - _Prompt: Role: Security Engineer with expertise in binary format fuzzing and memory safety | Task: Set up fuzzing for binary deserializer in keyrx_core/fuzz/fuzz_targets/fuzz_deserialize.rs following requirement 7.5 | Restrictions: Must use cargo-fuzz, deserializer must never panic or exhibit UB, all invalid inputs must return errors, run for 60+ seconds | Success: Fuzz target runs without crashes/UB, deserializer handles all inputs safely, no vulnerabilities discovered_
+
+- [ ] 21. Add integration test for multi-file imports
+  - File: keyrx_compiler/tests/integration/import_tests.rs
+  - Create test with 3+ Rhai files importing each other
+  - Test successful import resolution and merging
+  - Test circular import detection
+  - Test file not found errors
+  - Verify final ConfigRoot contains all imported devices
+  - Purpose: Verify import system works end-to-end
+  - _Leverage: ai-dev-foundation integration test patterns_
+  - _Requirements: 7.3, 4.1-4.5_
+  - _Prompt: Role: QA Engineer with expertise in integration testing and file system testing | Task: Write integration tests for multi-file imports in keyrx_compiler/tests/integration/import_tests.rs following requirements 7.3 and 4.1-4.5 | Restrictions: Must test all import scenarios, use temporary files, verify merged configuration, test error cases | Success: All import scenarios work correctly, circular imports detected, errors are clear, configurations merge properly_
+
+- [ ] 22. Update keyrx_core/src/lib.rs to export config module
+  - File: keyrx_core/src/lib.rs
+  - Add pub mod config; to export config module
+  - Add re-exports: pub use config::{ConfigRoot, DeviceConfig, KeyMapping, KeyCode, Version};
+  - Verify no_std compatibility
+  - Purpose: Make config types available to other crates
+  - _Leverage: structure.md module organization_
+  - _Requirements: 1.6_
+  - _Prompt: Role: Rust Developer with expertise in module systems and library design | Task: Update keyrx_core/src/lib.rs to export config module following requirement 1.6 | Restrictions: Must maintain no_std compatibility, export all public types, follow Rust module conventions | Success: Config types are accessible from keyrx_core, no_std builds work, all types exported correctly_
+
+- [ ] 23. Update keyrx_compiler/src/main.rs to add mod declarations
+  - File: keyrx_compiler/src/main.rs (update from task 15)
+  - Add mod declarations: mod parser; mod serialize; mod import_resolver; mod error;
+  - Verify all modules compile together
+  - Purpose: Wire all compiler modules together
+  - _Leverage: structure.md module organization_
+  - _Requirements: All_
+  - _Prompt: Role: Rust Developer with expertise in project structure and module organization | Task: Update keyrx_compiler/src/main.rs to declare all modules following structure.md conventions | Restrictions: Must declare all modules (parser, serialize, import_resolver, error), verify compilation, follow Rust module patterns | Success: All modules compile together, imports work correctly, no compilation errors_
+
+- [ ] 24. Add example Rhai configuration file
+  - File: keyrx_compiler/examples/simple.rhai
+  - Write example configuration with device() and map() calls
+  - Document syntax with comments
+  - Show 3-5 simple key mappings
+  - Purpose: Provide user-facing example of DSL syntax
+  - _Leverage: design.md Rhai DSL specification_
+  - _Requirements: 2.1, 2.2, 2.3_
+  - _Prompt: Role: Technical Writer with expertise in DSL documentation and examples | Task: Create example Rhai configuration file in keyrx_compiler/examples/simple.rhai demonstrating the DSL syntax | Restrictions: Must be valid Rhai syntax, show device() and map() usage, include helpful comments, keep it simple (3-5 mappings) | Success: Example is clear and working, demonstrates key DSL features, comments explain syntax_
+
+- [ ] 25. Add README.md for keyrx_compiler
+  - File: keyrx_compiler/README.md
+  - Document CLI usage with examples
+  - Show compile, verify, hash, parse commands
+  - Include example Rhai snippet
+  - Link to simple.rhai example
+  - Purpose: User-facing documentation for compiler
+  - _Leverage: design.md CLI specification_
+  - _Requirements: All_
+  - _Prompt: Role: Technical Writer with expertise in CLI documentation and user guides | Task: Create comprehensive README for keyrx_compiler documenting all CLI commands and usage | Restrictions: Must document all subcommands, include examples, reference simple.rhai example, keep it concise and actionable | Success: README is clear and complete, all commands documented with examples, users can learn the CLI quickly_
+
+- [ ] 26. Run full verification and fix any issues
+  - Execute: make verify
+  - Fix any clippy warnings
+  - Fix any format issues (cargo fmt)
+  - Ensure all tests pass
+  - Verify 90%+ coverage for config system
+  - Purpose: Final quality check before completion
+  - _Leverage: ai-dev-foundation verify.sh script_
+  - _Requirements: All_
+  - _Prompt: Role: Senior Rust Developer with expertise in code quality and CI/CD | Task: Run full verification (make verify) and fix any issues to meet quality standards | Restrictions: Must pass clippy with no warnings, code must be formatted, all tests must pass, coverage must be >90% | Success: make verify passes, no clippy warnings, all tests green, coverage >90%, ready for production_
