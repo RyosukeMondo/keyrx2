@@ -199,7 +199,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
   - _Prompt: Role: Rust Developer with expertise in Rhai scripting and DSL design | Task: Implement complete Rhai DSL parser in keyrx_compiler/src/parser.rs following requirements 2.1-2.7 with all custom functions and prefix validation | Restrictions: Must register all functions (map, tap_hold, when, when_not, with_shift, with_ctrl, with_alt, with_mods, device), enforce resource limits, handle syntax errors gracefully, integrate with import resolver, use prefix validation from task 9 | Success: Parser evaluates all Rhai DSL operations correctly, custom functions work, resource limits enforced, error messages include line/column, prefix validation integrated_
 
-- [ ] 14. Write unit tests for parser
+- [x] 14. Write unit tests for parser
   - File: keyrx_compiler/src/parser.rs (add #[cfg(test)] mod tests)
   - Test device() function creates DeviceConfig
   - Test map() function with VK_, MD_, LK_ outputs

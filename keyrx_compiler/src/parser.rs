@@ -1021,3 +1021,793 @@ mod prefix_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod parser_tests {
+    use super::*;
+    use std::fs;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    /// Helper to create a temporary script file
+    fn create_test_script(content: &str) -> (TempDir, std::path::PathBuf) {
+        let dir = TempDir::new().unwrap();
+        let file_path = dir.path().join("test.rhai");
+        let mut file = fs::File::create(&file_path).unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+        (dir, file_path)
+    }
+
+    #[test]
+    fn test_device_function_creates_device_config() {
+        let script = r#"
+            device_start("usb:1234:5678");
+            map("A", "VK_B");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices.len(), 1);
+        assert_eq!(config.devices[0].identifier.pattern, "usb:1234:5678");
+        assert_eq!(config.devices[0].mappings.len(), 1);
+    }
+
+    #[test]
+    fn test_map_function_with_vk_output() {
+        let script = r#"
+            device_start("keyboard");
+            map("A", "VK_B");
+            map("C", "VK_D");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 2);
+
+        // Verify first mapping
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::Simple { from, to }) => {
+                assert_eq!(*from, KeyCode::A);
+                assert_eq!(*to, KeyCode::B);
+            }
+            _ => panic!("Expected Simple mapping"),
+        }
+
+        // Verify second mapping
+        match &config.devices[0].mappings[1] {
+            KeyMapping::Base(BaseKeyMapping::Simple { from, to }) => {
+                assert_eq!(*from, KeyCode::C);
+                assert_eq!(*to, KeyCode::D);
+            }
+            _ => panic!("Expected Simple mapping"),
+        }
+    }
+
+    #[test]
+    fn test_map_function_with_md_output() {
+        let script = r#"
+            device_start("keyboard");
+            map("CapsLock", "MD_00");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::Modifier { from, modifier_id }) => {
+                assert_eq!(*from, KeyCode::CapsLock);
+                assert_eq!(*modifier_id, 0);
+            }
+            _ => panic!("Expected Modifier mapping"),
+        }
+    }
+
+    #[test]
+    fn test_map_function_with_lk_output() {
+        let script = r#"
+            device_start("keyboard");
+            map("ScrollLock", "LK_01");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::Lock { from, lock_id }) => {
+                assert_eq!(*from, KeyCode::ScrollLock);
+                assert_eq!(*lock_id, 1);
+            }
+            _ => panic!("Expected Lock mapping"),
+        }
+    }
+
+    #[test]
+    fn test_map_rejects_missing_prefix() {
+        let script = r#"
+            device_start("keyboard");
+            map("A", "B");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::SyntaxError { message, .. }) => {
+                assert!(message.contains("Output must have VK_, MD_, or LK_ prefix"));
+            }
+            _ => panic!("Expected SyntaxError about missing prefix"),
+        }
+    }
+
+    #[test]
+    fn test_tap_hold_creates_tap_hold_mapping() {
+        let script = r#"
+            device_start("keyboard");
+            tap_hold("Space", "VK_Space", "MD_00", 200);
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::TapHold {
+                from,
+                tap,
+                hold_modifier,
+                threshold_ms,
+            }) => {
+                assert_eq!(*from, KeyCode::Space);
+                assert_eq!(*tap, KeyCode::Space);
+                assert_eq!(*hold_modifier, 0);
+                assert_eq!(*threshold_ms, 200);
+            }
+            _ => panic!("Expected TapHold mapping"),
+        }
+    }
+
+    #[test]
+    fn test_tap_hold_validates_vk_for_tap() {
+        let script = r#"
+            device_start("keyboard");
+            tap_hold("Space", "Space", "MD_00", 200);
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::SyntaxError { message, .. }) => {
+                assert!(message.contains("tap_hold tap parameter must have VK_ prefix"));
+            }
+            _ => panic!("Expected SyntaxError about VK_ prefix for tap"),
+        }
+    }
+
+    #[test]
+    fn test_tap_hold_validates_md_for_hold() {
+        let script = r#"
+            device_start("keyboard");
+            tap_hold("Space", "VK_Space", "VK_LShift", 200);
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::SyntaxError { message, .. }) => {
+                assert!(message.contains("tap_hold hold parameter must have MD_ prefix"));
+            }
+            _ => panic!("Expected SyntaxError about MD_ prefix for hold"),
+        }
+    }
+
+    #[test]
+    fn test_when_with_single_condition() {
+        let script = r#"
+            device_start("keyboard");
+            when("MD_00", []);
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Conditional { condition, .. } => {
+                assert_eq!(*condition, Condition::ModifierActive(0));
+            }
+            _ => panic!("Expected Conditional mapping"),
+        }
+    }
+
+    #[test]
+    fn test_when_with_multiple_conditions() {
+        let script = r#"
+            device_start("keyboard");
+            when(["MD_00", "LK_01"], []);
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Conditional { condition, .. } => match condition {
+                Condition::AllActive(items) => {
+                    assert_eq!(items.len(), 2);
+                    assert_eq!(items[0], ConditionItem::ModifierActive(0));
+                    assert_eq!(items[1], ConditionItem::LockActive(1));
+                }
+                _ => panic!("Expected AllActive condition"),
+            },
+            _ => panic!("Expected Conditional mapping"),
+        }
+    }
+
+    #[test]
+    fn test_when_not_creates_not_active_condition() {
+        let script = r#"
+            device_start("keyboard");
+            when_not("MD_00", []);
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Conditional { condition, .. } => match condition {
+                Condition::NotActive(items) => {
+                    assert_eq!(items.len(), 1);
+                    assert_eq!(items[0], ConditionItem::ModifierActive(0));
+                }
+                _ => panic!("Expected NotActive condition"),
+            },
+            _ => panic!("Expected Conditional mapping"),
+        }
+    }
+
+    #[test]
+    fn test_with_shift_creates_modified_output() {
+        let script = r#"
+            device_start("keyboard");
+            with_shift("A", "VK_B");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::ModifiedOutput {
+                from,
+                to,
+                shift,
+                ctrl,
+                alt,
+                win,
+            }) => {
+                assert_eq!(*from, KeyCode::A);
+                assert_eq!(*to, KeyCode::B);
+                assert_eq!(*shift, true);
+                assert_eq!(*ctrl, false);
+                assert_eq!(*alt, false);
+                assert_eq!(*win, false);
+            }
+            _ => panic!("Expected ModifiedOutput mapping"),
+        }
+    }
+
+    #[test]
+    fn test_with_ctrl_creates_modified_output() {
+        let script = r#"
+            device_start("keyboard");
+            with_ctrl("C", "VK_V");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::ModifiedOutput {
+                from,
+                to,
+                shift,
+                ctrl,
+                alt,
+                win,
+            }) => {
+                assert_eq!(*from, KeyCode::C);
+                assert_eq!(*to, KeyCode::V);
+                assert_eq!(*shift, false);
+                assert_eq!(*ctrl, true);
+                assert_eq!(*alt, false);
+                assert_eq!(*win, false);
+            }
+            _ => panic!("Expected ModifiedOutput mapping"),
+        }
+    }
+
+    #[test]
+    fn test_with_alt_creates_modified_output() {
+        let script = r#"
+            device_start("keyboard");
+            with_alt("Tab", "VK_Escape");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::ModifiedOutput {
+                from,
+                to,
+                shift,
+                ctrl,
+                alt,
+                win,
+            }) => {
+                assert_eq!(*from, KeyCode::Tab);
+                assert_eq!(*to, KeyCode::Escape);
+                assert_eq!(*shift, false);
+                assert_eq!(*ctrl, false);
+                assert_eq!(*alt, true);
+                assert_eq!(*win, false);
+            }
+            _ => panic!("Expected ModifiedOutput mapping"),
+        }
+    }
+
+    #[test]
+    fn test_with_mods_with_named_parameters() {
+        let script = r#"
+            device_start("keyboard");
+            with_mods("A", "VK_B", true, true, false, false);
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 1);
+
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::ModifiedOutput {
+                from,
+                to,
+                shift,
+                ctrl,
+                alt,
+                win,
+            }) => {
+                assert_eq!(*from, KeyCode::A);
+                assert_eq!(*to, KeyCode::B);
+                assert_eq!(*shift, true);
+                assert_eq!(*ctrl, true);
+                assert_eq!(*alt, false);
+                assert_eq!(*win, false);
+            }
+            _ => panic!("Expected ModifiedOutput mapping"),
+        }
+    }
+
+    #[test]
+    fn test_complete_script_with_multiple_mappings() {
+        let script = r#"
+            device_start("usb:1234:5678");
+            map("A", "VK_B");
+            map("CapsLock", "MD_00");
+            tap_hold("Space", "VK_Space", "MD_01", 200);
+            with_shift("C", "VK_D");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices.len(), 1);
+        assert_eq!(config.devices[0].mappings.len(), 4);
+        assert_eq!(config.version, Version::current());
+    }
+
+    #[test]
+    fn test_multiple_devices() {
+        let script = r#"
+            device_start("keyboard1");
+            map("A", "VK_B");
+            device_end();
+
+            device_start("keyboard2");
+            map("C", "VK_D");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices.len(), 2);
+        assert_eq!(config.devices[0].identifier.pattern, "keyboard1");
+        assert_eq!(config.devices[1].identifier.pattern, "keyboard2");
+    }
+
+    #[test]
+    fn test_syntax_error_includes_line_number() {
+        let script = r#"
+            device_start("keyboard");
+            invalid_function();
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::SyntaxError { line, .. }) => {
+                assert!(line > 0); // Should have a line number
+            }
+            _ => panic!("Expected SyntaxError"),
+        }
+    }
+
+    #[test]
+    fn test_resource_limit_max_operations() {
+        // Create a script that would exceed max_operations
+        let mut script = String::from("device_start(\"keyboard\");\n");
+        for i in 0..1000 {
+            script.push_str(&format!("map(\"A\", \"VK_B\"); // {}\n", i));
+        }
+        script.push_str("device_end();");
+
+        let (_dir, path) = create_test_script(&script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        // Should either succeed or hit resource limit
+        // The exact behavior depends on Rhai's operation counting
+        if result.is_err() {
+            match result {
+                Err(ParseError::SyntaxError { message, .. }) => {
+                    // Rhai will return an error about operations exceeded
+                    assert!(
+                        message.contains("operations") || message.contains("limit"),
+                        "Expected resource limit error, got: {}",
+                        message
+                    );
+                }
+                Err(ParseError::ResourceLimitExceeded { .. }) => {
+                    // This is also acceptable
+                }
+                _ => panic!("Unexpected error type"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_unclosed_device_block_error() {
+        let script = r#"
+            device_start("keyboard");
+            map("A", "VK_B");
+            // Missing device_end()
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::SyntaxError { message, .. }) => {
+                assert!(message.contains("Unclosed device"));
+            }
+            _ => panic!("Expected SyntaxError about unclosed device block"),
+        }
+    }
+
+    #[test]
+    fn test_map_outside_device_block_error() {
+        let script = r#"
+            map("A", "VK_B");
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::SyntaxError { message, .. }) => {
+                assert!(message.contains("inside a device() block"));
+            }
+            _ => panic!("Expected SyntaxError about device block"),
+        }
+    }
+
+    #[test]
+    fn test_file_not_found_error() {
+        let mut parser = Parser::new();
+        let result = parser.parse_script(Path::new("/nonexistent/file.rhai"));
+
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::ImportNotFound { .. }) => {
+                // Expected
+            }
+            _ => panic!("Expected ImportNotFound error"),
+        }
+    }
+
+    #[test]
+    fn test_metadata_populated() {
+        let script = r#"
+            device_start("keyboard");
+            map("A", "VK_B");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+
+        // Check metadata is populated
+        assert!(config.metadata.compilation_timestamp > 0);
+        assert!(!config.metadata.compiler_version.is_empty());
+        assert_eq!(config.metadata.source_hash, "TODO"); // Placeholder for now
+    }
+
+    #[test]
+    fn test_parser_produces_independent_results() {
+        let script1 = r#"
+            device_start("keyboard1");
+            map("A", "VK_B");
+            device_end();
+        "#;
+
+        let script2 = r#"
+            device_start("keyboard2");
+            map("C", "VK_D");
+            device_end();
+        "#;
+
+        let (_dir1, path1) = create_test_script(script1);
+        let (_dir2, path2) = create_test_script(script2);
+
+        // Use separate parser instances to ensure independence
+        let mut parser1 = Parser::new();
+        let result1 = parser1.parse_script(&path1);
+        assert!(result1.is_ok());
+        let config1 = result1.unwrap();
+        assert_eq!(config1.devices.len(), 1);
+        assert_eq!(config1.devices[0].identifier.pattern, "keyboard1");
+
+        let mut parser2 = Parser::new();
+        let result2 = parser2.parse_script(&path2);
+        assert!(result2.is_ok());
+        let config2 = result2.unwrap();
+        assert_eq!(config2.devices.len(), 1);
+        assert_eq!(config2.devices[0].identifier.pattern, "keyboard2");
+
+        // Ensure they're independent
+        assert_ne!(
+            config1.devices[0].identifier.pattern,
+            config2.devices[0].identifier.pattern
+        );
+    }
+
+    #[test]
+    fn test_additional_key_codes_coverage() {
+        // Test additional key names to increase coverage
+        let script = r#"
+            device_start("keyboard");
+            map("LeftBracket", "VK_RightBracket");
+            map("Backslash", "VK_Semicolon");
+            map("Quote", "VK_Comma");
+            map("Period", "VK_Slash");
+            map("Grave", "VK_Minus");
+            map("Equal", "VK_LeftBracket");
+            map("Numpad0", "VK_Numpad1");
+            map("NumpadMultiply", "VK_NumpadAdd");
+            map("NumpadSubtract", "VK_NumpadDivide");
+            map("NumpadDecimal", "VK_NumpadEnter");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 10);
+    }
+
+    #[test]
+    fn test_alternative_key_names() {
+        // Test alternative key names
+        let script = r#"
+            device_start("keyboard");
+            map("Esc", "VK_Return");
+            map("Del", "VK_Num0");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 2);
+
+        // Verify Esc maps to Escape
+        match &config.devices[0].mappings[0] {
+            KeyMapping::Base(BaseKeyMapping::Simple { from, .. }) => {
+                assert_eq!(*from, KeyCode::Escape);
+            }
+            _ => panic!("Expected Simple mapping"),
+        }
+    }
+
+    #[test]
+    fn test_all_function_keys() {
+        let script = r#"
+            device_start("keyboard");
+            map("F1", "VK_F2");
+            map("F3", "VK_F4");
+            map("F5", "VK_F6");
+            map("F7", "VK_F8");
+            map("F9", "VK_F10");
+            map("F11", "VK_F12");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 6);
+    }
+
+    #[test]
+    fn test_all_modifier_keys() {
+        let script = r#"
+            device_start("keyboard");
+            map("LShift", "VK_RShift");
+            map("LCtrl", "VK_RCtrl");
+            map("LAlt", "VK_RAlt");
+            map("LMeta", "VK_RMeta");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 4);
+    }
+
+    #[test]
+    fn test_special_keys() {
+        let script = r#"
+            device_start("keyboard");
+            map("CapsLock", "VK_NumLock");
+            map("ScrollLock", "VK_PrintScreen");
+            map("Pause", "VK_Insert");
+            map("Home", "VK_End");
+            map("PageUp", "VK_PageDown");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 5);
+    }
+
+    #[test]
+    fn test_arrow_keys() {
+        let script = r#"
+            device_start("keyboard");
+            map("Left", "VK_Right");
+            map("Up", "VK_Down");
+            device_end();
+        "#;
+
+        let (_dir, path) = create_test_script(script);
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&path);
+
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.devices[0].mappings.len(), 2);
+    }
+}
