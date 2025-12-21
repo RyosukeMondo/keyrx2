@@ -6,6 +6,10 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[[bench]]
+name = "compile_bench"
+harness = false
+
 [dependencies]
 keyrx_core = { path = "../keyrx_core" }
 rhai = { workspace = true }
@@ -20,3 +24,4 @@ tempfile = "3.8"
 assert_cmd = "2.0"
 predicates = "3.0"
 proptest = { workspace = true }
+criterion = { workspace = true }
