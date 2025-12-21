@@ -67,7 +67,7 @@
   - _Requirements: 1.2_
   - _Prompt: Role: Rust Developer with expertise in data modeling and serialization | Task: Define DeviceIdentifier and DeviceConfig structs in keyrx_core/src/config.rs following requirement 1.2 | Restrictions: Must use #[repr(C)], derive all rkyv traits, DeviceIdentifier contains String pattern, DeviceConfig contains identifier and Vec<KeyMapping> | Success: Both structs compile correctly, rkyv traits work, DeviceConfig can store multiple mappings_
 
-- [ ] 6. Define Metadata and ConfigRoot structs
+- [x] 6. Define Metadata and ConfigRoot structs
   - File: keyrx_core/src/config.rs (same file as tasks 1-5)
   - Create Metadata struct with compilation_timestamp (u64), compiler_version (String), source_hash (String)
   - Create ConfigRoot struct with version (Version), devices (Vec<DeviceConfig>), metadata (Metadata)
