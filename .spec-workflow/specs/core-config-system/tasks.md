@@ -40,7 +40,7 @@
   - _Requirements: 1.4_
   - _Prompt: Role: Rust Developer with expertise in enum design and binary serialization | Task: Define Condition enum with 4 variants in keyrx_core/src/config.rs following requirement 1.4 | Restrictions: Must use #[repr(C)], include all 4 variants, support both single conditions and AND logic, derive all required rkyv traits | Success: Enum compiles, all variants work correctly, serialization works, supports nested conditions_
 
-- [ ] 4. Define KeyMapping enum with 6 variants
+- [x] 4. Define KeyMapping enum with 6 variants
   - File: keyrx_core/src/config.rs (same file as tasks 1-3)
   - Create KeyMapping enum with #[repr(C)]
   - Define Simple variant: { from: KeyCode, to: KeyCode } - 1:1 remapping

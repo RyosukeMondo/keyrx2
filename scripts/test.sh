@@ -21,12 +21,53 @@ INTEGRATION_MODE=false
 FUZZ_DURATION=""
 BENCH_MODE=false
 
+# Usage information
+usage() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Execute tests with flexible filtering options.
+
+OPTIONS:
+    --unit              Run only unit tests (lib tests)
+    --integration       Run only integration tests (tests/ directory)
+    --fuzz DURATION     Run fuzz tests for DURATION seconds (requires cargo-fuzz)
+    --bench             Run benchmarks (requires nightly toolchain)
+    --error             Show only errors
+    --json              Output results in JSON format
+    --quiet             Suppress non-error output
+    --log-file PATH     Specify custom log file path
+    -h, --help          Show this help message
+
+EXAMPLES:
+    $(basename "$0")                    # Run all tests
+    $(basename "$0") --unit             # Unit tests only
+    $(basename "$0") --integration      # Integration tests only
+    $(basename "$0") --fuzz 60          # Fuzz for 60 seconds
+    $(basename "$0") --bench            # Run benchmarks
+    $(basename "$0") --json             # JSON output
+
+EXIT CODES:
+    0 - Tests passed
+    1 - Tests failed
+    2 - Missing required tool
+
+OUTPUT MARKERS:
+    === accomplished === - Tests passed
+    === failed ===       - Tests failed
+EOF
+}
+
 # Parse arguments
 parse_common_flags "$@"
 set -- "${REMAINING_ARGS[@]}"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
+        -h|--help)
+            usage
+            exit 0
+            ;;
         --unit)
             UNIT_MODE=true
             shift
@@ -49,7 +90,8 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             log_error "Unknown option: $1"
-            log_error "Usage: $0 [--unit|--integration|--fuzz DURATION|--bench] [--error] [--json] [--quiet] [--log-file PATH]"
+            echo ""
+            usage
             exit 1
             ;;
     esac

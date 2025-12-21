@@ -248,6 +248,54 @@ pub enum Condition {
     NotActive(Vec<ConditionItem>),
 }
 
+/// Base key mapping without conditional nesting
+///
+/// Used as the leaf mappings within conditional blocks.
+/// This prevents infinite recursion in rkyv serialization.
+#[derive(Archive, Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+#[repr(C)]
+pub enum BaseKeyMapping {
+    /// Simple 1:1 key remapping
+    Simple { from: KeyCode, to: KeyCode },
+    /// Key acts as custom modifier (MD_00-MD_FE)
+    Modifier { from: KeyCode, modifier_id: u8 },
+    /// Key toggles custom lock (LK_00-LK_FE)
+    Lock { from: KeyCode, lock_id: u8 },
+    /// Dual tap/hold behavior
+    TapHold {
+        from: KeyCode,
+        tap: KeyCode,
+        hold_modifier: u8,
+        threshold_ms: u16,
+    },
+    /// Output with physical modifiers
+    ModifiedOutput {
+        from: KeyCode,
+        to: KeyCode,
+        shift: bool,
+        ctrl: bool,
+        alt: bool,
+        win: bool,
+    },
+}
+
+/// Key mapping configuration
+///
+/// Defines all possible mapping types.
+/// Conditional mappings contain base mappings to limit recursion depth to 1 level.
+#[derive(Archive, Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+#[repr(C)]
+pub enum KeyMapping {
+    /// Base mapping (non-conditional)
+    Base(BaseKeyMapping),
+    /// Conditional mappings (when/when_not)
+    /// Contains only base mappings to avoid infinite recursion
+    Conditional {
+        condition: Condition,
+        mappings: Vec<BaseKeyMapping>,
+    },
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

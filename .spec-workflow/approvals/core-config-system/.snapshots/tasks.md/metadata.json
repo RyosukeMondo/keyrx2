@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/core-config-system/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-21T07:35:02.882Z",
+      "trigger": "initial",
+      "approvalId": "approval_1766302502878_fep04k2j3",
+      "approvalTitle": "Tasks for Core Configuration System"
+    }
+  ]
+}
