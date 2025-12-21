@@ -6,14 +6,539 @@
 //! - MD_ prefix: Custom modifiers (00-FE hex range)
 //! - LK_ prefix: Custom locks (00-FE hex range)
 
+// Allow dead_code for parser components that will be used by CLI in task 18
+// Functions are called from Rhai closures which the compiler cannot detect
+#![allow(dead_code)]
+
 use crate::error::ParseError;
-use keyrx_core::config::{Condition, KeyCode};
+use keyrx_core::config::{
+    BaseKeyMapping, Condition, ConditionItem, ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode,
+    KeyMapping, Metadata, Version,
+};
+use rhai::{Array, Engine, EvalAltResult, Scope};
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// List of physical modifier names that cannot be used with MD_ prefix.
-#[allow(dead_code)] // Will be used by full parser in task 13
 const PHYSICAL_MODIFIERS: &[&str] = &[
     "LShift", "RShift", "LCtrl", "RCtrl", "LAlt", "RAlt", "LMeta", "RMeta",
 ];
+
+/// Parser state shared across Rhai custom functions
+#[derive(Debug, Clone)]
+struct ParserState {
+    /// The configuration being built
+    devices: Vec<DeviceConfig>,
+    /// Current device being configured (None if no device() block active)
+    current_device: Option<DeviceConfig>,
+}
+
+impl ParserState {
+    fn new() -> Self {
+        Self {
+            devices: Vec::new(),
+            current_device: None,
+        }
+    }
+}
+
+/// Main parser for Rhai DSL
+pub struct Parser {
+    engine: Engine,
+    state: Arc<Mutex<ParserState>>,
+}
+
+impl Parser {
+    /// Create a new parser with all custom functions registered
+    pub fn new() -> Self {
+        let mut engine = Engine::new();
+        let state = Arc::new(Mutex::new(ParserState::new()));
+
+        // Set resource limits
+        engine.set_max_operations(10_000);
+        engine.set_max_expr_depths(100, 100);
+        engine.set_max_call_levels(100);
+
+        // Register custom functions
+        Self::register_map_function(&mut engine, Arc::clone(&state));
+        Self::register_tap_hold_function(&mut engine, Arc::clone(&state));
+        Self::register_when_functions(&mut engine, Arc::clone(&state));
+        Self::register_modifier_functions(&mut engine, Arc::clone(&state));
+        Self::register_device_function(&mut engine, Arc::clone(&state));
+
+        Self { engine, state }
+    }
+
+    /// Parse a Rhai script file and return the resulting ConfigRoot
+    pub fn parse_script(&mut self, path: &Path) -> Result<ConfigRoot, ParseError> {
+        // Read the script file
+        let script = std::fs::read_to_string(path).map_err(|_e| ParseError::ImportNotFound {
+            path: path.to_path_buf(),
+            searched_paths: vec![path.to_path_buf()],
+        })?;
+
+        // Set up timeout
+        let start_time = SystemTime::now();
+        let timeout = Duration::from_secs(10);
+
+        // Execute the script
+        let mut scope = Scope::new();
+        self.engine
+            .run_with_scope(&mut scope, &script)
+            .map_err(|e| Self::convert_rhai_error(e, path))?;
+
+        // Check timeout
+        if SystemTime::now()
+            .duration_since(start_time)
+            .unwrap_or(Duration::ZERO)
+            > timeout
+        {
+            return Err(ParseError::ResourceLimitExceeded {
+                limit_type: "execution timeout (10 seconds)".to_string(),
+            });
+        }
+
+        // Build final ConfigRoot
+        let state = self.state.lock().unwrap();
+
+        // If there's a current device, it wasn't properly finalized
+        if state.current_device.is_some() {
+            return Err(ParseError::SyntaxError {
+                file: path.to_path_buf(),
+                line: 0,
+                column: 0,
+                message: "Unclosed device() block".to_string(),
+            });
+        }
+
+        let metadata = Metadata {
+            compilation_timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            compiler_version: env!("CARGO_PKG_VERSION").to_string(),
+            source_hash: "TODO".to_string(), // Will be computed by serializer
+        };
+
+        Ok(ConfigRoot {
+            version: Version::current(),
+            devices: state.devices.clone(),
+            metadata,
+        })
+    }
+
+    /// Convert Rhai error to ParseError
+    fn convert_rhai_error(err: Box<EvalAltResult>, path: &Path) -> ParseError {
+        let position = err.position();
+        ParseError::SyntaxError {
+            file: path.to_path_buf(),
+            line: position.line().unwrap_or(0),
+            column: position.position().unwrap_or(0),
+            message: err.to_string(),
+        }
+    }
+
+    /// Register the map() function
+    fn register_map_function(engine: &mut Engine, state: Arc<Mutex<ParserState>>) {
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "map",
+            move |from: &str, to: &str| -> Result<(), Box<EvalAltResult>> {
+                let mut state = state_clone.lock().unwrap();
+
+                // Parse 'from' key (no prefix expected for physical keys)
+                let from_key =
+                    parse_key_name(from).map_err(|e| format!("Invalid 'from' key: {}", e))?;
+
+                // Parse 'to' with prefix validation
+                let mapping = if to.starts_with("VK_") {
+                    // Virtual key output
+                    let to_key =
+                        parse_virtual_key(to).map_err(|e| format!("Invalid 'to' key: {}", e))?;
+                    BaseKeyMapping::Simple {
+                        from: from_key,
+                        to: to_key,
+                    }
+                } else if to.starts_with("MD_") {
+                    // Custom modifier
+                    let modifier_id =
+                        parse_modifier_id(to).map_err(|e| format!("Invalid modifier ID: {}", e))?;
+                    BaseKeyMapping::Modifier {
+                        from: from_key,
+                        modifier_id,
+                    }
+                } else if to.starts_with("LK_") {
+                    // Custom lock
+                    let lock_id =
+                        parse_lock_id(to).map_err(|e| format!("Invalid lock ID: {}", e))?;
+                    BaseKeyMapping::Lock {
+                        from: from_key,
+                        lock_id,
+                    }
+                } else {
+                    return Err(format!(
+                        "Output must have VK_, MD_, or LK_ prefix: {} → use VK_{} for virtual key",
+                        to, to
+                    )
+                    .into());
+                };
+
+                // Add to current device
+                if let Some(ref mut device) = state.current_device {
+                    device.mappings.push(KeyMapping::Base(mapping));
+                    Ok(())
+                } else {
+                    Err("map() must be called inside a device() block".into())
+                }
+            },
+        );
+    }
+
+    /// Register the tap_hold() function
+    fn register_tap_hold_function(engine: &mut Engine, state: Arc<Mutex<ParserState>>) {
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "tap_hold",
+            move |key: &str,
+                  tap: &str,
+                  hold: &str,
+                  threshold_ms: i64|
+                  -> Result<(), Box<EvalAltResult>> {
+                let mut state = state_clone.lock().unwrap();
+
+                // Parse key (no prefix)
+                let from_key = parse_key_name(key).map_err(|e| format!("Invalid key: {}", e))?;
+
+                // Parse tap (must have VK_ prefix)
+                if !tap.starts_with("VK_") {
+                    return Err(format!(
+                        "tap_hold tap parameter must have VK_ prefix, got: {}",
+                        tap
+                    )
+                    .into());
+                }
+                let tap_key =
+                    parse_virtual_key(tap).map_err(|e| format!("Invalid tap key: {}", e))?;
+
+                // Parse hold (must have MD_ prefix)
+                if !hold.starts_with("MD_") {
+                    return Err(format!(
+                        "tap_hold hold parameter must have MD_ prefix, got: {}",
+                        hold
+                    )
+                    .into());
+                }
+                let hold_modifier =
+                    parse_modifier_id(hold).map_err(|e| format!("Invalid hold modifier: {}", e))?;
+
+                let mapping = BaseKeyMapping::TapHold {
+                    from: from_key,
+                    tap: tap_key,
+                    hold_modifier,
+                    threshold_ms: threshold_ms as u16,
+                };
+
+                // Add to current device
+                if let Some(ref mut device) = state.current_device {
+                    device.mappings.push(KeyMapping::Base(mapping));
+                    Ok(())
+                } else {
+                    Err("tap_hold() must be called inside a device() block".into())
+                }
+            },
+        );
+    }
+
+    /// Register when() and when_not() functions
+    fn register_when_functions(engine: &mut Engine, state: Arc<Mutex<ParserState>>) {
+        // when() with single condition (string)
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "when",
+            move |cond: &str, _mappings: Array| -> Result<(), Box<EvalAltResult>> {
+                let condition = parse_condition_string(cond)
+                    .map_err(|e| format!("Invalid condition: {}", e))?;
+
+                // Convert mappings array to Vec<BaseKeyMapping>
+                // (In practice, this would need proper implementation)
+                // For now, we'll store the condition
+                let mut state = state_clone.lock().unwrap();
+                if let Some(ref mut device) = state.current_device {
+                    // Note: This is simplified - proper implementation would parse the closure
+                    device.mappings.push(KeyMapping::Conditional {
+                        condition,
+                        mappings: Vec::new(), // TODO: Parse from closure
+                    });
+                    Ok(())
+                } else {
+                    Err("when() must be called inside a device() block".into())
+                }
+            },
+        );
+
+        // when() with multiple conditions (array)
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "when",
+            move |conds: Array, _mappings: Array| -> Result<(), Box<EvalAltResult>> {
+                let mut condition_items = Vec::new();
+                for cond_dyn in conds {
+                    let cond_str = cond_dyn
+                        .into_string()
+                        .map_err(|_| "Condition must be a string")?;
+                    let cond = parse_condition_string(&cond_str)
+                        .map_err(|e| format!("Invalid condition: {}", e))?;
+
+                    // Convert to ConditionItem
+                    match cond {
+                        Condition::ModifierActive(id) => {
+                            condition_items.push(ConditionItem::ModifierActive(id))
+                        }
+                        Condition::LockActive(id) => {
+                            condition_items.push(ConditionItem::LockActive(id))
+                        }
+                        _ => return Err("Only single modifiers/locks allowed in array".into()),
+                    }
+                }
+
+                let condition = Condition::AllActive(condition_items);
+
+                let mut state = state_clone.lock().unwrap();
+                if let Some(ref mut device) = state.current_device {
+                    device.mappings.push(KeyMapping::Conditional {
+                        condition,
+                        mappings: Vec::new(), // TODO: Parse from closure
+                    });
+                    Ok(())
+                } else {
+                    Err("when() must be called inside a device() block".into())
+                }
+            },
+        );
+
+        // when_not() with single condition
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "when_not",
+            move |cond: &str, _mappings: Array| -> Result<(), Box<EvalAltResult>> {
+                let condition = parse_condition_string(cond)
+                    .map_err(|e| format!("Invalid condition: {}", e))?;
+
+                // Convert to NotActive
+                let condition_item = match condition {
+                    Condition::ModifierActive(id) => ConditionItem::ModifierActive(id),
+                    Condition::LockActive(id) => ConditionItem::LockActive(id),
+                    _ => return Err("Only single modifiers/locks allowed in when_not".into()),
+                };
+
+                let condition = Condition::NotActive(vec![condition_item]);
+
+                let mut state = state_clone.lock().unwrap();
+                if let Some(ref mut device) = state.current_device {
+                    device.mappings.push(KeyMapping::Conditional {
+                        condition,
+                        mappings: Vec::new(), // TODO: Parse from closure
+                    });
+                    Ok(())
+                } else {
+                    Err("when_not() must be called inside a device() block".into())
+                }
+            },
+        );
+    }
+
+    /// Register with_shift(), with_ctrl(), with_alt(), with_mods() functions
+    fn register_modifier_functions(engine: &mut Engine, state: Arc<Mutex<ParserState>>) {
+        // with_shift()
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "with_shift",
+            move |from: &str, to: &str| -> Result<(), Box<EvalAltResult>> {
+                let mut state = state_clone.lock().unwrap();
+
+                let from_key =
+                    parse_key_name(from).map_err(|e| format!("Invalid 'from' key: {}", e))?;
+
+                if !to.starts_with("VK_") {
+                    return Err(format!("with_shift 'to' must have VK_ prefix, got: {}", to).into());
+                }
+                let to_key =
+                    parse_virtual_key(to).map_err(|e| format!("Invalid 'to' key: {}", e))?;
+
+                let mapping = BaseKeyMapping::ModifiedOutput {
+                    from: from_key,
+                    to: to_key,
+                    shift: true,
+                    ctrl: false,
+                    alt: false,
+                    win: false,
+                };
+
+                if let Some(ref mut device) = state.current_device {
+                    device.mappings.push(KeyMapping::Base(mapping));
+                    Ok(())
+                } else {
+                    Err("with_shift() must be called inside a device() block".into())
+                }
+            },
+        );
+
+        // with_ctrl()
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "with_ctrl",
+            move |from: &str, to: &str| -> Result<(), Box<EvalAltResult>> {
+                let mut state = state_clone.lock().unwrap();
+
+                let from_key =
+                    parse_key_name(from).map_err(|e| format!("Invalid 'from' key: {}", e))?;
+
+                if !to.starts_with("VK_") {
+                    return Err(format!("with_ctrl 'to' must have VK_ prefix, got: {}", to).into());
+                }
+                let to_key =
+                    parse_virtual_key(to).map_err(|e| format!("Invalid 'to' key: {}", e))?;
+
+                let mapping = BaseKeyMapping::ModifiedOutput {
+                    from: from_key,
+                    to: to_key,
+                    shift: false,
+                    ctrl: true,
+                    alt: false,
+                    win: false,
+                };
+
+                if let Some(ref mut device) = state.current_device {
+                    device.mappings.push(KeyMapping::Base(mapping));
+                    Ok(())
+                } else {
+                    Err("with_ctrl() must be called inside a device() block".into())
+                }
+            },
+        );
+
+        // with_alt()
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "with_alt",
+            move |from: &str, to: &str| -> Result<(), Box<EvalAltResult>> {
+                let mut state = state_clone.lock().unwrap();
+
+                let from_key =
+                    parse_key_name(from).map_err(|e| format!("Invalid 'from' key: {}", e))?;
+
+                if !to.starts_with("VK_") {
+                    return Err(format!("with_alt 'to' must have VK_ prefix, got: {}", to).into());
+                }
+                let to_key =
+                    parse_virtual_key(to).map_err(|e| format!("Invalid 'to' key: {}", e))?;
+
+                let mapping = BaseKeyMapping::ModifiedOutput {
+                    from: from_key,
+                    to: to_key,
+                    shift: false,
+                    ctrl: false,
+                    alt: true,
+                    win: false,
+                };
+
+                if let Some(ref mut device) = state.current_device {
+                    device.mappings.push(KeyMapping::Base(mapping));
+                    Ok(())
+                } else {
+                    Err("with_alt() must be called inside a device() block".into())
+                }
+            },
+        );
+
+        // with_mods()
+        let state_clone = Arc::clone(&state);
+        engine.register_fn(
+            "with_mods",
+            move |from: &str,
+                  to: &str,
+                  shift: bool,
+                  ctrl: bool,
+                  alt: bool,
+                  win: bool|
+                  -> Result<(), Box<EvalAltResult>> {
+                let mut state = state_clone.lock().unwrap();
+
+                let from_key =
+                    parse_key_name(from).map_err(|e| format!("Invalid 'from' key: {}", e))?;
+
+                if !to.starts_with("VK_") {
+                    return Err(format!("with_mods 'to' must have VK_ prefix, got: {}", to).into());
+                }
+                let to_key =
+                    parse_virtual_key(to).map_err(|e| format!("Invalid 'to' key: {}", e))?;
+
+                let mapping = BaseKeyMapping::ModifiedOutput {
+                    from: from_key,
+                    to: to_key,
+                    shift,
+                    ctrl,
+                    alt,
+                    win,
+                };
+
+                if let Some(ref mut device) = state.current_device {
+                    device.mappings.push(KeyMapping::Base(mapping));
+                    Ok(())
+                } else {
+                    Err("with_mods() must be called inside a device() block".into())
+                }
+            },
+        );
+    }
+
+    /// Register the device() function
+    fn register_device_function(engine: &mut Engine, state: Arc<Mutex<ParserState>>) {
+        // device() function starts a new device configuration
+        let state_clone_start = Arc::clone(&state);
+        engine.register_fn(
+            "device_start",
+            move |pattern: &str| -> Result<(), Box<EvalAltResult>> {
+                let mut state = state_clone_start.lock().unwrap();
+
+                // Finalize previous device if any
+                if let Some(device) = state.current_device.take() {
+                    state.devices.push(device);
+                }
+
+                // Start new device
+                state.current_device = Some(DeviceConfig {
+                    identifier: DeviceIdentifier {
+                        pattern: pattern.to_string(),
+                    },
+                    mappings: Vec::new(),
+                });
+
+                Ok(())
+            },
+        );
+
+        // device_end() finalizes the current device
+        let state_clone_end = Arc::clone(&state);
+        engine.register_fn("device_end", move || -> Result<(), Box<EvalAltResult>> {
+            let mut state = state_clone_end.lock().unwrap();
+
+            if let Some(device) = state.current_device.take() {
+                state.devices.push(device);
+                Ok(())
+            } else {
+                Err("device_end() called without matching device_start()".into())
+            }
+        });
+    }
+}
+
+impl Default for Parser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// Parses a virtual key string with VK_ prefix.
 ///
@@ -31,7 +556,6 @@ const PHYSICAL_MODIFIERS: &[&str] = &[
 /// let key = parse_virtual_key("VK_A").unwrap();
 /// assert_eq!(key, KeyCode::A);
 /// ```
-#[allow(dead_code)] // Will be used by full parser in task 13
 pub fn parse_virtual_key(s: &str) -> Result<KeyCode, ParseError> {
     // Check for VK_ prefix
     if !s.starts_with("VK_") {
@@ -75,7 +599,6 @@ pub fn parse_virtual_key(s: &str) -> Result<KeyCode, ParseError> {
 /// // Physical modifiers are rejected
 /// assert!(parse_modifier_id("MD_LShift").is_err());
 /// ```
-#[allow(dead_code)] // Will be used by full parser in task 13
 pub fn parse_modifier_id(s: &str) -> Result<u8, ParseError> {
     // Check for MD_ prefix
     if !s.starts_with("MD_") {
@@ -133,7 +656,6 @@ pub fn parse_modifier_id(s: &str) -> Result<u8, ParseError> {
 /// let id = parse_lock_id("LK_FE").unwrap();
 /// assert_eq!(id, 254);
 /// ```
-#[allow(dead_code)] // Will be used by full parser in task 13
 pub fn parse_lock_id(s: &str) -> Result<u8, ParseError> {
     // Check for LK_ prefix
     if !s.starts_with("LK_") {
@@ -180,7 +702,6 @@ pub fn parse_lock_id(s: &str) -> Result<u8, ParseError> {
 /// let cond = parse_condition_string("LK_01").unwrap();
 /// assert_eq!(cond, Condition::LockActive(1));
 /// ```
-#[allow(dead_code)] // Will be used by full parser in task 13
 pub fn parse_condition_string(s: &str) -> Result<Condition, ParseError> {
     if s.starts_with("MD_") {
         let id = parse_modifier_id(s)?;
@@ -205,7 +726,6 @@ pub fn parse_condition_string(s: &str) -> Result<Condition, ParseError> {
 /// # Returns
 /// * `Ok(KeyCode)` - The parsed key code
 /// * `Err(ParseError)` - If the key name is unknown
-#[allow(dead_code)] // Will be used by full parser in task 13
 fn parse_key_name(name: &str) -> Result<KeyCode, ParseError> {
     match name {
         // Letters
