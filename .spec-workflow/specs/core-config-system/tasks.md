@@ -296,7 +296,7 @@
   - _Requirements: 6.2, 6.3, 6.4, 6.5_
   - _Prompt: Role: Rust Developer with expertise in error formatting and UX | Task: Implement error formatting functions in keyrx_compiler/src/error.rs following requirements 6.2-6.5 with detailed prefix error suggestions | Restrictions: Must format errors for both human and machine consumption, include context (file/line/column), provide actionable suggestions with examples, JSON must be parseable | Success: Error messages are clear and actionable with specific examples, JSON format is valid, suggestions help users fix issues quickly_
 
-- [ ] 20. Write integration tests for CLI
+- [x] 20. Write integration tests for CLI
   - File: keyrx_compiler/tests/integration/cli_tests.rs
   - Test compile command: Rhai → .krx file
   - Test verify command: valid .krx → success, corrupted → error
