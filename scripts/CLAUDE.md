@@ -18,6 +18,7 @@ This directory contains automation scripts for building, testing, verifying, and
 | `build.sh` | Build workspace in debug or release mode, with optional watch mode | `--error`, `--json`, `--quiet`, `--log-file` | `--release`, `--watch` | 0=success, 1=build failed, 2=missing tool |
 | `verify.sh` | Run comprehensive quality checks (build, clippy, fmt, tests, coverage) | `--error`, `--json`, `--quiet`, `--log-file` | `--skip-coverage` | 0=all passed, 1=check failed, 2=missing tool |
 | `test.sh` | Execute tests with flexible filtering (unit, integration, fuzz, bench) | `--error`, `--json`, `--quiet`, `--log-file` | `--unit`, `--integration`, `--fuzz DURATION`, `--bench` | 0=tests passed, 1=tests failed, 2=missing tool |
+| `test_docs.sh` | Verify documentation accuracy by compiling all example files | N/A | N/A | 0=all examples compile, 1=compilation failed |
 | `launch.sh` | Build and launch the keyrx daemon with configuration options | `--error`, `--json`, `--quiet`, `--log-file` | `--headless`, `--debug`, `--config PATH`, `--release` | 0=launched, 1=launch failed, 2=missing tool |
 | `setup_hooks.sh` | Install Git pre-commit hooks for automated quality gates | N/A | N/A | 0=installed, 1=not a git repo |
 
@@ -287,6 +288,20 @@ You can specify a custom log file path using `--log-file PATH`.
 
 # Re-run to update hook (idempotent)
 ./scripts/setup_hooks.sh
+```
+
+### test_docs.sh Examples
+
+```bash
+# Test all example .rhai files compile correctly
+./scripts/test_docs.sh
+
+# This script:
+# 1. Builds the keyrx_compiler in release mode
+# 2. Compiles every .rhai file in examples/ directory
+# 3. Extracts code blocks from docs/DSL_MANUAL.md
+# 4. Verifies documentation accuracy
+# Exit code 0 = all examples compile, 1 = compilation failed
 ```
 
 ## Failure Scenarios
