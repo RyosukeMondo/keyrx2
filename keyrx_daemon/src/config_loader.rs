@@ -1,6 +1,32 @@
 //! Configuration file loading module.
 //!
 //! This module provides functionality to load and validate .krx binary configuration files.
+//!
+//! # Memory Management Warning
+//!
+//! **IMPORTANT**: This module intentionally leaks memory to satisfy rkyv's `'static` lifetime
+//! requirement. The `load_config()` function uses `Box::leak()` to convert the loaded
+//! configuration bytes into a static reference.
+//!
+//! ## Implications
+//!
+//! - **Single Load**: If you load a configuration once at startup (typical daemon usage),
+//!   this is safe and acceptable. The memory will be freed when the program exits.
+//!
+//! - **Config Reloading**: If you implement hot-reload functionality that calls `load_config()`
+//!   multiple times, **each call will leak memory**. Repeated reloads will accumulate leaked
+//!   memory until the process terminates.
+//!
+//! ## Alternative Approaches for Hot-Reload
+//!
+//! If you need to support configuration reloading, consider:
+//!
+//! 1. **mmap with cleanup**: Use memory-mapped files with proper cleanup handlers
+//! 2. **ConfigManager**: Implement a manager that tracks allocations and provides cleanup
+//! 3. **Arc with unsafe**: Use `Arc<[u8]>` with unsafe transmute (requires careful validation)
+//!
+//! For now, this simple implementation is sufficient for the typical use case of loading
+//! configuration once at daemon startup.
 
 use std::path::Path;
 
@@ -86,9 +112,15 @@ pub fn load_config<P: AsRef<Path>>(
     // Read file bytes
     let bytes = std::fs::read(path)?;
 
-    // Leak the bytes to get a 'static lifetime
-    // This is necessary because rkyv::archived_root requires 'static lifetime
-    // The memory will live for the entire program duration
+    // INTENTIONAL MEMORY LEAK: Leak the bytes to get a 'static lifetime.
+    //
+    // This is necessary because rkyv's zero-copy deserialization requires the
+    // backing bytes to live for the entire lifetime of the archived reference.
+    //
+    // SAFETY: The memory will live for the entire program duration. This is
+    // acceptable for single-load scenarios (typical daemon startup), but will
+    // accumulate leaked memory if load_config() is called multiple times (e.g.,
+    // hot-reload). See module documentation for alternatives if hot-reload is needed.
     let static_bytes: &'static [u8] = Box::leak(bytes.into_boxed_slice());
 
     // Deserialize and validate the .krx file
