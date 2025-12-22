@@ -45,3 +45,6 @@ serde_json = { version = "1.0", optional = true }
 
 [dev-dependencies]
 tempfile = "3.14"
+# CLI testing - assert_cmd for command execution, predicates for output assertions
+assert_cmd = "2.0"
+predicates = "3.1"
