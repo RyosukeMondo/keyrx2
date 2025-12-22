@@ -139,38 +139,7 @@ fn hash_command(config: PathBuf) -> Result<(), String> {
 }
 
 fn parse_command(input: PathBuf, json: bool) -> Result<(), String> {
-    // Parse the Rhai script
-    let mut parser = parser::Parser::new();
-    let config = parser.parse_script(&input).map_err(format_parse_error)?;
-
-    if json {
-        // Output as JSON
-        let json_str =
-            serde_json::to_string_pretty(&config).map_err(|e| format!("JSON error: {}", e))?;
-        println!("{}", json_str);
-    } else {
-        // Output human-readable format
-        println!("Configuration parsed successfully:");
-        println!("  Version: {}", config.version);
-        println!("  Devices: {}", config.devices.len());
-        for (i, device) in config.devices.iter().enumerate() {
-            println!(
-                "    Device {}: {} ({} mappings)",
-                i + 1,
-                device.identifier.pattern,
-                device.mappings.len()
-            );
-        }
-        println!("  Metadata:");
-        println!("    Compiler version: {}", config.metadata.compiler_version);
-        println!(
-            "    Compilation timestamp: {}",
-            config.metadata.compilation_timestamp
-        );
-        println!("    Source hash: {}", config.metadata.source_hash);
-    }
-
-    Ok(())
+    cli::parse::handle_parse(&input, json).map_err(|e| e.to_string())
 }
 
 fn format_parse_error(e: ParseError) -> String {

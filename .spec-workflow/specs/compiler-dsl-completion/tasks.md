@@ -176,7 +176,7 @@
   - _Requirements: 3.3_
   - **Implementation**: Implemented handle_hash() function that reads .krx files, extracts embedded SHA256 hash from bytes 8-40, prints hash in hex format to stdout, and optionally verifies hash matches computed hash of data section (bytes 48+). Added comprehensive unit tests (7 tests) covering hash extraction, verification success/failure, file validation errors, and error message formatting. Added 3 integration tests to cli_tests.rs for --verify flag functionality. All tests pass successfully.
 
-- [ ] 16. Implement parse subcommand handler
+- [x] 16. Implement parse subcommand handler
   - File: `keyrx_compiler/src/cli/parse.rs` (continue)
   - Implement `handle_parse(input: &Path, json: bool) -> Result<(), ParseError>`
   - Parse Rhai script using Parser
@@ -185,7 +185,7 @@
   - Purpose: Debug tool - show parsed configuration
   - _Leverage: Parser, serde_json for JSON output_
   - _Requirements: 3.4, 3.5_
-  - _Prompt: Role: Rust Developer with JSON serialization expertise | Task: Implement parse subcommand that parses Rhai, outputs JSON or human-readable summary, following requirements 3.4 and 3.5, using Parser and serde_json | Restrictions: Call Parser::parse_file(), if json flag use serde_json::to_string_pretty() and print to stdout, else print summary: version, device count, mapping count per device, use println! for output, return ParseError on failures | Success: --json outputs valid JSON, human mode prints readable summary, both formats show complete config structure_
+  - **Implementation**: Implemented handle_parse() function that parses Rhai scripts using Parser::parse_script(), outputs JSON with serde_json::to_string_pretty() when --json flag is used, or outputs human-readable summary showing version, device count, mapping counts by type (Simple, Modifier, Lock, TapHold, ModifiedOutput, Conditional), and metadata (compiler version, compilation timestamp, source hash). Updated main.rs to use cli::parse::handle_parse(). All 6 existing parse tests pass successfully (test_parse_human_readable, test_parse_json_output, test_parse_advanced_config, test_parse_missing_file, test_parse_invalid_syntax, test_parse_prefix_error). Verified with manual testing: human-readable output shows clear summary, JSON output is valid and complete.
 
 - [ ] 17. Update main.rs with clap CLI definition
   - File: `keyrx_compiler/src/main.rs` (MODIFY EXISTING)

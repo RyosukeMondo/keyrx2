@@ -8,6 +8,7 @@ use std::io;
 use std::path::Path;
 
 use crate::error::ParseError as ParserParseError;
+use crate::parser::Parser;
 
 /// Errors that can occur during the parse subcommand.
 ///
@@ -67,10 +68,89 @@ impl From<serde_json::Error> for ParseCommandError {
 /// # Returns
 ///
 /// `Ok(())` on success, or `ParseCommandError` on failure.
-#[allow(dead_code)] // Will be used in task 16
 pub fn handle_parse(input: &Path, json: bool) -> Result<(), ParseCommandError> {
-    // TODO: Implementation in task 16
-    eprintln!("Parsing {:?} (json={})", input, json);
-    eprintln!("TODO: Implementation in task 16");
+    let mut parser = Parser::new();
+    let config = parser.parse_script(input)?;
+
+    if json {
+        // Output JSON format
+        let json_output = serde_json::to_string_pretty(&config)?;
+        println!("{}", json_output);
+    } else {
+        // Output human-readable summary
+        print_summary(&config);
+    }
+
     Ok(())
+}
+
+/// Prints a human-readable summary of the parsed configuration.
+fn print_summary(config: &keyrx_core::config::ConfigRoot) {
+    println!("Configuration parsed successfully:");
+    println!("  Version: {}", config.version);
+    println!("  Devices: {}", config.devices.len());
+
+    for (idx, device) in config.devices.iter().enumerate() {
+        println!(
+            "    Device {}: {} ({} mappings)",
+            idx + 1,
+            device.identifier.pattern,
+            device.mappings.len()
+        );
+
+        // Show detailed breakdown of mapping types
+        let mut simple = 0;
+        let mut modifier = 0;
+        let mut lock = 0;
+        let mut tap_hold = 0;
+        let mut modified_output = 0;
+        let mut conditional = 0;
+
+        for mapping in &device.mappings {
+            match mapping {
+                keyrx_core::config::KeyMapping::Base(base) => match base {
+                    keyrx_core::config::BaseKeyMapping::Simple { .. } => simple += 1,
+                    keyrx_core::config::BaseKeyMapping::Modifier { .. } => modifier += 1,
+                    keyrx_core::config::BaseKeyMapping::Lock { .. } => lock += 1,
+                    keyrx_core::config::BaseKeyMapping::TapHold { .. } => tap_hold += 1,
+                    keyrx_core::config::BaseKeyMapping::ModifiedOutput { .. } => {
+                        modified_output += 1
+                    }
+                },
+                keyrx_core::config::KeyMapping::Conditional { .. } => conditional += 1,
+            }
+        }
+
+        let mut details = Vec::new();
+        if simple > 0 {
+            details.push(format!("Simple: {}", simple));
+        }
+        if modifier > 0 {
+            details.push(format!("Modifier: {}", modifier));
+        }
+        if lock > 0 {
+            details.push(format!("Lock: {}", lock));
+        }
+        if tap_hold > 0 {
+            details.push(format!("TapHold: {}", tap_hold));
+        }
+        if modified_output > 0 {
+            details.push(format!("ModifiedOutput: {}", modified_output));
+        }
+        if conditional > 0 {
+            details.push(format!("Conditional: {}", conditional));
+        }
+
+        if !details.is_empty() {
+            println!("      {}", details.join(", "));
+        }
+    }
+
+    println!("  Metadata:");
+    println!("    Compiler version: {}", config.metadata.compiler_version);
+    println!(
+        "    Compilation timestamp: {}",
+        config.metadata.compilation_timestamp
+    );
+    println!("    Source hash: {}", config.metadata.source_hash);
 }
