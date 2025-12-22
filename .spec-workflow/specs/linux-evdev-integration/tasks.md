@@ -23,7 +23,7 @@
   - _Requirements: 1.4_
   - _Prompt: Role: Rust Developer with expertise in keyboard input systems and Linux evdev | Task: Create KeyCode mapping functions between evdev event codes and keyrx KeyCode enum, covering all keyboard keys following requirement 1.4 | Restrictions: Must handle all KeyCode variants exhaustively with match, return None for unknown evdev codes (for passthrough handling), use evdev::Key constants (KEY_A, KEY_LEFTSHIFT, etc.), add comprehensive doc comments with mapping table, organize by key category (letters, modifiers, function keys, special) | Success: evdev_to_keycode maps all evdev key codes to KeyCode, keycode_to_evdev maps all KeyCode variants to evdev codes, round-trip conversion is identity (evdev→KeyCode→evdev), unknown codes return None, compiles without warnings_
 
-- [ ] 3. Implement EvdevInput struct and constructor
+- [x] 3. Implement EvdevInput struct and constructor
   - File: `keyrx_daemon/src/platform/linux.rs` (continue)
   - Define `EvdevInput` struct with `evdev::Device` and `grabbed: bool`
   - Implement `open(path: &Path) -> Result<Self, DeviceError>`

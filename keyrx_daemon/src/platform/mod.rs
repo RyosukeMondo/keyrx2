@@ -16,7 +16,8 @@ pub mod windows;
 pub mod mock;
 
 #[cfg(feature = "linux")]
-pub use linux::LinuxPlatform;
+#[allow(unused_imports)] // EvdevInput will be used in task #4
+pub use linux::{EvdevInput, LinuxPlatform};
 
 #[cfg(feature = "windows")]
 pub use windows::WindowsPlatform;

@@ -3,10 +3,14 @@
 //! This module provides the Linux-specific implementation for keyboard input capture
 //! and event injection using the evdev and uinput kernel interfaces.
 
+use std::path::{Path, PathBuf};
+
 use evdev::{Device, Key};
 use uinput::Device as UInputDevice;
 
 use keyrx_core::config::KeyCode;
+
+use crate::platform::DeviceError;
 
 /// Linux platform structure for keyboard input/output operations.
 ///
@@ -57,6 +61,260 @@ impl Default for LinuxPlatform {
     }
 }
 
+/// Wrapper for evdev input device with keyrx interface.
+///
+/// `EvdevInput` provides a high-level interface for capturing keyboard events
+/// from Linux input devices via the evdev subsystem. It supports exclusive
+/// access (grab) to prevent events from reaching other applications.
+///
+/// # Device Access
+///
+/// Input devices are accessed via `/dev/input/event*` device nodes.
+/// By default, these require root or membership in the `input` group.
+///
+/// # Example
+///
+/// ```no_run
+/// use std::path::Path;
+/// use keyrx_daemon::platform::linux::EvdevInput;
+///
+/// // Open keyboard device
+/// let mut keyboard = EvdevInput::open(Path::new("/dev/input/event0"))?;
+///
+/// // Print device info
+/// println!("Device: {}", keyboard.name());
+/// if let Some(serial) = keyboard.serial() {
+///     println!("Serial: {}", serial);
+/// }
+///
+/// // Grab exclusive access (other apps won't receive events)
+/// // keyboard.grab()?;  // Implemented in task #4
+/// # Ok::<(), keyrx_daemon::platform::DeviceError>(())
+/// ```
+#[allow(dead_code)] // Will be used in task #4 (InputDevice trait implementation)
+pub struct EvdevInput {
+    /// The underlying evdev device handle.
+    device: Device,
+    /// Whether we have exclusive (grabbed) access to the device.
+    grabbed: bool,
+    /// Path to the device node (for identification).
+    path: PathBuf,
+}
+
+#[allow(dead_code)] // Methods will be used in task #4 (InputDevice trait implementation)
+impl EvdevInput {
+    /// Opens an evdev input device by path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the device node (e.g., `/dev/input/event0`)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(EvdevInput)` - Successfully opened the device
+    /// * `Err(DeviceError::NotFound)` - Device does not exist
+    /// * `Err(DeviceError::PermissionDenied)` - Insufficient permissions
+    /// * `Err(DeviceError::Io)` - Other I/O error
+    ///
+    /// # Permissions
+    ///
+    /// Accessing input devices typically requires:
+    /// - Running as root, OR
+    /// - Membership in the `input` group, OR
+    /// - Appropriate udev rules granting access
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    /// use keyrx_daemon::platform::linux::EvdevInput;
+    /// use keyrx_daemon::platform::DeviceError;
+    ///
+    /// match EvdevInput::open(Path::new("/dev/input/event0")) {
+    ///     Ok(device) => println!("Opened: {}", device.name()),
+    ///     Err(DeviceError::PermissionDenied(msg)) => {
+    ///         eprintln!("Permission denied: {}", msg);
+    ///         eprintln!("Try adding your user to the 'input' group");
+    ///     }
+    ///     Err(DeviceError::NotFound(msg)) => {
+    ///         eprintln!("Device not found: {}", msg);
+    ///     }
+    ///     Err(e) => eprintln!("Error: {}", e),
+    /// }
+    /// ```
+    pub fn open(path: &Path) -> Result<Self, DeviceError> {
+        let device = Device::open(path).map_err(|e| {
+            let path_str = path.display().to_string();
+            match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    DeviceError::NotFound(format!("device not found: {}", path_str))
+                }
+                std::io::ErrorKind::PermissionDenied => DeviceError::PermissionDenied(format!(
+                    "cannot access {}: permission denied. Try adding user to 'input' group",
+                    path_str
+                )),
+                _ => DeviceError::Io(e),
+            }
+        })?;
+
+        Ok(Self {
+            device,
+            grabbed: false,
+            path: path.to_path_buf(),
+        })
+    }
+
+    /// Creates an `EvdevInput` from an existing evdev device.
+    ///
+    /// This is useful when you've already opened a device through other means
+    /// (e.g., device enumeration) and want to wrap it in the keyrx interface.
+    ///
+    /// # Arguments
+    ///
+    /// * `device` - An already-opened evdev device
+    ///
+    /// # Note
+    ///
+    /// The path will be extracted from the device if available, otherwise
+    /// set to an empty path.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use evdev::Device;
+    /// use keyrx_daemon::platform::linux::EvdevInput;
+    ///
+    /// // Open device with evdev directly
+    /// let evdev_device = Device::open("/dev/input/event0")?;
+    ///
+    /// // Wrap in EvdevInput
+    /// let input = EvdevInput::from_device(evdev_device);
+    /// println!("Device: {}", input.name());
+    /// # Ok::<(), std::io::Error>(())
+    /// ```
+    pub fn from_device(device: Device) -> Self {
+        // Try to get the device path, falling back to empty if unavailable
+        let path = device
+            .physical_path()
+            .map(PathBuf::from)
+            .unwrap_or_default();
+
+        Self {
+            device,
+            grabbed: false,
+            path,
+        }
+    }
+
+    /// Returns the device name as reported by the kernel.
+    ///
+    /// This is typically a human-readable name like "AT Translated Set 2 keyboard"
+    /// or "Logitech USB Keyboard".
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    /// use keyrx_daemon::platform::linux::EvdevInput;
+    ///
+    /// let keyboard = EvdevInput::open(Path::new("/dev/input/event0"))?;
+    /// println!("Device name: {}", keyboard.name());
+    /// # Ok::<(), keyrx_daemon::platform::DeviceError>(())
+    /// ```
+    #[must_use]
+    pub fn name(&self) -> &str {
+        self.device.name().unwrap_or("Unknown Device")
+    }
+
+    /// Returns the device serial number, if available.
+    ///
+    /// Not all devices report a serial number. USB devices typically do,
+    /// while built-in laptop keyboards often don't.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(&str)` - Serial number if reported by device
+    /// * `None` - Device doesn't have a serial number
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    /// use keyrx_daemon::platform::linux::EvdevInput;
+    ///
+    /// let keyboard = EvdevInput::open(Path::new("/dev/input/event0"))?;
+    /// if let Some(serial) = keyboard.serial() {
+    ///     println!("Serial: {}", serial);
+    /// } else {
+    ///     println!("No serial number available");
+    /// }
+    /// # Ok::<(), keyrx_daemon::platform::DeviceError>(())
+    /// ```
+    #[must_use]
+    pub fn serial(&self) -> Option<&str> {
+        // evdev crate's uniq() method returns the unique identifier (serial)
+        self.device.unique_name()
+    }
+
+    /// Returns the path to the device node.
+    ///
+    /// This is the path used to open the device (e.g., `/dev/input/event0`).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    /// use keyrx_daemon::platform::linux::EvdevInput;
+    ///
+    /// let keyboard = EvdevInput::open(Path::new("/dev/input/event0"))?;
+    /// println!("Path: {}", keyboard.path().display());
+    /// # Ok::<(), keyrx_daemon::platform::DeviceError>(())
+    /// ```
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Returns whether the device is currently grabbed (exclusive access).
+    ///
+    /// When a device is grabbed, events from it are not delivered to other
+    /// applications. This is essential for key remapping to prevent the
+    /// original keystroke from reaching applications.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    /// use keyrx_daemon::platform::linux::EvdevInput;
+    ///
+    /// let keyboard = EvdevInput::open(Path::new("/dev/input/event0"))?;
+    /// assert!(!keyboard.is_grabbed());
+    /// // After grab(): keyboard.is_grabbed() would return true
+    /// # Ok::<(), keyrx_daemon::platform::DeviceError>(())
+    /// ```
+    #[must_use]
+    pub fn is_grabbed(&self) -> bool {
+        self.grabbed
+    }
+
+    /// Returns a reference to the underlying evdev device.
+    ///
+    /// This allows direct access to evdev functionality not exposed
+    /// through the `EvdevInput` interface.
+    #[must_use]
+    pub fn device(&self) -> &Device {
+        &self.device
+    }
+
+    /// Returns a mutable reference to the underlying evdev device.
+    ///
+    /// This allows direct access to evdev functionality not exposed
+    /// through the `EvdevInput` interface.
+    pub fn device_mut(&mut self) -> &mut Device {
+        &mut self.device
+    }
+}
+
 /// Maps an evdev key code to a keyrx KeyCode.
 ///
 /// # Arguments
@@ -73,6 +331,7 @@ impl Default for LinuxPlatform {
 /// - Modifiers: KEY_LEFTSHIFT, KEY_RIGHTSHIFT, etc.
 /// - Special keys: KEY_ESC, KEY_ENTER, KEY_BACKSPACE, etc.
 #[must_use]
+#[allow(dead_code)] // Will be used in task #4 (InputDevice trait implementation)
 pub fn evdev_to_keycode(code: u16) -> Option<KeyCode> {
     // Convert u16 to evdev Key for pattern matching
     let key = Key::new(code);
@@ -269,6 +528,7 @@ pub fn evdev_to_keycode(code: u16) -> Option<KeyCode> {
 /// This function covers all KeyCode variants exhaustively.
 /// The mapping is the inverse of `evdev_to_keycode`.
 #[must_use]
+#[allow(dead_code)] // Will be used in task #7 (OutputDevice trait implementation)
 pub fn keycode_to_evdev(keycode: KeyCode) -> u16 {
     match keycode {
         // Letters A-Z
@@ -821,5 +1081,147 @@ mod tests {
                 back
             );
         }
+    }
+
+    // ============================================
+    // EvdevInput Tests
+    // ============================================
+
+    /// Test that opening a non-existent device returns NotFound error
+    #[test]
+    fn test_evdevinput_open_not_found() {
+        use std::path::Path;
+
+        let result = EvdevInput::open(Path::new("/dev/input/event_nonexistent_12345"));
+        assert!(result.is_err());
+
+        match result {
+            Err(DeviceError::NotFound(msg)) => {
+                assert!(
+                    msg.contains("event_nonexistent"),
+                    "Error message should contain path"
+                );
+            }
+            Err(e) => panic!("Expected NotFound, got {:?}", e),
+            Ok(_) => panic!("Expected error, got Ok"),
+        }
+    }
+
+    /// Test EvdevInput::from_device with path extraction
+    /// Note: This test is marked #[ignore] as it requires a real device
+    #[test]
+    #[ignore = "requires real input device - run manually with: cargo test -p keyrx_daemon --features linux test_evdevinput_from_device -- --ignored"]
+    fn test_evdevinput_from_device() {
+        use std::path::Path;
+
+        // Try to open the first available event device
+        for i in 0..20 {
+            let path = format!("/dev/input/event{}", i);
+            if let Ok(device) = evdev::Device::open(&path) {
+                let input = EvdevInput::from_device(device);
+
+                // Verify the device was wrapped correctly
+                assert!(!input.name().is_empty());
+                assert!(!input.is_grabbed());
+
+                // Note: path may not match since from_device uses physical_path
+                println!(
+                    "Device: {}, Serial: {:?}, Path: {}",
+                    input.name(),
+                    input.serial(),
+                    input.path().display()
+                );
+                return;
+            }
+        }
+
+        panic!("No input devices available for testing");
+    }
+
+    /// Test that open returns PermissionDenied for devices we can't access
+    /// Note: This test only works when NOT running as root
+    #[test]
+    #[ignore = "requires non-root user without input group - run manually"]
+    fn test_evdevinput_open_permission_denied() {
+        use std::path::Path;
+
+        // Try to find a device that exists but we can't access
+        for i in 0..20 {
+            let path_str = format!("/dev/input/event{}", i);
+            let path = Path::new(&path_str);
+
+            if path.exists() {
+                match EvdevInput::open(path) {
+                    Err(DeviceError::PermissionDenied(msg)) => {
+                        assert!(msg.contains("permission denied"));
+                        assert!(msg.contains("input group"));
+                        return;
+                    }
+                    Ok(_) => {
+                        // We have permission, skip to next device or test
+                        continue;
+                    }
+                    Err(e) => {
+                        panic!("Expected PermissionDenied or Ok, got {:?}", e);
+                    }
+                }
+            }
+        }
+
+        panic!("Test inconclusive: could not find a device to test permission denied");
+    }
+
+    /// Test that is_grabbed returns false initially
+    #[test]
+    #[ignore = "requires real input device - run manually"]
+    fn test_evdevinput_not_grabbed_initially() {
+        use std::path::Path;
+
+        for i in 0..20 {
+            let path = format!("/dev/input/event{}", i);
+            if let Ok(input) = EvdevInput::open(Path::new(&path)) {
+                assert!(
+                    !input.is_grabbed(),
+                    "Device should not be grabbed initially"
+                );
+                return;
+            }
+        }
+
+        panic!("No accessible input devices for testing");
+    }
+
+    /// Test accessor methods on a real device
+    #[test]
+    #[ignore = "requires real input device - run manually"]
+    fn test_evdevinput_accessors() {
+        use std::path::Path;
+
+        for i in 0..20 {
+            let path_str = format!("/dev/input/event{}", i);
+            let path = Path::new(&path_str);
+            if let Ok(input) = EvdevInput::open(path) {
+                // Name should never be empty (fallback is "Unknown Device")
+                assert!(!input.name().is_empty());
+
+                // Path should match what we opened with
+                assert_eq!(input.path(), path);
+
+                // Serial may or may not be available
+                println!(
+                    "Device {} - Name: '{}', Serial: {:?}",
+                    i,
+                    input.name(),
+                    input.serial()
+                );
+
+                // device() should return a valid reference
+                let _device_ref = input.device();
+
+                return;
+            }
+        }
+
+        panic!("No accessible input devices for testing");
     }
 }
