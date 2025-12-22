@@ -94,12 +94,28 @@ pub fn process_event(
                 KeyEvent::Release(_) => alloc::vec![KeyEvent::Release(*to)],
             }
         }
-        BaseKeyMapping::Modifier { .. } => {
-            // TODO: Implement in task 10
+        BaseKeyMapping::Modifier { modifier_id, .. } => {
+            // Modifier mapping: update state, no output events
+            match event {
+                KeyEvent::Press(_) => {
+                    state.set_modifier(*modifier_id);
+                }
+                KeyEvent::Release(_) => {
+                    state.clear_modifier(*modifier_id);
+                }
+            }
             Vec::new()
         }
-        BaseKeyMapping::Lock { .. } => {
-            // TODO: Implement in task 10
+        BaseKeyMapping::Lock { lock_id, .. } => {
+            // Lock mapping: toggle on press, ignore release, no output events
+            match event {
+                KeyEvent::Press(_) => {
+                    state.toggle_lock(*lock_id);
+                }
+                KeyEvent::Release(_) => {
+                    // Do nothing on release
+                }
+            }
             Vec::new()
         }
         BaseKeyMapping::TapHold { .. } => {

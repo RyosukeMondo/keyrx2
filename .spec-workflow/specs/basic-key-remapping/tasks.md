@@ -98,7 +98,7 @@
   - _Requirements: 4.1, 4.2, 4.3_
   - _Prompt: Role: Rust Developer with expertise in event-driven systems and pattern matching | Task: Implement process_event function that takes KeyEvent, uses KeyLookup::find_mapping to resolve mapping, handles BaseKeyMapping::Simple by remapping key, and handles passthrough (no mapping) by returning original event, following requirements 4.1-4.3 | Restrictions: Must call lookup.find_mapping(event.keycode(), state), match on Option returned, if None return vec![event] (passthrough), if Some match on BaseKeyMapping variants, for Simple variant replace keycode with output key while preserving Press/Release, return Vec<KeyEvent> for consistency (even single event), use match event { Press(k) => Press(output_k), Release(k) => Release(output_k) } pattern, add TODO comments for unimplemented variants (Modifier, Lock, etc.), add doc comments with examples | Success: process_event with no mapping returns original event unchanged, process_event with Simple A→B mapping returns Press(B) for Press(A), returns Release(B) for Release(A), returns Vec with one element, compiles with warnings for unimplemented variants (expected at this stage)_
 
-- [ ] 10. Implement process_event for Modifier and Lock mappings
+- [x] 10. Implement process_event for Modifier and Lock mappings
   - File: `keyrx_core/src/runtime/event.rs` (continue)
   - Handle `BaseKeyMapping::Modifier`: Press→set bit, Release→clear bit, no output
   - Handle `BaseKeyMapping::Lock`: Press→toggle bit, Release→no output
