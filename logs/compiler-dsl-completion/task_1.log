@@ -1,5 +1,5 @@
 # Iteration 1
-# Started 2025-12-21T22:47:08.594109+00:00
+# Started 2025-12-22T02:21:48.016641+00:00
 # Spec compiler-dsl-completion
 # Command
 claude -p 'Work on the single next task for spec compiler-dsl-completion. When you complete a logical unit of work, you MUST run '"'"'git add'"'"' followed by '"'"'git commit'"'"' with a clear message. DO NOT just stage files - you must actually commit them. DO NOT ask permission - just commit immediately when work is done. Make atomic commits for each semantic group of changes.' --model sonnet --dangerously-skip-permissions
@@ -8,20 +8,41 @@ claude -p 'Work on the single next task for spec compiler-dsl-completion. When y
 Work on the single next task for spec compiler-dsl-completion. When you complete a logical unit of work, you MUST run 'git add' followed by 'git commit' with a clear message. DO NOT just stage files - you must actually commit them. DO NOT ask permission - just commit immediately when work is done. Make atomic commits for each semantic group of changes.
 
 # Output (stdout + stderr)
-Excellent! Tasks 1-4 of Phase 1 are now complete:
-- ✅ Task 1: Created prefix validation module with parse_physical_key, parse_virtual_key, and fuzzy matching
-- ✅ Task 2: Modifier/lock ID validation (already existed)
-- ✅ Task 3: Condition string parsing (already existed)
-- ✅ Task 4: Wrote 40 comprehensive validator unit tests
+Excellent! Task 25 is now complete. Let me provide a summary:
 
-**Progress Summary:**
-- Test coverage improved from 32.38% → 56.31% (+23.93pp)
-- All 40 validator tests passing
-- Fuzzy matching with Levenshtein distance implemented
-- Support for all 100+ KeyCode variants
-- Complete validation for MD_00-MD_FE and LK_00-LK_FE
+## Task 25 Complete: CI Documentation Accuracy Checks
 
-Ready to move on to Phase 2: DSL Function Implementation (tasks 5-11). The next task is **Task 5: Implement map() function with prefix dispatch**.
+I've successfully added CI checks to ensure documentation stays accurate as code evolves:
+
+### Changes Made:
+
+1. **Updated `.github/workflows/ci.yml`**:
+   - Added new `test-docs` job that runs after the `verify` job completes
+   - Job builds compiler in release mode and tests all 6 example `.rhai` files
+   - Extracts code blocks from `docs/DSL_MANUAL.md` using awk for validation
+   - CI will fail with exit code 1 if any example fails to compile
+
+2. **Created `scripts/test_docs.sh`**:
+   - Local testing script that mirrors CI behavior
+   - Builds compiler and compiles all examples
+   - Extracts and validates documentation code blocks
+   - Provides clear success/failure messages
+
+3. **Updated `scripts/CLAUDE.md`**:
+   - Added `test_docs.sh` to the Script Reference Table
+   - Added examples section showing how to use the script
+   - Documents the script's purpose and behavior
+
+4. **Updated `tasks.md`**:
+   - Marked task 25 as complete with implementation details
+
+### Verification:
+- All 6 example files compile successfully locally
+- CI workflow YAML is valid
+- Script is executable and works correctly
+- Documentation is complete and accurate
+
+The CI will now automatically verify that all documentation examples remain valid and compilable on every PR, preventing documentation drift.
 
 # Exit Code
 0

@@ -4,4 +4,5 @@
 
 mod integration {
     mod import_tests;
+    mod workflow_tests;
 }
