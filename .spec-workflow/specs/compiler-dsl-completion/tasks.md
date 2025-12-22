@@ -114,8 +114,8 @@
   - _Requirements: 1.11_
   - **Implementation**: Device functionality was already implemented using device_start/device_end pattern. Added 13 comprehensive tests covering all device functionality including multiple devices, mixed mapping types, conditional mappings, error cases, and realistic multi-device configurations. All tests pass.
 
-- [ ] 11. Write DSL function unit tests
-  - File: `keyrx_compiler/tests/parser_function_tests.rs` (NEW)
+- [x] 11. Write DSL function unit tests
+  - File: `keyrx_compiler/tests/parser_function_tests.rs` (ENHANCED)
   - Test map() with VK_/MD_/LK_ outputs
   - Test tap_hold() with valid and invalid parameters
   - Test helper functions (with_shift, with_ctrl, etc.)
@@ -126,7 +126,7 @@
   - Purpose: Ensure all DSL functions work correctly in isolation
   - _Leverage: ParserState setup utilities_
   - _Requirements: 1.1-1.11_
-  - _Prompt: Role: QA Engineer with Rhai testing expertise | Task: Create comprehensive unit tests for all DSL functions (map, tap_hold, helpers, when, when_not, device) covering requirements 1.1-1.11, testing both success paths and error scenarios | Restrictions: Must test each function in isolation using mock ParserState, verify KeyMapping types created, test error messages for invalid input, test that functions require device() context, use Rhai engine to evaluate test scripts | Success: All DSL functions tested with valid input, all error scenarios covered, edge cases tested (empty device, missing prefix, out of range IDs), tests verify exact KeyMapping structure created_
+  - **Implementation**: Created comprehensive test suite with 88 tests covering all DSL functions. Tests include: map() with all output types (VK_/MD_/LK_), tap_hold() validation, modifier helpers (with_shift, with_ctrl, with_alt, with_win, with_mods), when() with single and array conditions, when_not() for negated conditions, device() functionality, and extensive error case coverage. All tests pass successfully.
 
 ## Phase 3: CLI Enhancement (User Interface)
 
