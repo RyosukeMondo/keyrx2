@@ -9,6 +9,7 @@ use std::path::Path;
 
 /// Errors that can occur during the hash subcommand.
 #[derive(Debug)]
+#[allow(dead_code)] // Will be used in task 15
 pub enum HashError {
     /// Hash verification failed (mismatch between embedded and computed hash).
     HashMismatch {
@@ -63,6 +64,7 @@ impl From<io::Error> for HashError {
 /// # Returns
 ///
 /// `Ok(())` on success, or `HashError` on failure.
+#[allow(dead_code)] // Will be used in task 15
 pub fn handle_hash(file: &Path, verify: bool) -> Result<(), HashError> {
     // TODO: Implementation in task 15
     eprintln!("Extracting hash from {:?} (verify={})", file, verify);

@@ -14,6 +14,8 @@ use crate::error::ParseError as ParserParseError;
 /// Note: This is distinct from `crate::error::ParseError` which is used by the parser.
 /// This error type is specific to the parse subcommand CLI operation.
 #[derive(Debug)]
+#[allow(dead_code)] // Will be used in task 16
+#[allow(clippy::enum_variant_names)]
 pub enum ParseCommandError {
     /// Failed to parse Rhai script.
     ParseError(ParserParseError),
@@ -65,6 +67,7 @@ impl From<serde_json::Error> for ParseCommandError {
 /// # Returns
 ///
 /// `Ok(())` on success, or `ParseCommandError` on failure.
+#[allow(dead_code)] // Will be used in task 16
 pub fn handle_parse(input: &Path, json: bool) -> Result<(), ParseCommandError> {
     // TODO: Implementation in task 16
     eprintln!("Parsing {:?} (json={})", input, json);

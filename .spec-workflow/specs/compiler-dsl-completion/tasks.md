@@ -152,7 +152,7 @@
   - _Requirements: 3.1_
   - **Implementation**: Implemented handle_compile() function that parses Rhai scripts using Parser::parse_script(), serializes to .krx using serialize(), writes output file, and prints success message with file size and SHA256 hash. Added hex crate dependency for hash encoding. Created comprehensive integration tests covering success cases, parse errors, file not found, and complex configurations with all mapping types. All tests pass successfully.
 
-- [ ] 14. Implement verify subcommand handler
+- [x] 14. Implement verify subcommand handler
   - File: `keyrx_compiler/src/cli/verify.rs` (continue)
   - Implement `handle_verify(file: &Path) -> Result<(), VerifyError>`
   - Read .krx file bytes
@@ -162,7 +162,7 @@
   - Purpose: Validate .krx file integrity
   - _Leverage: deserialize() from serialize.rs_
   - _Requirements: 3.2_
-  - _Prompt: Role: Rust Developer with file validation expertise | Task: Implement verify subcommand that reads .krx file, calls deserialize() for validation, prints step-by-step results, following requirement 3.2, using deserialize() from serialize.rs | Restrictions: deserialize() already validates magic/version/hash/rkyv, print "✓ Magic bytes valid", "✓ Version: 1", "✓ SHA256 hash matches", etc., print "✓ Verification passed" or "✗ Verification failed: {error}" at end, use eprintln! for output, return VerifyError on failure | Success: Valid .krx passes all checks, corrupted files fail with specific error, output is human-readable_
+  - **Implementation**: Implemented handle_verify() function that reads .krx file, calls deserialize() for validation, and prints detailed step-by-step verification results. On success, prints "✓ Magic bytes valid", "✓ Version: X", "✓ SHA256 hash matches", "✓ rkyv deserialization successful", "✓ Configuration valid" with device and mapping counts, and "✓ Verification passed". On failure, prints specific error details for each DeserializeError variant with "✗" markers and hex-encoded hashes. Updated main.rs to use cli::verify::handle_verify(). Updated existing CLI tests to match new stderr output format. All 5 verify tests pass successfully.
 
 - [ ] 15. Implement hash subcommand handler
   - File: `keyrx_compiler/src/cli/hash.rs` (continue)

@@ -15,6 +15,8 @@ use crate::serialize::serialize;
 
 /// Errors that can occur during the compile subcommand.
 #[derive(Debug)]
+#[allow(dead_code)] // Will be used in task 17
+#[allow(clippy::enum_variant_names)]
 pub enum CompileError {
     /// Failed to parse Rhai script.
     ParseError(ParseError),
@@ -66,6 +68,7 @@ impl From<SerializeError> for CompileError {
 /// # Returns
 ///
 /// `Ok(())` on success, or `CompileError` on failure.
+#[allow(dead_code)] // Will be used in task 17
 pub fn handle_compile(input: &Path, output: &Path) -> Result<(), CompileError> {
     eprintln!("Parsing {}...", input.display());
 

@@ -51,8 +51,58 @@ impl From<DeserializeError> for VerifyError {
 ///
 /// `Ok(())` on success, or `VerifyError` on failure.
 pub fn handle_verify(file: &Path) -> Result<(), VerifyError> {
-    // TODO: Implementation in task 14
-    eprintln!("Verifying {:?}", file);
-    eprintln!("TODO: Implementation in task 14");
-    Ok(())
+    use crate::serialize::deserialize;
+
+    // Read .krx file bytes
+    let bytes = std::fs::read(file)?;
+
+    // Attempt to deserialize (which performs all validation)
+    match deserialize(&bytes) {
+        Ok(config) => {
+            // All validation passed
+            eprintln!("✓ Magic bytes valid");
+            eprintln!("✓ Version: {}", crate::serialize::KRX_VERSION);
+            eprintln!("✓ SHA256 hash matches");
+            eprintln!("✓ rkyv deserialization successful");
+            eprintln!("✓ Configuration valid:");
+            eprintln!("  - Devices: {}", config.devices.len());
+
+            let total_mappings: usize = config.devices.iter().map(|d| d.mappings.len()).sum();
+            eprintln!("  - Total mappings: {}", total_mappings);
+
+            eprintln!("\n✓ Verification passed");
+            Ok(())
+        }
+        Err(err) => {
+            // Validation failed - print specific error details
+            match &err {
+                DeserializeError::InvalidMagic { expected, got } => {
+                    eprintln!("✗ Magic bytes invalid");
+                    eprintln!("  Expected: {:?}", expected);
+                    eprintln!("  Got: {:?}", got);
+                }
+                DeserializeError::VersionMismatch { expected, got } => {
+                    eprintln!("✗ Version mismatch");
+                    eprintln!("  Expected: {}", expected);
+                    eprintln!("  Got: {}", got);
+                }
+                DeserializeError::HashMismatch { expected, computed } => {
+                    eprintln!("✗ SHA256 hash mismatch (data corruption)");
+                    eprintln!("  Expected: {}", hex::encode(expected));
+                    eprintln!("  Computed: {}", hex::encode(computed));
+                }
+                DeserializeError::RkyvError(msg) => {
+                    eprintln!("✗ rkyv deserialization failed");
+                    eprintln!("  Error: {}", msg);
+                }
+                DeserializeError::IoError(msg) => {
+                    eprintln!("✗ I/O error");
+                    eprintln!("  Error: {}", msg);
+                }
+            }
+
+            eprintln!("\n✗ Verification failed: {:?}", err);
+            Err(err.into())
+        }
+    }
 }

@@ -254,11 +254,13 @@ fn test_verify_valid_file() {
         .arg(&krx_file)
         .assert()
         .success()
-        .stdout(predicate::str::contains("is valid"))
-        .stdout(predicate::str::contains("Magic bytes: OK"))
-        .stdout(predicate::str::contains("Version: OK"))
-        .stdout(predicate::str::contains("Hash: OK"))
-        .stdout(predicate::str::contains("Data: OK"));
+        .stderr(predicate::str::contains("✓ Verification passed"))
+        .stderr(predicate::str::contains("✓ Magic bytes valid"))
+        .stderr(predicate::str::contains("✓ Version:"))
+        .stderr(predicate::str::contains("✓ SHA256 hash matches"))
+        .stderr(predicate::str::contains(
+            "✓ rkyv deserialization successful",
+        ));
 }
 
 #[test]
@@ -302,7 +304,8 @@ fn test_verify_corrupted_magic() {
         .assert()
         .failure()
         .code(1)
-        .stderr(predicate::str::contains("Error"));
+        .stderr(predicate::str::contains("✗ Magic bytes invalid"))
+        .stderr(predicate::str::contains("✗ Verification failed"));
 }
 
 #[test]
@@ -332,7 +335,8 @@ fn test_verify_corrupted_hash() {
         .assert()
         .failure()
         .code(1)
-        .stderr(predicate::str::contains("Error"));
+        .stderr(predicate::str::contains("✗ SHA256 hash mismatch"))
+        .stderr(predicate::str::contains("✗ Verification failed"));
 }
 
 #[test]

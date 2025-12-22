@@ -6,6 +6,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::process;
 
+mod cli;
 mod dfa_gen;
 mod error;
 mod import_resolver;
@@ -13,7 +14,7 @@ mod mphf_gen;
 mod parser;
 mod serialize;
 
-use error::{DeserializeError, ParseError, SerializeError};
+use error::{ParseError, SerializeError};
 
 #[derive(Parser)]
 #[command(name = "keyrx_compiler")]
@@ -109,22 +110,7 @@ fn compile_command(input: PathBuf, output: Option<PathBuf>) -> Result<(), String
 }
 
 fn verify_command(config: PathBuf) -> Result<(), String> {
-    // Read the .krx file
-    let bytes = std::fs::read(&config)
-        .map_err(|e| format!("Failed to read file {}: {}", config.display(), e))?;
-
-    // Deserialize and validate
-    match serialize::deserialize(&bytes) {
-        Ok(_archived_config) => {
-            println!("✓ {} is valid", config.display());
-            println!("  Magic bytes: OK");
-            println!("  Version: OK");
-            println!("  Hash: OK");
-            println!("  Data: OK");
-            Ok(())
-        }
-        Err(e) => Err(format_deserialize_error(e)),
-    }
+    cli::verify::handle_verify(&config).map_err(|e| e.to_string())
 }
 
 fn hash_command(config: PathBuf) -> Result<(), String> {
@@ -193,8 +179,4 @@ fn format_parse_error(e: ParseError) -> String {
 
 fn format_serialize_error(e: SerializeError) -> String {
     format!("Serialization error: {}", e)
-}
-
-fn format_deserialize_error(e: DeserializeError) -> String {
-    format!("Deserialization error: {}", e)
 }
