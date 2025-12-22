@@ -111,11 +111,29 @@ Output:
 ✓ Verification passed
 ```
 
-### 5. Load the Configuration
+### 5. Run the Daemon (Linux)
 
-(TODO: Add daemon instructions once keyrx_daemon is implemented)
+Build and run the daemon:
 
-For now, you can test configurations in the browser using the WASM simulator:
+```bash
+# Build the daemon
+cargo build --release -p keyrx_daemon --features linux
+
+# List available keyboard devices
+./target/release/keyrx_daemon list-devices
+
+# Validate your configuration (dry-run)
+./target/release/keyrx_daemon validate --config my-config.krx
+
+# Run the daemon (requires root or proper permissions)
+sudo ./target/release/keyrx_daemon run --config my-config.krx
+```
+
+For non-root operation and systemd integration, see the [Linux Setup Guide](docs/LINUX_SETUP.md).
+
+### 6. Test in Browser (Optional)
+
+You can also test configurations in the browser using the WASM simulator:
 
 ```bash
 # Build and run the UI
@@ -129,6 +147,7 @@ Then open http://localhost:5173 and load your `.krx` file.
 ## Documentation
 
 - **[DSL Manual](docs/DSL_MANUAL.md)** - Complete reference for the KeyRx DSL with syntax, functions, and examples
+- **[Linux Setup Guide](docs/LINUX_SETUP.md)** - Linux installation, permissions, and systemd integration
 - **[Examples](examples/)** - Six example configurations from basic to advanced
 - **[Compiler README](keyrx_compiler/README.md)** - CLI commands and usage
 - **[Core README](keyrx_core/README.md)** - Architecture and library API
@@ -273,12 +292,21 @@ help: Check for missing semicolons, quotes, or parentheses
 ```
 Error: Permission denied when accessing /dev/input/eventX
 ```
-**Fix**: Run the daemon with appropriate permissions:
+**Fix**: Set up proper permissions for non-root operation:
 ```bash
-sudo keyrx_daemon config.krx
-# Or add your user to the input group
-sudo usermod -a -G input $USER
+# Install udev rules
+sudo cp keyrx_daemon/udev/99-keyrx.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# Add user to required groups
+sudo groupadd -f uinput
+sudo usermod -aG input,uinput $USER
+
+# Log out and back in for changes to take effect
 ```
+Or run with sudo: `sudo ./target/release/keyrx_daemon run --config config.krx`
+
+See [Linux Setup Guide](docs/LINUX_SETUP.md) for complete instructions.
 
 ### Getting Help
 

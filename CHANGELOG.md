@@ -9,6 +9,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Linux evdev Integration
+
+- **Native Linux Input Capture**
+  - evdev-based keyboard event capture from `/dev/input/event*` devices
+  - Bidirectional KeyCode mapping between evdev event codes and KeyRx KeyCode enum
+  - Support for all standard keyboard keys (letters, numbers, modifiers, function keys, special keys)
+  - Exclusive device grabbing with EVIOCGRAB ioctl to prevent event leakage
+  - Device release for clean shutdown and graceful exit
+
+- **Virtual Keyboard Output**
+  - uinput-based virtual keyboard creation for event injection
+  - Full keyboard capability configuration (all KEY_* events)
+  - EV_SYN synchronization for immediate event delivery
+  - Automatic cleanup with Drop trait implementation
+  - Held key release on shutdown to prevent stuck keys
+
+- **Device Discovery and Matching**
+  - Automatic keyboard enumeration from `/dev/input/` directory
+  - Device filtering (keyboards vs mice/touchpads) based on EV_KEY capabilities
+  - Pattern matching for device selection (wildcard `*`, prefix matching, exact match)
+  - Case-insensitive matching against device name and serial number
+  - Hot-plug support for USB keyboard connect/disconnect during operation
+
+- **Multi-Device Management**
+  - `DeviceManager` struct for orchestrating multiple keyboards
+  - Per-device configuration with pattern-based matching
+  - Priority ordering (specific patterns before wildcards)
+  - Independent state tracking per device
+  - Graceful handling of device errors without affecting other devices
+
+- **Daemon Lifecycle Management**
+  - Signal handling with signal-hook crate:
+    - SIGTERM/SIGINT for graceful shutdown
+    - SIGHUP for configuration reload
+  - Hot configuration reload without restart (preserves modifier state)
+  - Clean shutdown sequence (release grabs, destroy virtual keyboard)
+  - Automatic cleanup via Drop trait even on panic
+
+- **CLI Interface**
+  - `keyrx_daemon run --config <path> [--debug]` - Start the daemon
+  - `keyrx_daemon list-devices` - List available input devices with keyboard markers
+  - `keyrx_daemon validate --config <path>` - Dry-run validation without grabbing
+  - Appropriate exit codes: 0=success, 1=config error, 2=permission error
+  - Helpful error messages with troubleshooting guidance
+
+- **systemd Integration**
+  - System-wide service file (`keyrx.service`) with security hardening:
+    - NoNewPrivileges, ProtectSystem=strict, PrivateTmp
+    - DeviceAllow for controlled input device access
+    - SystemCallFilter for syscall restrictions
+  - User-level service file (`keyrx-user.service`) for per-user operation
+  - ExecReload support for `systemctl reload keyrx`
+  - Restart=on-failure with StartLimitBurst for restart throttling
+
+- **udev Rules**
+  - Permission rules for non-root daemon operation
+  - Input group access to `/dev/input/event*` devices
+  - Uinput group access to `/dev/uinput` with static_node option
+  - Detailed installation and troubleshooting instructions
+
+- **Comprehensive Test Suites**
+  - 38 CLI integration tests (argument parsing, subcommands, error handling)
+  - 29 daemon integration tests (lifecycle, signals, reload, shutdown)
+  - 22 end-to-end tests for real hardware scenarios (marked #[ignore] for CI)
+  - Tests cover basic remapping, Vim navigation layers, multi-device configs
+
+- **Documentation**
+  - [docs/LINUX_SETUP.md](docs/LINUX_SETUP.md) - Complete Linux setup guide
+  - udev rules with installation instructions
+  - systemd service files with usage examples
+  - Troubleshooting guide for common issues
+
 #### Core Runtime System
 
 - **Runtime Data Structures**

@@ -306,7 +306,7 @@
   - _Prompt: Role: E2E Test Engineer with Linux input testing expertise | Task: Create end-to-end integration tests using real input devices (marked #[ignore] for CI) covering common use cases following Testing Strategy: End-to-End Testing | Restrictions: All tests require real devices (mark #[ignore] and document requirements), test basic remapping (A→B), test CapsLock→Escape, test Vim navigation layer (CapsLock+HJKL), test multi-device (if multiple keyboards available), use subprocess to run daemon and inject test events, verify output with evtest or xdotool, add detailed test documentation | Success: E2E tests verify real remapping works, tests document hardware requirements, tests can be run manually on development machine, test results are reliable and repeatable_
   - **Completed**: Created comprehensive E2E test suite with 22 tests covering: basic remapping (CapsLock→Escape, A→B, multiple remappings), Vim navigation layers (HJKL arrows, word movement with Ctrl+Left/Right), multi-device configuration (wildcard patterns, specific patterns, no-match handling), lock state configuration, configuration reload (valid/invalid), shutdown and cleanup (graceful shutdown, Drop trait), performance (rapid start/stop, long-running stability), signal handling (running flag control), complex configurations (multi-layer, tap-hold), and interactive manual tests. All tests are marked #[ignore] for CI compatibility and require real hardware with /dev/uinput access.
 
-- [ ] 28. Update CHANGELOG and documentation
+- [x] 28. Update CHANGELOG and documentation
   - Files: `CHANGELOG.md`, `README.md`, `docs/LINUX_SETUP.md` (NEW)
   - Document Linux platform support
   - Write installation guide with udev rules
@@ -316,6 +316,7 @@
   - _Leverage: Existing documentation structure_
   - _Requirements: Documentation_
   - _Prompt: Role: Technical Writer with Linux expertise | Task: Update documentation for Linux platform support including installation, configuration, and troubleshooting following Documentation requirements | Restrictions: Update CHANGELOG.md with Linux evdev integration features, update README.md with Linux quickstart, create docs/LINUX_SETUP.md with detailed setup instructions (udev rules, systemd service, permissions), include troubleshooting section for common issues (permission denied, no devices found), test instructions on fresh Ubuntu/Fedora install | Success: CHANGELOG documents all new features, README has Linux quickstart, LINUX_SETUP.md has complete setup guide, troubleshooting covers common issues, documentation is accurate and tested_
+  - **Completed**: Updated CHANGELOG.md with comprehensive Linux evdev integration section documenting all new features (input capture, virtual keyboard, device discovery, daemon lifecycle, CLI, systemd, udev, test suites). Updated README.md with Linux quickstart section showing how to build, list devices, validate, and run the daemon. Created comprehensive docs/LINUX_SETUP.md (400+ lines) with installation guide, permissions setup (udev rules, user groups), running the daemon (manual, systemd system/user services), configuration management (hot reload, multi-device), troubleshooting section covering all common issues, and security considerations.
 
 - [ ] 29. Final integration and verification
   - Files: All modified files
