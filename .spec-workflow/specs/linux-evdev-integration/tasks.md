@@ -166,7 +166,7 @@
   - _Requirements: 4.2, 4.3_
   - _Prompt: Role: Rust Developer with expertise in Unix signal handling | Task: Implement signal handlers for SIGTERM, SIGINT, and SIGHUP using signal-hook crate, coordinating with daemon running flag following requirements 4.2 and 4.3 | Restrictions: Must use signal_hook::flag::register for SIGTERM and SIGINT to set running=false, use signal_hook::iterator::Signals for SIGHUP to trigger reload, running must be Arc<AtomicBool> for thread safety, add doc comments explaining signal behavior, handle registration errors gracefully | Success: SIGTERM sets running flag to false, SIGINT sets running flag to false, SIGHUP can be detected for reload trigger, signal handlers don't interfere with normal operation, compiles and handles Ctrl+C correctly_
 
-- [ ] 16. Implement Daemon struct and constructor
+- [x] 16. Implement Daemon struct and constructor
   - File: `keyrx_daemon/src/daemon.rs` (continue)
   - Define `Daemon` struct with config_path, device_manager, output, running flag
   - Implement `new(config_path: &Path) -> Result<Self, DaemonError>`
