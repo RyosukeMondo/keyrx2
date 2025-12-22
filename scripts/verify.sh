@@ -162,8 +162,10 @@ check_coverage() {
     fi
 
     # Run tarpaulin and capture output
+    # Exclude linux-feature-gated test files that produce empty coverage without the feature
     local tarpaulin_output
-    if tarpaulin_output=$(cargo tarpaulin --workspace --out Xml --output-dir coverage 2>&1); then
+    if tarpaulin_output=$(cargo tarpaulin --workspace --out Xml --output-dir coverage \
+        --exclude-files 'keyrx_daemon/tests/e2e_harness.rs' 'keyrx_daemon/tests/e2e_tests.rs' 'keyrx_daemon/tests/daemon_tests.rs' 2>&1); then
         # Extract coverage percentage from output
         # Tarpaulin outputs: "XX.XX% coverage, XX/XX lines covered"
         local coverage_pct
