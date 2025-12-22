@@ -122,9 +122,504 @@ pub fn process_event(
             // TODO: TapHold deferred to advanced-input-logic spec
             Vec::new()
         }
-        BaseKeyMapping::ModifiedOutput { .. } => {
-            // TODO: Implement in task 11
-            Vec::new()
+        BaseKeyMapping::ModifiedOutput {
+            to,
+            shift,
+            ctrl,
+            alt,
+            win,
+            ..
+        } => {
+            // ModifiedOutput: emit modifier presses, then key, then releases in reverse
+            use crate::config::KeyCode;
+
+            let mut events = Vec::new();
+
+            match event {
+                KeyEvent::Press(_) => {
+                    // Press modifiers first, then the key
+                    if *shift {
+                        events.push(KeyEvent::Press(KeyCode::LShift));
+                    }
+                    if *ctrl {
+                        events.push(KeyEvent::Press(KeyCode::LCtrl));
+                    }
+                    if *alt {
+                        events.push(KeyEvent::Press(KeyCode::LAlt));
+                    }
+                    if *win {
+                        events.push(KeyEvent::Press(KeyCode::LMeta));
+                    }
+                    events.push(KeyEvent::Press(*to));
+                }
+                KeyEvent::Release(_) => {
+                    // Release key first, then modifiers in reverse order
+                    events.push(KeyEvent::Release(*to));
+                    if *win {
+                        events.push(KeyEvent::Release(KeyCode::LMeta));
+                    }
+                    if *alt {
+                        events.push(KeyEvent::Release(KeyCode::LAlt));
+                    }
+                    if *ctrl {
+                        events.push(KeyEvent::Release(KeyCode::LCtrl));
+                    }
+                    if *shift {
+                        events.push(KeyEvent::Release(KeyCode::LShift));
+                    }
+                }
+            }
+
+            events
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    extern crate alloc;
+    use crate::config::{
+        BaseKeyMapping, Condition, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping,
+    };
+    use crate::runtime::{DeviceState, KeyLookup};
+    use alloc::string::String;
+    use alloc::vec;
+
+    /// Helper to create a test DeviceConfig with given mappings
+    fn create_test_config(mappings: Vec<KeyMapping>) -> DeviceConfig {
+        DeviceConfig {
+            identifier: DeviceIdentifier {
+                pattern: String::from("*"),
+            },
+            mappings,
+        }
+    }
+
+    #[test]
+    fn test_process_event_passthrough_no_mapping() {
+        // Test passthrough: unmapped key returns original event
+        let config = create_test_config(vec![]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Test Press event
+        let input_press = KeyEvent::Press(KeyCode::A);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::A));
+
+        // Test Release event
+        let input_release = KeyEvent::Release(KeyCode::A);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Release(KeyCode::A));
+    }
+
+    #[test]
+    fn test_process_event_simple_mapping() {
+        // Test Simple mapping: A → B
+        let config = create_test_config(vec![KeyMapping::simple(KeyCode::A, KeyCode::B)]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Test Press(A) returns Press(B)
+        let input_press = KeyEvent::Press(KeyCode::A);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::B));
+
+        // Test Release(A) returns Release(B)
+        let input_release = KeyEvent::Release(KeyCode::A);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Release(KeyCode::B));
+    }
+
+    #[test]
+    fn test_process_event_modifier_mapping() {
+        // Test Modifier mapping: sets state on press, clears on release, no output
+        let config = create_test_config(vec![KeyMapping::modifier(KeyCode::CapsLock, 0)]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Verify modifier is initially inactive
+        assert!(!state.is_modifier_active(0));
+
+        // Press should set modifier and return empty Vec
+        let input_press = KeyEvent::Press(KeyCode::CapsLock);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 0);
+        assert!(state.is_modifier_active(0));
+
+        // Release should clear modifier and return empty Vec
+        let input_release = KeyEvent::Release(KeyCode::CapsLock);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 0);
+        assert!(!state.is_modifier_active(0));
+    }
+
+    #[test]
+    fn test_process_event_lock_mapping() {
+        // Test Lock mapping: toggles on press, no output
+        let config = create_test_config(vec![KeyMapping::lock(KeyCode::ScrollLock, 1)]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Verify lock is initially inactive
+        assert!(!state.is_lock_active(1));
+
+        // First press: toggle ON
+        let input_press = KeyEvent::Press(KeyCode::ScrollLock);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 0);
+        assert!(state.is_lock_active(1));
+
+        // Release: do nothing
+        let input_release = KeyEvent::Release(KeyCode::ScrollLock);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 0);
+        assert!(state.is_lock_active(1)); // Still ON
+
+        // Second press: toggle OFF
+        let input_press = KeyEvent::Press(KeyCode::ScrollLock);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 0);
+        assert!(!state.is_lock_active(1));
+
+        // Release: do nothing
+        let input_release = KeyEvent::Release(KeyCode::ScrollLock);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 0);
+        assert!(!state.is_lock_active(1)); // Still OFF
+
+        // Third press: toggle ON again
+        let input_press = KeyEvent::Press(KeyCode::ScrollLock);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 0);
+        assert!(state.is_lock_active(1));
+    }
+
+    #[test]
+    fn test_process_event_modified_output_shift() {
+        // Test ModifiedOutput: Shift+1 sequence
+        let config = create_test_config(vec![KeyMapping::modified_output(
+            KeyCode::A,
+            KeyCode::Num1,
+            true,  // shift
+            false, // ctrl
+            false, // alt
+            false, // win
+        )]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Press should emit: Press(LShift), Press(Num1)
+        let input_press = KeyEvent::Press(KeyCode::A);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 2);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::LShift));
+        assert_eq!(output[1], KeyEvent::Press(KeyCode::Num1));
+
+        // Release should emit: Release(Num1), Release(LShift) (reverse order)
+        let input_release = KeyEvent::Release(KeyCode::A);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 2);
+        assert_eq!(output[0], KeyEvent::Release(KeyCode::Num1));
+        assert_eq!(output[1], KeyEvent::Release(KeyCode::LShift));
+    }
+
+    #[test]
+    fn test_process_event_modified_output_ctrl_alt() {
+        // Test ModifiedOutput: Ctrl+Alt+C sequence
+        let config = create_test_config(vec![KeyMapping::modified_output(
+            KeyCode::A,
+            KeyCode::C,
+            false, // shift
+            true,  // ctrl
+            true,  // alt
+            false, // win
+        )]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Press should emit: Press(LCtrl), Press(LAlt), Press(C)
+        let input_press = KeyEvent::Press(KeyCode::A);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 3);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::LCtrl));
+        assert_eq!(output[1], KeyEvent::Press(KeyCode::LAlt));
+        assert_eq!(output[2], KeyEvent::Press(KeyCode::C));
+
+        // Release should emit in reverse: Release(C), Release(LAlt), Release(LCtrl)
+        let input_release = KeyEvent::Release(KeyCode::A);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 3);
+        assert_eq!(output[0], KeyEvent::Release(KeyCode::C));
+        assert_eq!(output[1], KeyEvent::Release(KeyCode::LAlt));
+        assert_eq!(output[2], KeyEvent::Release(KeyCode::LCtrl));
+    }
+
+    #[test]
+    fn test_process_event_modified_output_all_modifiers() {
+        // Test ModifiedOutput: Shift+Ctrl+Alt+Win+Key sequence
+        let config = create_test_config(vec![KeyMapping::modified_output(
+            KeyCode::A,
+            KeyCode::Z,
+            true, // shift
+            true, // ctrl
+            true, // alt
+            true, // win
+        )]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Press should emit all modifiers then key
+        let input_press = KeyEvent::Press(KeyCode::A);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 5);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::LShift));
+        assert_eq!(output[1], KeyEvent::Press(KeyCode::LCtrl));
+        assert_eq!(output[2], KeyEvent::Press(KeyCode::LAlt));
+        assert_eq!(output[3], KeyEvent::Press(KeyCode::LMeta));
+        assert_eq!(output[4], KeyEvent::Press(KeyCode::Z));
+
+        // Release should emit in reverse order
+        let input_release = KeyEvent::Release(KeyCode::A);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 5);
+        assert_eq!(output[0], KeyEvent::Release(KeyCode::Z));
+        assert_eq!(output[1], KeyEvent::Release(KeyCode::LMeta));
+        assert_eq!(output[2], KeyEvent::Release(KeyCode::LAlt));
+        assert_eq!(output[3], KeyEvent::Release(KeyCode::LCtrl));
+        assert_eq!(output[4], KeyEvent::Release(KeyCode::LShift));
+    }
+
+    #[test]
+    fn test_process_event_conditional_mapping_true() {
+        // Test Conditional mapping: when modifier active, apply conditional mapping
+        let config = create_test_config(vec![
+            // CapsLock activates MD_00
+            KeyMapping::modifier(KeyCode::CapsLock, 0),
+            // when(MD_00): H → Left
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::H,
+                    to: KeyCode::Left,
+                }],
+            ),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Activate modifier
+        state.set_modifier(0);
+
+        // With modifier active, H should map to Left
+        let input_press = KeyEvent::Press(KeyCode::H);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::Left));
+
+        let input_release = KeyEvent::Release(KeyCode::H);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Release(KeyCode::Left));
+    }
+
+    #[test]
+    fn test_process_event_conditional_mapping_false() {
+        // Test Conditional mapping: when modifier NOT active, passthrough
+        let config = create_test_config(vec![
+            // CapsLock activates MD_00
+            KeyMapping::modifier(KeyCode::CapsLock, 0),
+            // when(MD_00): H → Left
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::H,
+                    to: KeyCode::Left,
+                }],
+            ),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Modifier is NOT active, H should passthrough
+        let input_press = KeyEvent::Press(KeyCode::H);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::H)); // Passthrough
+
+        let input_release = KeyEvent::Release(KeyCode::H);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Release(KeyCode::H)); // Passthrough
+    }
+
+    #[test]
+    fn test_process_event_conditional_with_unconditional_fallback() {
+        // Test conditional with fallback: if condition false, use unconditional mapping
+        let config = create_test_config(vec![
+            // when(MD_00): H → Left (conditional)
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::H,
+                    to: KeyCode::Left,
+                }],
+            ),
+            // H → Down (unconditional fallback)
+            KeyMapping::simple(KeyCode::H, KeyCode::Down),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Modifier NOT active: should use unconditional mapping (H → Down)
+        let input_press = KeyEvent::Press(KeyCode::H);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::Down));
+
+        // Activate modifier
+        state.set_modifier(0);
+
+        // Modifier active: should use conditional mapping (H → Left)
+        let input_press = KeyEvent::Press(KeyCode::H);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::Left));
+    }
+
+    #[test]
+    fn test_process_event_vim_navigation_layer() {
+        // Test realistic Vim navigation: CapsLock as layer, HJKL → arrow keys
+        let config = create_test_config(vec![
+            // CapsLock activates MD_00
+            KeyMapping::modifier(KeyCode::CapsLock, 0),
+            // when(MD_00): H → Left
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::H,
+                    to: KeyCode::Left,
+                }],
+            ),
+            // when(MD_00): J → Down
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::J,
+                    to: KeyCode::Down,
+                }],
+            ),
+            // when(MD_00): K → Up
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::K,
+                    to: KeyCode::Up,
+                }],
+            ),
+            // when(MD_00): L → Right
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::L,
+                    to: KeyCode::Right,
+                }],
+            ),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Press CapsLock to activate layer
+        let _ = process_event(KeyEvent::Press(KeyCode::CapsLock), &lookup, &mut state);
+        assert!(state.is_modifier_active(0));
+
+        // Test H → Left
+        let output = process_event(KeyEvent::Press(KeyCode::H), &lookup, &mut state);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::Left));
+
+        // Test J → Down
+        let output = process_event(KeyEvent::Press(KeyCode::J), &lookup, &mut state);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::Down));
+
+        // Test K → Up
+        let output = process_event(KeyEvent::Press(KeyCode::K), &lookup, &mut state);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::Up));
+
+        // Test L → Right
+        let output = process_event(KeyEvent::Press(KeyCode::L), &lookup, &mut state);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::Right));
+
+        // Release CapsLock to deactivate layer
+        let _ = process_event(KeyEvent::Release(KeyCode::CapsLock), &lookup, &mut state);
+        assert!(!state.is_modifier_active(0));
+
+        // H should now passthrough (no mapping when layer inactive)
+        let output = process_event(KeyEvent::Press(KeyCode::H), &lookup, &mut state);
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::H));
+    }
+
+    #[test]
+    fn test_keyevent_keycode_helper() {
+        // Test KeyEvent::keycode() helper method
+        let press = KeyEvent::Press(KeyCode::A);
+        assert_eq!(press.keycode(), KeyCode::A);
+
+        let release = KeyEvent::Release(KeyCode::B);
+        assert_eq!(release.keycode(), KeyCode::B);
+    }
+
+    #[test]
+    fn test_keyevent_derives() {
+        use alloc::format;
+
+        // Test that KeyEvent has all expected derives
+        let event1 = KeyEvent::Press(KeyCode::A);
+        let event2 = KeyEvent::Press(KeyCode::A);
+        let event3 = KeyEvent::Release(KeyCode::A);
+
+        // Test Clone (Copy trait)
+        let cloned = event1;
+        assert_eq!(cloned, event1);
+
+        // Test PartialEq and Eq
+        assert_eq!(event1, event2);
+        assert_ne!(event1, event3);
+
+        // Test Debug (should not panic)
+        let _ = format!("{:?}", event1);
+
+        // Test Hash - verify that equal events produce equal hashes
+        use core::hash::{Hash, Hasher};
+
+        // Simple test hasher that accumulates hash values
+        struct TestHasher {
+            value: u64,
+        }
+
+        impl Hasher for TestHasher {
+            fn finish(&self) -> u64 {
+                self.value
+            }
+
+            fn write(&mut self, bytes: &[u8]) {
+                for &byte in bytes {
+                    self.value = self.value.wrapping_mul(31).wrapping_add(byte as u64);
+                }
+            }
+        }
+
+        let mut hasher1 = TestHasher { value: 0 };
+        event1.hash(&mut hasher1);
+
+        let mut hasher2 = TestHasher { value: 0 };
+        event2.hash(&mut hasher2);
+
+        // Equal values should have equal hashes
+        assert_eq!(hasher1.finish(), hasher2.finish());
     }
 }

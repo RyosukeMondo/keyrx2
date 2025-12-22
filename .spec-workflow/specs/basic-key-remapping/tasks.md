@@ -107,7 +107,7 @@
   - _Requirements: 4.4, 4.5_
   - _Prompt: Role: Rust Developer with expertise in stateful event processing and side effects | Task: Extend process_event to handle BaseKeyMapping::Modifier and Lock variants, updating DeviceState and returning empty Vec (no output events), following requirements 4.4-4.5 | Restrictions: For Modifier variant on Press call state.set_modifier(id), on Release call state.clear_modifier(id), return Vec::new() (no output), for Lock variant on Press call state.toggle_lock(id), on Release return Vec::new() (do nothing), use match on event inside Modifier/Lock arms to distinguish Press/Release, add doc comments explaining state update behavior | Success: Modifier mapping on Press sets modifier bit and returns empty Vec, on Release clears modifier bit and returns empty Vec, Lock mapping on Press toggles lock bit and returns empty Vec, on Release returns empty Vec (no toggle), DeviceState is correctly mutated, no output events for Modifier or Lock mappings_
 
-- [ ] 11. Implement process_event for ModifiedOutput and Conditional mappings
+- [x] 11. Implement process_event for ModifiedOutput and Conditional mappings
   - File: `keyrx_core/src/runtime/event.rs` (continue)
   - Handle `BaseKeyMapping::ModifiedOutput`: Press→output modifiers then key, Release→reverse order
   - Handle `BaseKeyMapping::Conditional`: already handled by find_mapping (conditions evaluated there)
@@ -117,7 +117,7 @@
   - _Requirements: 4.6, 4.7, 4.8_
   - _Prompt: Role: Rust Developer with expertise in complex event sequencing and pattern matching | Task: Extend process_event to handle BaseKeyMapping::ModifiedOutput by generating multiple KeyEvents (modifier presses, then key press) and BaseKeyMapping::Conditional (delegate to find_mapping), add TapHold stub with TODO, following requirements 4.6-4.8 | Restrictions: For ModifiedOutput on Press: build Vec starting with modifier presses (if shift: Press(LShift), if ctrl: Press(LCtrl), etc.) then Press(output_key), on Release: reverse order (Release(output_key) then modifier releases), for Conditional just return result (condition already evaluated in find_mapping, so this branch may not be reached directly), for TapHold return Vec::new() and add TODO comment "TapHold deferred to advanced-input-logic spec", add doc comments with examples showing multi-event output | Success: ModifiedOutput with shift=true outputs [Press(LShift), Press(key)] on Press, [Release(key), Release(LShift)] on Release, Conditional mappings work via find_mapping (no special handling needed in process_event), TapHold returns empty Vec with TODO, compiles without errors_
 
-- [ ] 12. Write process_event unit tests
+- [x] 12. Write process_event unit tests
   - File: `keyrx_core/src/runtime/event.rs` (add tests module)
   - Test passthrough (no mapping)
   - Test Simple mapping (A→B)
