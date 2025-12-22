@@ -71,10 +71,44 @@ impl KeyEvent {
 /// let outputs = process_event(input, &lookup, &mut state);
 /// ```
 pub fn process_event(
-    _event: KeyEvent,
-    _lookup: &KeyLookup,
-    _state: &mut DeviceState,
+    event: KeyEvent,
+    lookup: &KeyLookup,
+    state: &mut DeviceState,
 ) -> Vec<KeyEvent> {
-    // Placeholder - will be implemented in tasks 9-11
-    Vec::new()
+    use crate::config::BaseKeyMapping;
+
+    // Look up the mapping for this key
+    let mapping = lookup.find_mapping(event.keycode(), state);
+
+    // If no mapping found, pass through the original event
+    let Some(mapping) = mapping else {
+        return alloc::vec![event];
+    };
+
+    // Process the mapping based on its type
+    match mapping {
+        BaseKeyMapping::Simple { to, .. } => {
+            // Simple remapping: replace keycode while preserving Press/Release
+            match event {
+                KeyEvent::Press(_) => alloc::vec![KeyEvent::Press(*to)],
+                KeyEvent::Release(_) => alloc::vec![KeyEvent::Release(*to)],
+            }
+        }
+        BaseKeyMapping::Modifier { .. } => {
+            // TODO: Implement in task 10
+            Vec::new()
+        }
+        BaseKeyMapping::Lock { .. } => {
+            // TODO: Implement in task 10
+            Vec::new()
+        }
+        BaseKeyMapping::TapHold { .. } => {
+            // TODO: TapHold deferred to advanced-input-logic spec
+            Vec::new()
+        }
+        BaseKeyMapping::ModifiedOutput { .. } => {
+            // TODO: Implement in task 11
+            Vec::new()
+        }
+    }
 }

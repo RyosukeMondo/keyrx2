@@ -78,7 +78,7 @@
 
 ## Phase 3: Event Processing Logic
 
-- [ ] 8. Define KeyEvent enum
+- [x] 8. Define KeyEvent enum
   - File: `keyrx_core/src/runtime/event.rs`
   - Define `KeyEvent` enum: `Press(KeyCode)`, `Release(KeyCode)`
   - Derive: `Debug, Clone, Copy, PartialEq, Eq, Hash`
@@ -88,7 +88,7 @@
   - _Requirements: 4.1, 4.2_
   - _Prompt: Role: Rust Type System Expert with focus on ergonomic API design | Task: Define KeyEvent enum with Press and Release variants holding KeyCode, derive all useful traits (Debug, Clone, Copy, PartialEq, Eq, Hash), and add keycode helper method following requirements 4.1-4.2 | Restrictions: Must use #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] for maximum utility, keycode method must extract KeyCode from both variants (use match), add doc comments explaining usage and why Copy is safe (KeyCode is Copy), include examples in doc comments | Success: KeyEvent::Press and KeyEvent::Release defined, all derives compile, keycode() returns correct KeyCode for both variants, enum is Copy (can pass by value efficiently), doc comments include usage examples_
 
-- [ ] 9. Implement process_event for simple mappings
+- [x] 9. Implement process_event for simple mappings
   - File: `keyrx_core/src/runtime/event.rs` (continue)
   - Implement `process_event(event: KeyEvent, lookup: &KeyLookup, state: &mut DeviceState) -> Vec<KeyEvent>`
   - Handle `BaseKeyMapping::Simple`: map input key to output key
