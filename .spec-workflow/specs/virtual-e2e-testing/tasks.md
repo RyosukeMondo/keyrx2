@@ -143,7 +143,7 @@
     Success: E2EError covers all failure modes, E2EConfig::simple_remap/modifier/conditional work correctly
     After completion: Mark task [-] as in-progress before starting, use log-implementation tool to record what was built, then mark [x] as complete_
 
-- [ ] 10. Implement E2EHarness::setup
+- [x] 10. Implement E2EHarness::setup
   - File: `keyrx_daemon/tests/e2e_harness.rs` (continue)
   - Implement setup(config) method
   - Create VirtualKeyboard with unique name

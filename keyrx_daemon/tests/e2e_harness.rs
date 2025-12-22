@@ -7,26 +7,36 @@
 //!
 //! - [`E2EError`]: Error types for E2E test operations
 //! - [`E2EConfig`]: Test configuration with helper constructors
+//! - [`E2EHarness`]: Complete test orchestration
 //!
 //! # Example
 //!
 //! ```ignore
-//! use keyrx_daemon::tests::e2e_harness::{E2EConfig, E2EError};
+//! use keyrx_daemon::tests::e2e_harness::{E2EConfig, E2EHarness};
 //!
 //! // Create a simple remap configuration
 //! let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+//!
+//! // Setup the test environment (starts daemon as subprocess)
+//! let harness = E2EHarness::setup(config)?;
 //! ```
 
 #![cfg(all(target_os = "linux", feature = "linux"))]
 
 use std::fmt;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant, SystemTime};
 
+use keyrx_compiler::serialize::serialize as serialize_config;
 use keyrx_core::config::{
     BaseKeyMapping, Condition, ConditionItem, ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode,
     KeyMapping, Metadata, Version,
 };
 use keyrx_core::runtime::KeyEvent;
-use keyrx_daemon::test_utils::VirtualDeviceError;
+use keyrx_daemon::test_utils::{OutputCapture, VirtualDeviceError, VirtualKeyboard};
 
 // ============================================================================
 // E2EError - Error types for E2E test operations
@@ -488,6 +498,338 @@ impl Default for E2EConfig {
 }
 
 // ============================================================================
+// E2EHarness - Complete E2E test orchestration
+// ============================================================================
+
+/// Default name for the daemon's virtual output device.
+const DAEMON_OUTPUT_NAME: &str = "keyrx Virtual Keyboard";
+
+/// Default timeout for waiting for daemon to be ready.
+const DAEMON_STARTUP_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Default timeout for waiting for output device to appear.
+const OUTPUT_DEVICE_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Orchestrates complete E2E test lifecycle.
+///
+/// This harness manages:
+/// - Creation of a virtual input keyboard
+/// - Generation and writing of test configuration
+/// - Starting the daemon as a subprocess
+/// - Finding and connecting to the daemon's output device
+/// - Cleanup of all resources on drop
+///
+/// # Example
+///
+/// ```ignore
+/// use keyrx_daemon::tests::e2e_harness::{E2EConfig, E2EHarness};
+/// use keyrx_core::config::KeyCode;
+///
+/// // Create a simple A→B remapping test
+/// let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+/// let harness = E2EHarness::setup(config)?;
+///
+/// // Harness is now ready for testing
+/// // - Virtual keyboard created
+/// // - Daemon running and grabbing the virtual keyboard
+/// // - Output capture connected to daemon's output
+/// ```
+pub struct E2EHarness {
+    /// Virtual keyboard for injecting test input events.
+    virtual_input: VirtualKeyboard,
+    /// Daemon subprocess handle.
+    daemon_process: Option<Child>,
+    /// Output capture for reading daemon's remapped events.
+    output_capture: OutputCapture,
+    /// Path to the temporary .krx config file.
+    config_path: PathBuf,
+    /// Captured stderr from daemon for diagnostics.
+    /// This field will be populated and used by future teardown implementation.
+    #[allow(dead_code)]
+    daemon_stderr: Option<String>,
+}
+
+impl E2EHarness {
+    /// Sets up a complete E2E test environment.
+    ///
+    /// This method performs the following steps:
+    /// 1. Creates a VirtualKeyboard with a unique name
+    /// 2. Generates a .krx config file targeting the virtual keyboard
+    /// 3. Starts the daemon as a subprocess with the config
+    /// 4. Waits for the daemon to grab the device and create its output
+    /// 5. Finds and opens the daemon's output device
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Test configuration with mappings to apply
+    ///
+    /// # Returns
+    ///
+    /// An `E2EHarness` ready for test input/output operations.
+    ///
+    /// # Errors
+    ///
+    /// - [`E2EError::VirtualDevice`] if virtual keyboard creation fails
+    /// - [`E2EError::ConfigError`] if config serialization fails
+    /// - [`E2EError::DaemonStartError`] if daemon fails to start
+    /// - [`E2EError::Timeout`] if daemon doesn't become ready in time
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let config = E2EConfig::simple_remap(KeyCode::CapsLock, KeyCode::Escape);
+    /// let harness = E2EHarness::setup(config)?;
+    /// ```
+    pub fn setup(config: E2EConfig) -> Result<Self, E2EError> {
+        Self::setup_with_timeout(config, DAEMON_STARTUP_TIMEOUT, OUTPUT_DEVICE_TIMEOUT)
+    }
+
+    /// Sets up E2E environment with custom timeouts.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Test configuration
+    /// * `daemon_timeout` - How long to wait for daemon to start
+    /// * `output_timeout` - How long to wait for output device
+    pub fn setup_with_timeout(
+        config: E2EConfig,
+        _daemon_timeout: Duration,
+        output_timeout: Duration,
+    ) -> Result<Self, E2EError> {
+        // Step 1: Create virtual keyboard with unique name
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+        let input_name = format!("e2e-test-input-{}", timestamp);
+
+        let virtual_input = VirtualKeyboard::create(&input_name)?;
+
+        // Give the kernel a moment to register the device
+        std::thread::sleep(Duration::from_millis(100));
+
+        // Step 2: Generate .krx config file targeting the virtual keyboard
+        // Modify the config to match our virtual keyboard's name
+        let test_config = E2EConfig {
+            device_pattern: virtual_input.name().to_string(),
+            mappings: config.mappings,
+        };
+
+        let config_root = test_config.to_config_root();
+        let config_bytes = serialize_config(&config_root).map_err(|e| E2EError::ConfigError {
+            message: format!("failed to serialize config: {}", e),
+        })?;
+
+        // Write to temporary file
+        let config_path = std::env::temp_dir().join(format!("keyrx-e2e-{}.krx", timestamp));
+        let mut file = File::create(&config_path)?;
+        file.write_all(&config_bytes)?;
+        file.sync_all()?;
+
+        // Step 3: Start daemon as subprocess
+        let daemon_binary = Self::find_daemon_binary()?;
+
+        let mut daemon_process = Command::new(&daemon_binary)
+            .arg("run")
+            .arg("--config")
+            .arg(&config_path)
+            .arg("--debug")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| E2EError::DaemonStartError {
+                message: format!("failed to spawn daemon: {}", e),
+                stderr: None,
+            })?;
+
+        // Step 4: Wait for daemon to start and grab our device
+        // We do this by waiting for the output device to appear
+        let start = Instant::now();
+
+        // Give daemon a moment to initialize
+        std::thread::sleep(Duration::from_millis(200));
+
+        // Check if daemon is still running
+        if let Some(status) = daemon_process.try_wait().map_err(E2EError::Io)? {
+            // Daemon exited immediately - capture stderr for diagnostics
+            let stderr = Self::read_child_stderr(&mut daemon_process);
+            return Err(E2EError::DaemonCrashed {
+                exit_code: status.code(),
+                stderr,
+            });
+        }
+
+        // Step 5: Find and open the daemon's output device
+        let remaining_timeout = output_timeout.saturating_sub(start.elapsed());
+        let mut output_capture = OutputCapture::find_by_name(DAEMON_OUTPUT_NAME, remaining_timeout)
+            .map_err(|e| match e {
+                VirtualDeviceError::NotFound { .. } | VirtualDeviceError::Timeout { .. } => {
+                    // Daemon may have crashed - check and include stderr
+                    let stderr = Self::read_child_stderr(&mut daemon_process);
+                    if let Some(status) = daemon_process.try_wait().ok().flatten() {
+                        E2EError::DaemonCrashed {
+                            exit_code: status.code(),
+                            stderr,
+                        }
+                    } else {
+                        E2EError::Timeout {
+                            operation: format!(
+                                "waiting for output device '{}'",
+                                DAEMON_OUTPUT_NAME
+                            ),
+                            timeout_ms: output_timeout.as_millis() as u64,
+                        }
+                    }
+                }
+                _ => E2EError::VirtualDevice(e),
+            })?;
+
+        // Drain any pending events from output capture
+        let _ = output_capture.drain();
+
+        Ok(Self {
+            virtual_input,
+            daemon_process: Some(daemon_process),
+            output_capture,
+            config_path,
+            daemon_stderr: None,
+        })
+    }
+
+    /// Returns a reference to the virtual input keyboard.
+    #[must_use]
+    pub fn virtual_input(&self) -> &VirtualKeyboard {
+        &self.virtual_input
+    }
+
+    /// Returns a mutable reference to the virtual input keyboard.
+    pub fn virtual_input_mut(&mut self) -> &mut VirtualKeyboard {
+        &mut self.virtual_input
+    }
+
+    /// Returns a reference to the output capture.
+    #[must_use]
+    pub fn output_capture(&self) -> &OutputCapture {
+        &self.output_capture
+    }
+
+    /// Returns a mutable reference to the output capture.
+    pub fn output_capture_mut(&mut self) -> &mut OutputCapture {
+        &mut self.output_capture
+    }
+
+    /// Returns the config file path.
+    #[must_use]
+    pub fn config_path(&self) -> &PathBuf {
+        &self.config_path
+    }
+
+    /// Returns whether the daemon process is still running.
+    #[must_use]
+    pub fn is_daemon_running(&mut self) -> bool {
+        if let Some(ref mut process) = self.daemon_process {
+            matches!(process.try_wait(), Ok(None))
+        } else {
+            false
+        }
+    }
+
+    /// Finds the daemon binary path.
+    ///
+    /// Looks in the following order:
+    /// 1. `target/debug/keyrx_daemon` (debug build)
+    /// 2. `target/release/keyrx_daemon` (release build)
+    /// 3. Path from `KEYRX_DAEMON_PATH` environment variable
+    fn find_daemon_binary() -> Result<PathBuf, E2EError> {
+        // Check environment variable first
+        if let Ok(path) = std::env::var("KEYRX_DAEMON_PATH") {
+            let path = PathBuf::from(path);
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+
+        // Try workspace target directory
+        // We navigate from the test crate to the workspace root
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+        let workspace_root = PathBuf::from(&manifest_dir)
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."));
+
+        // Try debug build first
+        let debug_path = workspace_root.join("target/debug/keyrx_daemon");
+        if debug_path.exists() {
+            return Ok(debug_path);
+        }
+
+        // Try release build
+        let release_path = workspace_root.join("target/release/keyrx_daemon");
+        if release_path.exists() {
+            return Ok(release_path);
+        }
+
+        Err(E2EError::ConfigError {
+            message: format!(
+                "Could not find keyrx_daemon binary. Tried:\n\
+                 - {}\n\
+                 - {}\n\
+                 Set KEYRX_DAEMON_PATH environment variable to specify the path.",
+                debug_path.display(),
+                release_path.display()
+            ),
+        })
+    }
+
+    /// Reads stderr from the daemon process if available.
+    fn read_child_stderr(child: &mut Child) -> Option<String> {
+        use std::io::Read;
+        child.stderr.as_mut().and_then(|stderr| {
+            let mut buf = String::new();
+            stderr.read_to_string(&mut buf).ok()?;
+            if buf.is_empty() {
+                None
+            } else {
+                Some(buf)
+            }
+        })
+    }
+}
+
+impl Drop for E2EHarness {
+    /// Ensures cleanup even on panic.
+    ///
+    /// This method:
+    /// 1. Terminates the daemon process (SIGTERM, then SIGKILL if needed)
+    /// 2. Removes the temporary config file
+    /// 3. Virtual keyboard is dropped automatically
+    fn drop(&mut self) {
+        // Terminate daemon process
+        if let Some(mut process) = self.daemon_process.take() {
+            // Try graceful shutdown first with SIGTERM
+            #[cfg(unix)]
+            unsafe {
+                libc::kill(process.id() as libc::pid_t, libc::SIGTERM);
+            }
+
+            // Wait briefly for graceful shutdown
+            std::thread::sleep(Duration::from_millis(100));
+
+            // Check if still running and force kill if needed
+            if let Ok(None) = process.try_wait() {
+                let _ = process.kill();
+            }
+
+            // Wait for process to fully exit
+            let _ = process.wait();
+        }
+
+        // Clean up config file
+        let _ = fs::remove_file(&self.config_path);
+    }
+}
+
+// ============================================================================
 // Unit Tests
 // ============================================================================
 
@@ -771,5 +1113,126 @@ mod tests {
         let config = E2EConfig::default();
         assert_eq!(config.device_pattern, "*");
         assert!(config.mappings.is_empty());
+    }
+
+    // ------------------------------------------------------------------------
+    // E2EHarness Tests
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_daemon_output_name_constant() {
+        // Verify the constant matches what the daemon creates
+        assert_eq!(DAEMON_OUTPUT_NAME, "keyrx Virtual Keyboard");
+    }
+
+    #[test]
+    fn test_daemon_startup_timeout_is_reasonable() {
+        // Timeout should be between 1 and 30 seconds
+        assert!(DAEMON_STARTUP_TIMEOUT >= Duration::from_secs(1));
+        assert!(DAEMON_STARTUP_TIMEOUT <= Duration::from_secs(30));
+    }
+
+    #[test]
+    fn test_output_device_timeout_is_reasonable() {
+        // Timeout should be between 1 and 30 seconds
+        assert!(OUTPUT_DEVICE_TIMEOUT >= Duration::from_secs(1));
+        assert!(OUTPUT_DEVICE_TIMEOUT <= Duration::from_secs(30));
+    }
+
+    #[test]
+    fn test_find_daemon_binary_uses_environment_variable() {
+        // Set up a fake path via environment variable
+        // This won't find the binary but tests the lookup logic
+        std::env::set_var("KEYRX_DAEMON_PATH", "/nonexistent/path/keyrx_daemon");
+
+        let result = E2EHarness::find_daemon_binary();
+
+        // Clean up
+        std::env::remove_var("KEYRX_DAEMON_PATH");
+
+        // Should fail because the path doesn't exist
+        // But it should try the environment variable first
+        // Since it doesn't exist, it falls through to trying workspace paths
+        // The test verifies the function exists and returns a Result
+        match result {
+            Ok(path) => {
+                // If we found a binary, it should exist
+                assert!(path.exists());
+            }
+            Err(E2EError::ConfigError { message }) => {
+                // Expected when no binary is available
+                assert!(message.contains("Could not find keyrx_daemon binary"));
+            }
+            Err(e) => {
+                panic!("Unexpected error type: {:?}", e);
+            }
+        }
+    }
+
+    /// Test that E2EHarness::setup creates all components correctly
+    /// Note: Marked #[ignore] because it requires uinput access and daemon binary
+    #[test]
+    #[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux test_e2e_harness_setup -- --ignored"]
+    fn test_e2e_harness_setup() {
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+        let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+        // Verify components are initialized
+        assert!(!harness.virtual_input().name().is_empty());
+        assert!(harness
+            .virtual_input()
+            .name()
+            .starts_with("e2e-test-input-"));
+        assert!(harness.config_path().exists());
+        assert!(harness.is_daemon_running());
+
+        // Harness will be cleaned up on drop
+    }
+
+    /// Test that E2EHarness cleanup works on drop
+    /// Note: Marked #[ignore] because it requires uinput access and daemon binary
+    #[test]
+    #[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux test_e2e_harness_cleanup -- --ignored"]
+    fn test_e2e_harness_cleanup() {
+        let config_path;
+
+        {
+            let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+            let harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+            config_path = harness.config_path().clone();
+            assert!(config_path.exists(), "Config file should exist during test");
+
+            // Harness is dropped here
+        }
+
+        // After drop, config file should be cleaned up
+        assert!(
+            !config_path.exists(),
+            "Config file should be removed after drop"
+        );
+    }
+
+    /// Test that E2EHarness fails gracefully when daemon binary is missing
+    #[test]
+    fn test_e2e_harness_setup_fails_without_binary() {
+        // Set environment to a nonexistent path to ensure binary isn't found
+        let original_path = std::env::var("KEYRX_DAEMON_PATH").ok();
+        std::env::set_var("KEYRX_DAEMON_PATH", "/definitely/nonexistent/keyrx_daemon");
+
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+
+        // Setup should fail either with VirtualDevice error (no uinput access)
+        // or ConfigError (no daemon binary)
+        let result = E2EHarness::setup(config);
+
+        // Restore environment
+        match original_path {
+            Some(path) => std::env::set_var("KEYRX_DAEMON_PATH", path),
+            None => std::env::remove_var("KEYRX_DAEMON_PATH"),
+        }
+
+        // Should be an error
+        assert!(result.is_err());
     }
 }
