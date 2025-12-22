@@ -295,7 +295,7 @@
 
 ## Phase 6: Integration Testing and Documentation
 
-- [ ] 27. Create end-to-end integration tests
+- [x] 27. Create end-to-end integration tests
   - File: `keyrx_daemon/tests/e2e_tests.rs` (NEW)
   - Test CapsLock→Escape remapping with real device
   - Test Vim navigation layer with real device
@@ -304,6 +304,7 @@
   - _Leverage: Real devices, evtest for verification_
   - _Requirements: Testing Strategy: End-to-End Testing_
   - _Prompt: Role: E2E Test Engineer with Linux input testing expertise | Task: Create end-to-end integration tests using real input devices (marked #[ignore] for CI) covering common use cases following Testing Strategy: End-to-End Testing | Restrictions: All tests require real devices (mark #[ignore] and document requirements), test basic remapping (A→B), test CapsLock→Escape, test Vim navigation layer (CapsLock+HJKL), test multi-device (if multiple keyboards available), use subprocess to run daemon and inject test events, verify output with evtest or xdotool, add detailed test documentation | Success: E2E tests verify real remapping works, tests document hardware requirements, tests can be run manually on development machine, test results are reliable and repeatable_
+  - **Completed**: Created comprehensive E2E test suite with 22 tests covering: basic remapping (CapsLock→Escape, A→B, multiple remappings), Vim navigation layers (HJKL arrows, word movement with Ctrl+Left/Right), multi-device configuration (wildcard patterns, specific patterns, no-match handling), lock state configuration, configuration reload (valid/invalid), shutdown and cleanup (graceful shutdown, Drop trait), performance (rapid start/stop, long-running stability), signal handling (running flag control), complex configurations (multi-layer, tap-hold), and interactive manual tests. All tests are marked #[ignore] for CI compatibility and require real hardware with /dev/uinput access.
 
 - [ ] 28. Update CHANGELOG and documentation
   - Files: `CHANGELOG.md`, `README.md`, `docs/LINUX_SETUP.md` (NEW)
