@@ -156,7 +156,7 @@
 
 ## Phase 4: Daemon Lifecycle Management
 
-- [ ] 15. Implement signal handling
+- [x] 15. Implement signal handling
   - File: `keyrx_daemon/src/daemon.rs` (NEW)
   - Implement `install_signal_handlers(running: Arc<AtomicBool>) -> Result<(), io::Error>`
   - Handle SIGTERM and SIGINT for graceful shutdown
