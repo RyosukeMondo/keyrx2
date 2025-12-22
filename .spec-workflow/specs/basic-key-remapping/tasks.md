@@ -2,7 +2,7 @@
 
 ## Phase 1: Core Runtime Data Structures
 
-- [ ] 1. Create runtime module structure
+- [x] 1. Create runtime module structure
   - Files: `keyrx_core/src/runtime/mod.rs`, `state.rs`, `lookup.rs`, `event.rs`
   - Set up module exports and public API
   - Add `bitvec` dependency to keyrx_core/Cargo.toml
@@ -11,7 +11,7 @@
   - _Requirements: Non-Functional: Code Architecture and Modularity_
   - _Prompt: Role: Rust Software Architect with expertise in module design and workspace organization | Task: Create keyrx_core/src/runtime module with mod.rs, state.rs, lookup.rs, event.rs files, set up public API exports in mod.rs, and add bitvec crate dependency to Cargo.toml | Restrictions: Must follow existing keyrx_core module patterns, maintain no_std compatibility design (don't use no_std yet, but design for it), ensure clear module boundaries with no circular dependencies | Success: Module compiles without errors, mod.rs exports DeviceState, KeyLookup, KeyEvent, process_event function, all files have proper documentation comments, bitvec dependency added to Cargo.toml_
 
-- [ ] 2. Implement DeviceState with bit vectors
+- [x] 2. Implement DeviceState with bit vectors
   - File: `keyrx_core/src/runtime/state.rs`
   - Define `DeviceState` struct with 255-bit modifiers and locks (using `BitVec<u8, Lsb0>`)
   - Implement `new()`, `set_modifier()`, `clear_modifier()`, `toggle_lock()`
@@ -21,7 +21,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
   - _Prompt: Role: Rust Systems Programmer with expertise in bit manipulation and high-performance data structures | Task: Implement DeviceState struct using BitVec<u8, Lsb0> for 255-bit modifier and lock state vectors, following requirements 2.1-2.4, with methods for setting/clearing/toggling bits and querying state | Restrictions: Must validate bit indexes (0-254 only, reject 255+), no panics on invalid input (log error and return), use BitVec::set/get for clarity, design for <10μs update time (measure later), add comprehensive doc comments explaining bit layout | Success: DeviceState::new() creates zeroed 255-bit vectors, set_modifier(0) and set_modifier(254) work correctly, set_modifier(255) logs error and returns without panic, is_modifier_active returns correct boolean, toggle_lock flips bit state (first call ON, second OFF), all methods have doc comments with examples_
 
-- [ ] 3. Implement condition evaluation in DeviceState
+- [x] 3. Implement condition evaluation in DeviceState
   - File: `keyrx_core/src/runtime/state.rs` (continue)
   - Implement `evaluate_condition(&self, condition: &Condition) -> bool`
   - Handle `Condition::ModifierActive`, `LockActive`, `AllActive`, `NotActive`
@@ -30,7 +30,7 @@
   - _Requirements: 2.5, 2.6, 2.7, 2.8_
   - _Prompt: Role: Rust Developer with expertise in pattern matching and enum handling | Task: Implement evaluate_condition method in DeviceState that evaluates Condition enum variants (ModifierActive, LockActive, AllActive, NotActive) following requirements 2.5-2.8, using existing Condition and ConditionItem enums from keyrx_core::config | Restrictions: Must handle all Condition variants exhaustively with match, AllActive returns true only if all items evaluate to true, NotActive returns true only if all items evaluate to false, use is_modifier_active and is_lock_active helpers (don't duplicate bit checking logic), add doc comments with examples for each variant | Success: evaluate_condition(Condition::ModifierActive(0)) returns true when modifier 0 is set, AllActive([MD_00, LK_01]) returns true only when both are active, NotActive([MD_00]) returns true when MD_00 is NOT active, handles all variants without panics_
 
-- [ ] 4. Write DeviceState unit tests
+- [x] 4. Write DeviceState unit tests
   - File: `keyrx_core/src/runtime/state.rs` (add tests module)
   - Test set/clear modifier for IDs 0, 127, 254
   - Test toggle_lock behavior (OFF→ON→OFF)
@@ -43,7 +43,7 @@
 
 ## Phase 2: Key Lookup Implementation
 
-- [ ] 5. Implement KeyLookup with HashMap
+- [x] 5. Implement KeyLookup with HashMap
   - File: `keyrx_core/src/runtime/lookup.rs`
   - Define `KeyLookup` struct with `HashMap<KeyCode, Vec<BaseKeyMapping>>`
   - Implement `from_device_config(config: &DeviceConfig) -> Self`
@@ -54,7 +54,7 @@
   - _Requirements: 3.1, 3.7_
   - _Prompt: Role: Rust Developer with expertise in HashMap optimization and data structure design | Task: Implement KeyLookup struct using HashMap<KeyCode, Vec<BaseKeyMapping>> to build lookup table from DeviceConfig, following requirements 3.1 and 3.7, grouping mappings by input key and ordering conditionals before unconditional | Restrictions: Must iterate DeviceConfig.mappings, extract input key from each BaseKeyMapping variant (Simple→from, Modifier→key, Lock→key, TapHold→key, ModifiedOutput→from, Conditional→extract from nested mappings), insert into HashMap using entry API, push conditional mappings before unconditional, use Vec::with_capacity for efficiency if possible, add doc comments explaining ordering | Success: from_device_config builds HashMap correctly, mappings for same key are grouped in Vec, conditional mappings appear before unconditional in Vec, handles empty DeviceConfig (returns empty HashMap), compiles without warnings_
 
-- [ ] 6. Implement find_mapping with condition evaluation
+- [x] 6. Implement find_mapping with condition evaluation
   - File: `keyrx_core/src/runtime/lookup.rs` (continue)
   - Implement `find_mapping(&self, key: KeyCode, state: &DeviceState) -> Option<&BaseKeyMapping>`
   - Iterate Vec<BaseKeyMapping> for key
@@ -65,7 +65,7 @@
   - _Requirements: 3.2, 3.3, 3.4, 3.5, 3.6_
   - _Prompt: Role: Rust Developer with expertise in Option handling and iterator patterns | Task: Implement find_mapping method in KeyLookup that searches HashMap for key, iterates Vec<BaseKeyMapping>, evaluates conditional mappings using DeviceState::evaluate_condition, and returns first matching mapping following requirements 3.2-3.6 | Restrictions: Must use HashMap::get to retrieve Vec, return None if key not in table (passthrough case), iterate Vec in order (conditionals first), for Conditional variant extract condition and call state.evaluate_condition, return Some(&mapping) on first match, return unconditional mapping if no conditionals match, never clone BaseKeyMapping (return reference), add doc comments with examples | Success: find_mapping returns None for unmapped key, returns &BaseKeyMapping for simple mapping, evaluates conditionals in order and returns first match, falls back to unconditional if no conditionals match, handles Vec with only conditionals (returns None if none match), compiles without warnings_
 
-- [ ] 7. Write KeyLookup unit tests
+- [x] 7. Write KeyLookup unit tests
   - File: `keyrx_core/src/runtime/lookup.rs` (add tests module)
   - Test from_device_config with simple, conditional, mixed mappings
   - Test find_mapping with no mapping (passthrough)
