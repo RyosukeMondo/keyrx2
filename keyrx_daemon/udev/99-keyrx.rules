@@ -1,0 +1,57 @@
+# keyrx - Keyboard remapping daemon udev rules
+# ============================================
+#
+# This file grants non-root users access to input devices and uinput
+# for keyboard event capture and injection.
+#
+# INSTALLATION:
+#   1. Copy this file to the udev rules directory:
+#      sudo cp 99-keyrx.rules /etc/udev/rules.d/
+#
+#   2. Reload udev rules:
+#      sudo udevadm control --reload-rules
+#      sudo udevadm trigger
+#
+#   3. Create uinput group (if not exists):
+#      sudo groupadd -f uinput
+#
+#   4. Add your user to the required groups:
+#      sudo usermod -aG input $USER
+#      sudo usermod -aG uinput $USER
+#
+#   5. Log out and log back in for group changes to take effect
+#      (or use: newgrp input && newgrp uinput)
+#
+# REQUIRED GROUPS:
+#   - input:  Read access to /dev/input/event* devices
+#   - uinput: Read/write access to /dev/uinput for virtual keyboard creation
+#
+# TROUBLESHOOTING:
+#   - Check group membership: groups $USER
+#   - Check device permissions: ls -la /dev/input/event* /dev/uinput
+#   - Test input access: cat /dev/input/event0 (should show binary data on keypress)
+#   - Verify uinput module: lsmod | grep uinput
+#   - Load uinput module: sudo modprobe uinput
+#
+# SECURITY NOTE:
+#   Users in the 'input' group can read all input devices including keyboards,
+#   mice, and other HID devices. Only add trusted users to this group.
+#
+# Tested on: Ubuntu 22.04+, Fedora 38+, Arch Linux (rolling)
+
+# =============================================================================
+# Input Device Rules
+# =============================================================================
+
+# Grant input group read access to all input event devices
+# This allows keyrx daemon to capture keyboard events
+KERNEL=="event[0-9]*", SUBSYSTEM=="input", GROUP="input", MODE="0660"
+
+# =============================================================================
+# uinput Device Rules
+# =============================================================================
+
+# Grant uinput group read/write access to /dev/uinput
+# This allows keyrx daemon to create virtual keyboard for event injection
+# OPTIONS+="static_node=uinput" ensures the device node is created at boot
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="uinput", MODE="0660", OPTIONS+="static_node=uinput"
