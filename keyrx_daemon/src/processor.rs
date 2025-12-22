@@ -385,6 +385,38 @@ impl<I: InputDevice, O: OutputDevice> EventProcessor<I, O> {
             }
         }
     }
+
+    /// Returns a reference to the output device.
+    ///
+    /// This is primarily useful for testing, where you can inspect the
+    /// events that were injected to the output device.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::processor::EventProcessor;
+    /// use keyrx_daemon::platform::{MockInput, MockOutput};
+    /// use keyrx_core::config::mappings::{DeviceConfig, DeviceIdentifier};
+    /// use keyrx_core::runtime::KeyEvent;
+    /// use keyrx_core::config::KeyCode;
+    ///
+    /// let input = MockInput::new(vec![KeyEvent::Press(KeyCode::A)]);
+    /// let output = MockOutput::new();
+    /// let config = DeviceConfig {
+    ///     identifier: DeviceIdentifier { pattern: String::from("*") },
+    ///     mappings: vec![],
+    /// };
+    ///
+    /// let mut processor = EventProcessor::new(&config, input, output);
+    /// processor.run().unwrap();
+    ///
+    /// // Access output device to verify events
+    /// let events = processor.output().events();
+    /// assert_eq!(events.len(), 1);
+    /// ```
+    pub fn output(&self) -> &O {
+        &self.output
+    }
 }
 
 #[cfg(test)]
