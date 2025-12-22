@@ -102,3 +102,64 @@ jobs:
             echo "No code blocks found in DSL_MANUAL.md (this is unusual)"
           fi
           echo "DSL manual check complete"
+
+  virtual-e2e-tests:
+    name: Virtual E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verify
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-e2e-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup uinput permissions
+        run: |
+          # Load uinput kernel module
+          sudo modprobe uinput
+          # Set permissions on uinput device
+          sudo chmod 666 /dev/uinput
+          # Verify uinput is available
+          ls -la /dev/uinput
+
+      - name: Build daemon with Linux features
+        run: cargo build --release -p keyrx_daemon --features linux
+
+      - name: Build compiler
+        run: cargo build --release -p keyrx_compiler
+
+      - name: Run virtual E2E tests
+        id: e2e-tests
+        run: |
+          # Run the virtual E2E tests (marked as #[ignore] so need --ignored flag)
+          cargo test --test virtual_e2e_tests --features linux -- --ignored --test-threads=1 2>&1 | tee e2e-test-output.log
+        continue-on-error: true
+
+      - name: Upload test logs on failure
+        if: steps.e2e-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-logs
+          path: |
+            e2e-test-output.log
+            /tmp/keyrx-e2e-*.log
+          retention-days: 7
+
+      - name: Check test results
+        if: steps.e2e-tests.outcome == 'failure'
+        run: |
+          echo "Virtual E2E tests failed. See uploaded logs for details."
+          exit 1
