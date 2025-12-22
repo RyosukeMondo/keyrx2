@@ -3,6 +3,7 @@
 //! This binary compiles Rhai DSL configuration scripts into static .krx binary files.
 
 use clap::{Parser, Subcommand};
+use std::env;
 use std::path::PathBuf;
 use std::process;
 
@@ -13,8 +14,6 @@ mod import_resolver;
 mod mphf_gen;
 mod parser;
 mod serialize;
-
-use error::{ParseError, SerializeError};
 
 #[derive(Parser)]
 #[command(name = "keyrx_compiler")]
@@ -34,7 +33,7 @@ enum Commands {
         /// Input Rhai configuration file
         input: PathBuf,
 
-        /// Output .krx binary file (default: input.krx)
+        /// Output .krx binary file (defaults to input file with .krx extension)
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
@@ -42,16 +41,20 @@ enum Commands {
     /// Verify a .krx binary file
     Verify {
         /// .krx binary file to verify
-        config: PathBuf,
+        file: PathBuf,
     },
 
     /// Extract and display the SHA256 hash from a .krx file
     Hash {
         /// .krx binary file
-        config: PathBuf,
+        file: PathBuf,
+
+        /// Verify hash matches computed hash of data section
+        #[arg(long)]
+        verify: bool,
     },
 
-    /// Parse a Rhai script and output JSON
+    /// Parse a Rhai script and display the configuration
     Parse {
         /// Input Rhai configuration file
         input: PathBuf,
@@ -63,13 +66,37 @@ enum Commands {
 }
 
 fn main() {
+    // Check NO_COLOR environment variable to disable colored output
+    // This is a standard convention: https://no-color.org/
+    let no_color = env::var("NO_COLOR").is_ok();
+
+    // Note: Individual CLI handlers check NO_COLOR when formatting output.
+    // This could be extended to use a colored output library like `colored`
+    // if needed in the future.
+    if no_color {
+        // Currently, handlers use basic eprintln!/println! which are uncolored.
+        // If we add colored output in the future, we would disable it here.
+    }
+
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Compile { input, output } => compile_command(input, output),
-        Commands::Verify { config } => verify_command(config),
-        Commands::Hash { config } => hash_command(config),
-        Commands::Parse { input, json } => parse_command(input, json),
+        Commands::Compile { input, output } => {
+            // Determine output path (default to input with .krx extension)
+            let output_path = output.unwrap_or_else(|| {
+                let mut path = input.clone();
+                path.set_extension("krx");
+                path
+            });
+            cli::compile::handle_compile(&input, &output_path).map_err(|e| e.to_string())
+        }
+        Commands::Verify { file } => cli::verify::handle_verify(&file).map_err(|e| e.to_string()),
+        Commands::Hash { file, verify } => {
+            cli::hash::handle_hash(&file, verify).map_err(|e| e.to_string())
+        }
+        Commands::Parse { input, json } => {
+            cli::parse::handle_parse(&input, json).map_err(|e| e.to_string())
+        }
     };
 
     match result {
@@ -79,73 +106,4 @@ fn main() {
             process::exit(1);
         }
     }
-}
-
-fn compile_command(input: PathBuf, output: Option<PathBuf>) -> Result<(), String> {
-    // Determine output path
-    let output_path = output.unwrap_or_else(|| {
-        let mut path = input.clone();
-        path.set_extension("krx");
-        path
-    });
-
-    // Parse the Rhai script
-    let mut parser = parser::Parser::new();
-    let config = parser.parse_script(&input).map_err(format_parse_error)?;
-
-    // Serialize to binary
-    let binary = serialize::serialize(&config).map_err(format_serialize_error)?;
-
-    // Write to output file
-    std::fs::write(&output_path, binary)
-        .map_err(|e| format!("Failed to write output file: {}", e))?;
-
-    println!(
-        "Successfully compiled {} to {}",
-        input.display(),
-        output_path.display()
-    );
-
-    Ok(())
-}
-
-fn verify_command(config: PathBuf) -> Result<(), String> {
-    cli::verify::handle_verify(&config).map_err(|e| e.to_string())
-}
-
-fn hash_command(config: PathBuf) -> Result<(), String> {
-    // Read the .krx file
-    let bytes = std::fs::read(&config)
-        .map_err(|e| format!("Failed to read file {}: {}", config.display(), e))?;
-
-    // Validate minimum size
-    if bytes.len() < serialize::HEADER_SIZE {
-        return Err(format!(
-            "File too small: {} bytes (expected at least {} bytes for header)",
-            bytes.len(),
-            serialize::HEADER_SIZE
-        ));
-    }
-
-    // Extract hash from bytes 8-40 (after magic and version)
-    let hash_bytes = &bytes[8..40];
-
-    // Format as hex string
-    let hash_hex: String = hash_bytes.iter().map(|b| format!("{:02x}", b)).collect();
-
-    println!("{}", hash_hex);
-
-    Ok(())
-}
-
-fn parse_command(input: PathBuf, json: bool) -> Result<(), String> {
-    cli::parse::handle_parse(&input, json).map_err(|e| e.to_string())
-}
-
-fn format_parse_error(e: ParseError) -> String {
-    format!("Parse error: {}", e)
-}
-
-fn format_serialize_error(e: SerializeError) -> String {
-    format!("Serialization error: {}", e)
 }

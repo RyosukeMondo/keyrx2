@@ -93,8 +93,11 @@ pub fn handle_compile(input: &Path, output: &Path) -> Result<(), CompileError> {
     // Calculate file size
     let file_size = bytes.len();
 
-    eprintln!("✓ Compilation successful");
-    eprintln!("  Output: {}", output.display());
+    println!(
+        "Successfully compiled {} to {}",
+        input.display(),
+        output.display()
+    );
     eprintln!("  Size: {} bytes", file_size);
     eprintln!("  SHA256: {}", hash_hex);
 
