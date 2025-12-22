@@ -110,7 +110,7 @@
     Success: Assertion failure shows detailed diff, passing assertion returns cleanly, handles empty sequences
     After completion: Mark task [-] as in-progress before starting, use log-implementation tool to record what was built, then mark [x] as complete_
 
-- [ ] 8. Write OutputCapture unit tests
+- [x] 8. Write OutputCapture unit tests
   - File: `keyrx_daemon/src/test_utils/output_capture.rs` (add tests module)
   - Test device discovery by name
   - Test timeout behavior
