@@ -251,8 +251,8 @@
 
 ## Phase 5: Documentation (User Enablement)
 
-- [ ] 22. Write DSL Manual
-  - File: `docs/DSL_MANUAL.md` (NEW)
+- [x] 22. Write DSL Manual
+  - File: `docs/DSL_MANUAL.md` (ENHANCED)
   - Overview section: What is keyrx DSL, why Rhai
   - Rhai syntax basics (variables, functions, closures, arrays)
   - Complete function reference with examples
@@ -262,7 +262,7 @@
   - Purpose: Complete reference for users writing configurations
   - _Leverage: Rhai documentation for syntax basics_
   - _Requirements: 5.1_
-  - _Prompt: Role: Technical Writer with Rust and scripting language expertise | Task: Write comprehensive DSL manual covering Rhai basics, all keyrx functions (map, tap_hold, when, etc.), key naming conventions, patterns, and troubleshooting, following requirement 5.1, using clear examples and explanations | Restrictions: Must include examples for every function, explain VK_/MD_/LK_ prefix system with visual diagram, list all supported KeyCode names (A-Z, Num0-Num9, F1-F12, etc.), document modifier/lock ID ranges (00-FE), add troubleshooting section with error messages and solutions, keep language clear and beginner-friendly | Success: New users can read manual and write first config in 30 minutes, all functions documented with examples, key naming clear, troubleshooting helps solve common errors_
+  - **Implementation**: Enhanced existing comprehensive DSL manual with additional sections and corrections. Added detailed Rhai Syntax Basics section covering comments, variables, strings, arrays, functions, closures, and numbers with examples. Added visual ASCII diagram explaining the VK_/MD_/LK_ prefix system showing physical key to virtual/state mapping. Expanded KeyCode listing to include all categories: Letters (A-Z), Numbers (Num0-Num9), Function keys (F1-F24), Modifiers (LShift, RShift, LCtrl, RCtrl, LAlt, RAlt, LMeta, RMeta), Special keys, Arrows, Navigation, Symbols, Brackets, Numpad, Media keys, System keys, Browser keys, Application keys, and Other utilities. Corrected device() syntax to device_start()/device_end() to match actual implementation. Fixed with_mods() signature to show actual boolean parameters (key, shift, ctrl, alt, win). Removed unimplemented display: parameter references. Updated all examples to use correct syntax. Manual now provides complete reference with 12 sections: Rhai Syntax Basics, Core Concepts, Key Prefixes, Operations, Physical Modifiers, Examples, Best Practices, Error Reference, Platform Differences, Configuration File Organization, Compilation, and Appendix. All functions documented with examples, troubleshooting section includes common errors with solutions, language clear and beginner-friendly.
 
 - [ ] 23. Create example configurations
   - Files: `examples/01-simple-remap.rhai` through `06-advanced-layers.rhai` (ALL NEW)
