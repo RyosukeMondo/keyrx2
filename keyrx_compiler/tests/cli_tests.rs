@@ -477,6 +477,126 @@ fn test_hash_determinism() {
     );
 }
 
+#[test]
+#[ignore] // TODO(task 17): Enable when --verify flag is added to CLI
+fn test_hash_verify_valid() {
+    let temp_dir = setup_test_dir();
+    let input = create_simple_rhai_config(&temp_dir, "config.rhai");
+    let krx_file = temp_dir.path().join("config.krx");
+
+    // Compile
+    get_binary()
+        .arg("compile")
+        .arg(&input)
+        .arg("-o")
+        .arg(&krx_file)
+        .assert()
+        .success();
+
+    // Verify hash with --verify flag
+    get_binary()
+        .arg("hash")
+        .arg(&krx_file)
+        .arg("--verify")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("✓ Hash matches"));
+}
+
+#[test]
+#[ignore] // TODO(task 17): Enable when --verify flag is added to CLI
+fn test_hash_verify_corrupted() {
+    let temp_dir = setup_test_dir();
+    let input = create_simple_rhai_config(&temp_dir, "config.rhai");
+    let krx_file = temp_dir.path().join("config.krx");
+
+    // Compile
+    get_binary()
+        .arg("compile")
+        .arg(&input)
+        .arg("-o")
+        .arg(&krx_file)
+        .assert()
+        .success();
+
+    // Corrupt the data section (not the hash)
+    let mut bytes = fs::read(&krx_file).expect("Failed to read file");
+    if bytes.len() > 48 {
+        bytes[50] = !bytes[50]; // Flip a bit in the data section
+        fs::write(&krx_file, bytes).expect("Failed to write corrupted file");
+    }
+
+    // Verify should fail
+    get_binary()
+        .arg("hash")
+        .arg(&krx_file)
+        .arg("--verify")
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(predicate::str::contains("✗ Hash mismatch"))
+        .stderr(predicate::str::contains("Embedded:"))
+        .stderr(predicate::str::contains("Computed:"));
+}
+
+#[test]
+#[ignore] // TODO(task 17): Enable when --verify flag is added to CLI
+fn test_hash_verify_displays_both_hashes_on_mismatch() {
+    let temp_dir = setup_test_dir();
+    let input = create_simple_rhai_config(&temp_dir, "config.rhai");
+    let krx_file = temp_dir.path().join("config.krx");
+
+    // Compile
+    get_binary()
+        .arg("compile")
+        .arg(&input)
+        .arg("-o")
+        .arg(&krx_file)
+        .assert()
+        .success();
+
+    // Corrupt the data section
+    let mut bytes = fs::read(&krx_file).expect("Failed to read file");
+    bytes[60] = !bytes[60]; // Flip a bit
+    fs::write(&krx_file, bytes).expect("Failed to write corrupted file");
+
+    // Verify should show both hashes
+    let output = get_binary()
+        .arg("hash")
+        .arg(&krx_file)
+        .arg("--verify")
+        .assert()
+        .failure()
+        .code(1)
+        .get_output()
+        .stderr
+        .clone();
+
+    let stderr_str = String::from_utf8_lossy(&output);
+
+    // Check that both embedded and computed hashes are displayed
+    assert!(stderr_str.contains("Embedded:"));
+    assert!(stderr_str.contains("Computed:"));
+
+    // Both should be 64 hex characters
+    let lines: Vec<&str> = stderr_str.lines().collect();
+    for line in lines {
+        if line.contains("Embedded:") || line.contains("Computed:") {
+            // Extract the hash part (everything after the colon and whitespace)
+            let parts: Vec<&str> = line.split(':').collect();
+            if parts.len() > 1 {
+                let hash_part = parts[1].trim();
+                assert_eq!(
+                    hash_part.len(),
+                    64,
+                    "Hash should be 64 hex characters: {}",
+                    line
+                );
+            }
+        }
+    }
+}
+
 // ============================================================================
 // Parse Command Tests
 // ============================================================================

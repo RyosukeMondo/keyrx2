@@ -164,7 +164,7 @@
   - _Requirements: 3.2_
   - **Implementation**: Implemented handle_verify() function that reads .krx file, calls deserialize() for validation, and prints detailed step-by-step verification results. On success, prints "✓ Magic bytes valid", "✓ Version: X", "✓ SHA256 hash matches", "✓ rkyv deserialization successful", "✓ Configuration valid" with device and mapping counts, and "✓ Verification passed". On failure, prints specific error details for each DeserializeError variant with "✗" markers and hex-encoded hashes. Updated main.rs to use cli::verify::handle_verify(). Updated existing CLI tests to match new stderr output format. All 5 verify tests pass successfully.
 
-- [ ] 15. Implement hash subcommand handler
+- [x] 15. Implement hash subcommand handler
   - File: `keyrx_compiler/src/cli/hash.rs` (continue)
   - Implement `handle_hash(file: &Path, verify: bool) -> Result<(), HashError>`
   - Read .krx file and extract embedded hash (bytes 8-40)
@@ -174,7 +174,7 @@
   - Purpose: Extract and verify embedded SHA256 hash
   - _Leverage: sha2 crate for hash computation_
   - _Requirements: 3.3_
-  - _Prompt: Role: Rust Developer with cryptography expertise | Task: Implement hash subcommand that extracts embedded hash from .krx header, optionally verifies it matches data section hash, following requirement 3.3, using sha2::Sha256 for computation | Restrictions: Extract hash from bytes[8..40], print to stdout using println! (not eprintln!), verify flag computes hash of bytes[48..], compare with embedded hash, print "✓ Hash matches" or "✗ Hash mismatch" to stderr, return HashError::HashMismatch on mismatch | Success: Prints hash in hex format, --verify correctly validates hash, errors handled gracefully_
+  - **Implementation**: Implemented handle_hash() function that reads .krx files, extracts embedded SHA256 hash from bytes 8-40, prints hash in hex format to stdout, and optionally verifies hash matches computed hash of data section (bytes 48+). Added comprehensive unit tests (7 tests) covering hash extraction, verification success/failure, file validation errors, and error message formatting. Added 3 integration tests to cli_tests.rs for --verify flag functionality. All tests pass successfully.
 
 - [ ] 16. Implement parse subcommand handler
   - File: `keyrx_compiler/src/cli/parse.rs` (continue)
