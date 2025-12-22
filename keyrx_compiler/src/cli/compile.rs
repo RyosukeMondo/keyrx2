@@ -4,11 +4,14 @@
 //! to binary .krx format.
 
 use std::fmt;
+use std::fs;
 use std::io;
 use std::path::Path;
 
 use crate::error::ParseError;
 use crate::error::SerializeError;
+use crate::parser::Parser;
+use crate::serialize::serialize;
 
 /// Errors that can occur during the compile subcommand.
 #[derive(Debug)]
@@ -64,8 +67,33 @@ impl From<SerializeError> for CompileError {
 ///
 /// `Ok(())` on success, or `CompileError` on failure.
 pub fn handle_compile(input: &Path, output: &Path) -> Result<(), CompileError> {
-    // TODO: Implementation in task 13
-    eprintln!("Compiling {:?} -> {:?}", input, output);
-    eprintln!("TODO: Implementation in task 13");
+    eprintln!("Parsing {}...", input.display());
+
+    // Parse the Rhai script
+    let mut parser = Parser::new();
+    let config = parser.parse_script(input)?;
+
+    eprintln!("Serializing configuration...");
+
+    // Serialize to .krx format
+    let bytes = serialize(&config)?;
+
+    eprintln!("Writing to {}...", output.display());
+
+    // Write to output file
+    fs::write(output, &bytes)?;
+
+    // Extract hash from bytes (bytes 8-40 contain the SHA256 hash)
+    let hash = &bytes[8..40];
+    let hash_hex = hex::encode(hash);
+
+    // Calculate file size
+    let file_size = bytes.len();
+
+    eprintln!("✓ Compilation successful");
+    eprintln!("  Output: {}", output.display());
+    eprintln!("  Size: {} bytes", file_size);
+    eprintln!("  SHA256: {}", hash_hex);
+
     Ok(())
 }

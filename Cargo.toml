@@ -31,6 +31,7 @@ sha2 = "0.10"
 
 # CLI tools
 clap = { version = "4", features = ["derive"] }
+hex = "0.4"
 
 # OS integration (Linux)
 evdev = "0.12"
