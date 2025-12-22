@@ -36,3 +36,9 @@ name = "fuzz_deserialize"
 path = "fuzz_targets/fuzz_deserialize.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "fuzz_runtime"
+path = "fuzz_targets/fuzz_runtime.rs"
+test = false
+doc = false

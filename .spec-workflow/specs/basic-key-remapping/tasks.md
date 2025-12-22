@@ -250,7 +250,7 @@
   - _Requirements: Performance: Event Processing Latency, Lookup Time, State Update Time_
   - _Prompt: Role: Performance Engineer with Rust benchmarking expertise | Task: Create criterion benchmarks measuring key lookup time, state update time, and end-to-end event processing time, verifying they meet performance targets (<100μs, <10μs, <1ms respectively) following Performance requirements | Restrictions: Must add criterion to dev-dependencies with harness = false in Cargo.toml [[bench]] section, create benches/runtime_benchmarks.rs, use criterion::Criterion and criterion::black_box to prevent optimization, benchmark KeyLookup::find_mapping with realistic config (100 mappings), benchmark DeviceState::set_modifier, benchmark process_event with simple mapping, run with `cargo bench`, add comments showing target times | Success: Benchmarks compile and run with `cargo bench`, output shows lookup <100μs, state update <10μs, process_event <1ms on typical hardware (logged for future optimization), criterion generates report in target/criterion/_
 
-- [ ] 24. Create end-to-end integration test suite
+- [x] 24. Create end-to-end integration test suite
   - File: `keyrx_daemon/tests/integration_tests.rs` (NEW)
   - Test realistic scenarios: Vim navigation, lock persistence, multi-device
   - Load test .krx files from tests/fixtures/
@@ -260,8 +260,8 @@
   - _Requirements: 5.4, Testing Strategy: End-to-End Testing_
   - _Prompt: Role: E2E Test Engineer with focus on realistic user scenarios | Task: Create end-to-end integration tests using realistic configurations (Vim navigation layer, lock toggle persistence, multi-device) following requirement 5.4 and Testing Strategy E2E section | Restrictions: Must create or load realistic test configs (e.g., CapsLock→MD_00, when(MD_00){H→Left, J→Down, K→Up, L→Right}), create event sequences simulating user input (Press(CapsLock), Press(H), Release(H), Release(CapsLock)), process through EventProcessor, verify output matches expected navigation keys, test lock persistence (toggle on, use, toggle off, use), test multiple devices with different configs (requires multiple DeviceConfig and EventProcessor instances), use descriptive test names | Success: Test test_vim_navigation_layer activates CapsLock, presses H, outputs Left, test_lock_persistence toggles ScrollLock, verifies subsequent keys use conditional mapping, then toggles off and verifies passthrough, test_multi_device processes events for 2 different devices with independent state, all tests pass_
 
-- [ ] 25. Add fuzzing infrastructure (optional but recommended)
-  - File: `keyrx_core/fuzz/fuzz_targets/runtime_fuzzing.rs`
+- [x] 25. Add fuzzing infrastructure (optional but recommended)
+  - File: `keyrx_core/fuzz/fuzz_targets/fuzz_runtime.rs`
   - Use `cargo-fuzz` to generate random events and configs
   - Verify: no panics, no infinite loops, no crashes
   - Purpose: Discover edge cases and undefined behavior
@@ -269,7 +269,7 @@
   - _Requirements: Reliability: No Panics, Security: No Panics_
   - _Prompt: Role: Security Engineer with fuzzing expertise and Rust safety focus | Task: Set up cargo-fuzz infrastructure for keyrx_core runtime components, create fuzz target that generates random KeyEvents and DeviceConfigs, verifies no panics or crashes, following Reliability and Security requirements | Restrictions: Must use `cargo install cargo-fuzz` and `cargo fuzz init` to set up, create fuzz_targets/runtime_fuzzing.rs, use arbitrary crate to derive Arbitrary for KeyEvent if needed, fuzz process_event with random inputs, run for at least 60 seconds (`cargo fuzz run runtime_fuzzing -- -max_total_time=60`), document any crashes found and fixed, add README.md in fuzz/ explaining how to run fuzz tests | Success: Fuzz infrastructure compiles, fuzz_targets/runtime_fuzzing.rs generates random events, fuzzer runs without crashes for 60 seconds, README.md documents fuzzing setup and usage, any crashes discovered are fixed and documented_
 
-- [ ] 26. Final integration, benchmarking, and documentation
+- [x] 26. Final integration, benchmarking, and documentation
   - Files: All modified files
   - Run full test suite (unit + integration + property + benchmarks)
   - Verify benchmarks meet performance targets

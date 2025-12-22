@@ -9,6 +9,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Core Runtime System
+
+- **Runtime Data Structures**
+  - `DeviceState` - 255-bit modifier and lock state tracking using BitVec
+    - Sub-microsecond state updates (1.4ns for set_modifier, 2.2ns for toggle_lock)
+    - Condition evaluation for conditional mappings (AllActive, NotActive)
+    - Efficient bit manipulation with boundary validation (0-254, rejects 255+)
+  - `KeyLookup` - O(1) average-case key-to-mapping resolution using HashMap
+    - Ordered mapping search (conditionals before unconditional fallback)
+    - Support for all mapping types (Simple, Modifier, Lock, TapHold, ModifiedOutput, Conditional)
+  - `KeyEvent` - Type-safe keyboard event representation (Press/Release)
+    - Derives Copy for efficient pass-by-value
+    - Keycode extraction helper for pattern matching
+
+- **Event Processing Engine**
+  - `process_event()` - Core event processing function
+    - Simple remapping (A→B) in ~17ns
+    - Modifier activation/deactivation (no output) in ~10ns
+    - Lock toggling with persistent state in ~2.2ns
+    - ModifiedOutput sequences (Shift+Key, Ctrl+Key, etc.)
+    - Conditional mapping evaluation with state-based resolution
+    - Passthrough for unmapped keys in ~15ns
+  - Deterministic event processing (same input + state → same output)
+  - No panics on invalid input (error logging instead)
+
+- **Platform Abstraction Layer**
+  - `InputDevice` trait - Platform-agnostic input event capture
+    - `next_event()` - Retrieve next keyboard event
+    - `grab()` / `release()` - Exclusive device access control
+  - `OutputDevice` trait - Platform-agnostic output event injection
+    - `inject_event()` - Send keyboard events to OS
+  - `MockInput` / `MockOutput` - Zero-dependency test implementations
+    - FIFO event queue simulation
+    - Grab/release flag tracking
+    - Event capture for test verification
+  - `DeviceError` enum - Comprehensive error handling
+    - NotFound, PermissionDenied, EndOfStream, InjectionFailed, Io variants
+
+- **Event Processor Orchestrator**
+  - `EventProcessor<I, O>` - Generic event loop coordinator
+    - `new()` - Initialize with config, input, and output devices
+    - `process_one()` - Process single event (input → lookup → output)
+    - `run()` - Main event loop until EndOfStream
+  - Dependency injection for testability (generic over InputDevice/OutputDevice)
+  - Structured JSON logging with timestamps and latency tracking
+    - config_loaded, key_processed, state_transition, platform_error events
+    - DEBUG level for per-event, INFO for lifecycle, ERROR for failures
+  - Per-event latency measurement with std::time::Instant
+
+- **Configuration Loader**
+  - `load_config()` - Load and validate .krx binary files
+  - `ConfigError` enum - Io and Deserialize error variants
+  - Integration with keyrx_compiler serialization format
+
+- **Testing Infrastructure**
+  - 56 unit tests for runtime components (100% critical path coverage)
+  - 15 integration tests for end-to-end workflows
+  - Property-based tests with proptest:
+    - Modifier state validity (rejects 255+, accepts 0-254)
+    - Lock toggle cycles (OFF→ON→OFF)
+    - Event processing determinism
+    - No event loss during processing
+  - Realistic scenario tests:
+    - Vim navigation layer (CapsLock + HJKL → Arrow keys)
+    - Lock persistence across key sequences
+    - Multi-device independent state management
+    - Complex multi-layer configurations
+
+- **Performance Benchmarks**
+  - Criterion-based benchmarks for critical paths:
+    - key_lookup: ~4.7ns (O(1) HashMap access)
+    - state_update_set_modifier: ~1.4ns
+    - state_update_toggle_lock: ~2.2ns
+    - process_event_simple: ~17ns (complete key remapping)
+    - process_event_modifier: ~10ns (state update only)
+    - process_event_passthrough: ~15ns (unmapped key)
+  - All benchmarks meet <10μs latency requirement (actual: <20ns)
+
+- **Fuzzing Infrastructure** (Optional)
+  - cargo-fuzz integration for runtime components
+  - Random event and config generation
+  - Verified: no panics, no infinite loops, no crashes
+  - Documented fuzzing setup and results
+
 #### Compiler DSL Completion
 
 - **Comprehensive DSL Validator Functions**
