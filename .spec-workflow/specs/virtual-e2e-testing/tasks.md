@@ -177,7 +177,7 @@
     Success: inject/capture/verify methods work correctly, inject_and_capture is atomic
     After completion: Mark task [-] as in-progress before starting, use log-implementation tool to record what was built, then mark [x] as complete_
 
-- [-] 12. Implement E2EHarness teardown and Drop
+- [x] 12. Implement E2EHarness teardown and Drop
   - File: `keyrx_daemon/tests/e2e_harness.rs` (continue)
   - Implement teardown(self) for graceful cleanup
   - Send SIGTERM to daemon process
