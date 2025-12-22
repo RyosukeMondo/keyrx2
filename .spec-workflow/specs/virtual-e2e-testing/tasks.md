@@ -195,7 +195,7 @@
     Success: teardown cleans up all resources, Drop works on panic, no orphaned processes or devices
     After completion: Mark task [-] as in-progress before starting, use log-implementation tool to record what was built, then mark [x] as complete_
 
-- [ ] 13. Add TestEvents helper
+- [x] 13. Add TestEvents helper
   - File: `keyrx_daemon/tests/e2e_harness.rs` (continue)
   - Create TestEvents struct with helper methods
   - Implement press(key), release(key), tap(key)
@@ -212,7 +212,7 @@
 
 ## Phase 4: E2E Test Cases
 
-- [ ] 14. Create virtual_e2e_tests.rs with simple remap tests
+- [x] 14. Create virtual_e2e_tests.rs with simple remap tests
   - File: `keyrx_daemon/tests/virtual_e2e_tests.rs` (NEW)
   - Test simple A→B remap (press and release)
   - Test multiple remaps in sequence
