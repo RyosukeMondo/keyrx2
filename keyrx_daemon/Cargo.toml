@@ -17,6 +17,7 @@ keyrx_core = { path = "../keyrx_core" }
 keyrx_compiler = { path = "../keyrx_compiler" }
 rkyv = { version = "0.7", features = ["validation"] }
 thiserror = "2.0"
+log = "0.4"
 
 # Linux-specific dependencies
 evdev = { version = "0.12", optional = true }

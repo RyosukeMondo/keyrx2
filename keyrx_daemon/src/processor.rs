@@ -25,6 +25,21 @@
 //! └─────────────┘
 //! ```
 //!
+//! # Structured Logging
+//!
+//! The event processor emits structured JSON logs for observability:
+//!
+//! - `config_loaded` (INFO): Logged when processor is initialized
+//!   - Fields: timestamp, level, service, event_type, context.mapping_count
+//! - `key_processed` (DEBUG): Logged for each event processed
+//!   - Fields: timestamp, level, service, event_type, context.input_key, context.output_keys, context.latency_us
+//! - `state_transition` (DEBUG): Logged when modifier/lock state changes
+//!   - Fields: timestamp, level, service, event_type, context.transition_type, context.modifier_id, context.lock_id
+//! - `platform_error` (ERROR): Logged when device errors occur
+//!   - Fields: timestamp, level, service, event_type, context.error
+//!
+//! All logs follow the schema: `{"timestamp":"...", "level":"...", "service":"keyrx_daemon", "event_type":"...", "context":{...}}`
+//!
 //! # Example
 //!
 //! ```no_run
@@ -52,9 +67,12 @@
 //! processor.run().unwrap();
 //! ```
 
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+
 use keyrx_core::config::DeviceConfig;
 use keyrx_core::runtime::event::process_event;
 use keyrx_core::runtime::{DeviceState, KeyLookup};
+use log::{debug, error, info};
 use thiserror::Error;
 
 use crate::platform::{DeviceError, InputDevice, OutputDevice};
@@ -69,6 +87,27 @@ pub enum ProcessorError {
     /// Error writing to output device.
     #[error("output device error: {0}")]
     Output(DeviceError),
+}
+
+/// Returns the current Unix timestamp in ISO 8601 format.
+fn current_timestamp() -> String {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| {
+            let secs = d.as_secs();
+            let nanos = d.subsec_nanos();
+            format!(
+                "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+                1970 + secs / 31_557_600,
+                ((secs % 31_557_600) / 2_629_800) + 1,
+                ((secs % 2_629_800) / 86400) + 1,
+                (secs % 86400) / 3600,
+                (secs % 3600) / 60,
+                secs % 60,
+                nanos / 1_000_000
+            )
+        })
+        .unwrap_or_else(|_| String::from("1970-01-01T00:00:00.000Z"))
 }
 
 /// Event processor orchestrator.
@@ -156,6 +195,13 @@ impl<I: InputDevice, O: OutputDevice> EventProcessor<I, O> {
         // Initialize empty state (all modifiers and locks off)
         let state = DeviceState::new();
 
+        // Log config_loaded event
+        info!(
+            r#"{{"timestamp":"{}","level":"INFO","service":"keyrx_daemon","event_type":"config_loaded","context":{{"mapping_count":{}}}}}"#,
+            current_timestamp(),
+            config.mappings.len()
+        );
+
         Self {
             input,
             output,
@@ -196,18 +242,96 @@ impl<I: InputDevice, O: OutputDevice> EventProcessor<I, O> {
     /// processor.process_one().unwrap();
     /// ```
     pub fn process_one(&mut self) -> Result<(), ProcessorError> {
+        // Start latency measurement
+        let start = Instant::now();
+
         // Read next event from input device
-        let event = self.input.next_event()?;
+        let event = self.input.next_event().map_err(|e| {
+            // Log platform_error for input errors (except EndOfStream)
+            if !matches!(e, DeviceError::EndOfStream) {
+                error!(
+                    r#"{{"timestamp":"{}","level":"ERROR","service":"keyrx_daemon","event_type":"platform_error","context":{{"error":"{}","device":"input"}}}}"#,
+                    current_timestamp(),
+                    e
+                );
+            }
+            e
+        })?;
+
+        // Detect state transitions by checking mapping type
+        let mapping = self.lookup.find_mapping(event.keycode(), &self.state);
+        let will_transition = if let Some(m) = mapping {
+            use keyrx_core::config::mappings::BaseKeyMapping;
+            use keyrx_core::runtime::KeyEvent;
+            match (m, event) {
+                (BaseKeyMapping::Modifier { modifier_id, .. }, KeyEvent::Press(_)) => {
+                    Some(format!(
+                        r#"{{"transition_type":"modifier_activated","modifier_id":{}}}"#,
+                        modifier_id
+                    ))
+                }
+                (BaseKeyMapping::Modifier { modifier_id, .. }, KeyEvent::Release(_)) => {
+                    Some(format!(
+                        r#"{{"transition_type":"modifier_deactivated","modifier_id":{}}}"#,
+                        modifier_id
+                    ))
+                }
+                (BaseKeyMapping::Lock { lock_id, .. }, KeyEvent::Press(_)) => Some(format!(
+                    r#"{{"transition_type":"lock_toggled","lock_id":{}}}"#,
+                    lock_id
+                )),
+                _ => None,
+            }
+        } else {
+            None
+        };
 
         // Process event through runtime
         let output_events = process_event(event, &self.lookup, &mut self.state);
 
-        // Inject all output events
-        for output_event in output_events {
-            self.output
-                .inject_event(output_event)
-                .map_err(ProcessorError::Output)?;
+        // Log state transition if it occurred
+        if let Some(context) = will_transition {
+            debug!(
+                r#"{{"timestamp":"{}","level":"DEBUG","service":"keyrx_daemon","event_type":"state_transition","context":{}}}"#,
+                current_timestamp(),
+                context
+            );
         }
+
+        // Inject all output events
+        for output_event in &output_events {
+            self.output
+                .inject_event(*output_event)
+                .map_err(|e| {
+                    // Log platform_error for output errors
+                    error!(
+                        r#"{{"timestamp":"{}","level":"ERROR","service":"keyrx_daemon","event_type":"platform_error","context":{{"error":"{}","device":"output"}}}}"#,
+                        current_timestamp(),
+                        e
+                    );
+                    ProcessorError::Output(e)
+                })?;
+        }
+
+        // Calculate latency
+        let latency_us = start.elapsed().as_micros() as u64;
+
+        // Log key_processed event
+        let output_keys: Vec<String> = output_events
+            .iter()
+            .map(|e| format!("{:?}", e.keycode()))
+            .collect();
+        debug!(
+            r#"{{"timestamp":"{}","level":"DEBUG","service":"keyrx_daemon","event_type":"key_processed","context":{{"input_key":"{:?}","output_keys":[{}],"latency_us":{}}}}}"#,
+            current_timestamp(),
+            event.keycode(),
+            output_keys
+                .iter()
+                .map(|k| format!(r#""{}""#, k))
+                .collect::<Vec<_>>()
+                .join(","),
+            latency_us
+        );
 
         Ok(())
     }
