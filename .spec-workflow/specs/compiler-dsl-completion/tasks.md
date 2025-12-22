@@ -215,7 +215,7 @@
 
 ## Phase 4: Error Formatting (User Experience)
 
-- [ ] 19. Implement error formatting with code snippets
+- [-] 19. Implement error formatting with code snippets
   - File: `keyrx_compiler/src/error/formatting.rs` (NEW)
   - Implement `format_error(error: &ParseError, file: &Path, source: &str) -> String`
   - Generate colored terminal output with code snippets
