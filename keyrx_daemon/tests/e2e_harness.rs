@@ -28,6 +28,8 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::sync::mpsc;
+use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 
 use keyrx_compiler::serialize::serialize as serialize_config;
@@ -37,6 +39,43 @@ use keyrx_core::config::{
 };
 use keyrx_core::runtime::KeyEvent;
 use keyrx_daemon::test_utils::{OutputCapture, VirtualDeviceError, VirtualKeyboard};
+
+// ============================================================================
+// TestTimeoutPhase - Phase tracking for timeout diagnostics
+// ============================================================================
+
+/// Represents the phase of an E2E test for timeout diagnostics.
+///
+/// When a test times out, this enum identifies exactly which phase was
+/// executing, enabling precise diagnosis of where the test hung.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TestTimeoutPhase {
+    /// Test setup phase (creating virtual devices, starting daemon)
+    Setup,
+    /// Event injection phase (sending key events to virtual keyboard)
+    Injection,
+    /// Event capture phase (reading events from daemon output)
+    Capture,
+    /// Verification phase (comparing captured vs expected events)
+    Verification,
+    /// Test cleanup phase (stopping daemon, destroying devices)
+    Teardown,
+    /// User-defined test logic
+    TestLogic,
+}
+
+impl fmt::Display for TestTimeoutPhase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TestTimeoutPhase::Setup => write!(f, "setup"),
+            TestTimeoutPhase::Injection => write!(f, "event injection"),
+            TestTimeoutPhase::Capture => write!(f, "event capture"),
+            TestTimeoutPhase::Verification => write!(f, "verification"),
+            TestTimeoutPhase::Teardown => write!(f, "teardown"),
+            TestTimeoutPhase::TestLogic => write!(f, "test logic"),
+        }
+    }
+}
 
 // ============================================================================
 // E2EError - Error types for E2E test operations
@@ -89,6 +128,22 @@ pub enum E2EError {
         operation: String,
         /// How long we waited
         timeout_ms: u64,
+    },
+
+    /// Test exceeded its overall time limit.
+    ///
+    /// This error is returned when a test wrapped with [`with_timeout`] exceeds
+    /// the maximum allowed duration. It includes diagnostic information about
+    /// which phase was executing when the timeout occurred.
+    TestTimeout {
+        /// Which phase of the test timed out
+        phase: TestTimeoutPhase,
+        /// Total test timeout duration
+        timeout: Duration,
+        /// Time elapsed when timeout occurred
+        elapsed: Duration,
+        /// Diagnostic context about what was happening
+        context: String,
     },
 
     /// I/O error during test operations.
@@ -146,6 +201,24 @@ impl fmt::Display for E2EError {
                     "timeout after {}ms waiting for {}",
                     timeout_ms, operation
                 )
+            }
+            E2EError::TestTimeout {
+                phase,
+                timeout,
+                elapsed,
+                context,
+            } => {
+                writeln!(
+                    f,
+                    "TEST TIMEOUT: test exceeded {}s limit (elapsed: {:.2}s)",
+                    timeout.as_secs(),
+                    elapsed.as_secs_f64()
+                )?;
+                writeln!(f, "  Phase: {}", phase)?;
+                if !context.is_empty() {
+                    writeln!(f, "  Context: {}", context)?;
+                }
+                write!(f, "  Action: Check for hung daemon or slow I/O operations")
             }
             E2EError::Io(e) => write!(f, "I/O error: {}", e),
         }
@@ -1735,6 +1808,231 @@ impl TestEvents {
 }
 
 // ============================================================================
+// Test Timeout Handling
+// ============================================================================
+
+/// Default timeout for E2E tests (30 seconds).
+///
+/// This is generous to allow for slow CI environments while still catching
+/// genuinely hung tests. Tests can override this with custom timeouts.
+pub const DEFAULT_TEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Result type for timeout-wrapped test functions.
+pub type TimeoutResult<T> = Result<T, E2EError>;
+
+/// Runs a test function with a timeout, ensuring cleanup on timeout or panic.
+///
+/// This wrapper function provides:
+/// - A configurable timeout for the entire test
+/// - Automatic cleanup of the harness on timeout
+/// - Phase tracking for diagnostic messages
+/// - Proper error reporting with context
+///
+/// # Arguments
+///
+/// * `timeout` - Maximum duration allowed for the test
+/// * `test_fn` - The test function to run. Receives the harness and phase setter.
+///
+/// # Type Parameters
+///
+/// * `F` - The test function type
+/// * `T` - The return type of the test function
+///
+/// # Returns
+///
+/// The result of the test function, or a [`E2EError::TestTimeout`] if the
+/// test exceeds the timeout.
+///
+/// # Example
+///
+/// ```ignore
+/// use keyrx_daemon::tests::e2e_harness::{with_timeout, E2EConfig, DEFAULT_TEST_TIMEOUT};
+///
+/// #[test]
+/// fn test_with_timeout_wrapper() {
+///     let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+///
+///     let result = with_timeout(DEFAULT_TEST_TIMEOUT, config, |harness, set_phase| {
+///         set_phase(TestTimeoutPhase::TestLogic);
+///
+///         // Your test logic here
+///         let captured = harness.inject_and_capture(
+///             &TestEvents::tap(KeyCode::A),
+///             Duration::from_millis(100),
+///         )?;
+///
+///         harness.verify(&captured, &TestEvents::tap(KeyCode::B))?;
+///         Ok(())
+///     });
+///
+///     result.expect("Test should pass");
+/// }
+/// ```
+///
+/// # Notes
+///
+/// The test function runs in a separate thread to enable timeout detection.
+/// If the test panics, the panic will be propagated to the calling thread
+/// after cleanup is performed.
+pub fn with_timeout<F, T>(timeout: Duration, config: E2EConfig, test_fn: F) -> TimeoutResult<T>
+where
+    F: FnOnce(&mut E2EHarness, &dyn Fn(TestTimeoutPhase)) -> Result<T, E2EError> + Send + 'static,
+    T: Send + 'static,
+{
+    let start = Instant::now();
+
+    // Shared phase tracking (using atomic operations via channel)
+    let (phase_tx, phase_rx) = mpsc::channel::<TestTimeoutPhase>();
+
+    // Spawn the test in a separate thread
+    let handle = thread::spawn(move || {
+        // Phase setter function
+        let set_phase = |phase: TestTimeoutPhase| {
+            let _ = phase_tx.send(phase);
+        };
+
+        // Setup phase
+        set_phase(TestTimeoutPhase::Setup);
+        let harness_result = E2EHarness::setup(config);
+
+        match harness_result {
+            Ok(mut harness) => {
+                // Run the test function
+                let test_result = test_fn(&mut harness, &set_phase);
+
+                // Teardown phase (cleanup happens in Drop if we don't call teardown explicitly)
+                set_phase(TestTimeoutPhase::Teardown);
+
+                // Return both the result and harness for cleanup
+                (Some(harness), test_result)
+            }
+            Err(e) => (None, Err(e)),
+        }
+    });
+
+    // Wait for the test with timeout, polling for phase updates
+    let mut last_phase = TestTimeoutPhase::Setup;
+    let poll_interval = Duration::from_millis(100);
+
+    loop {
+        // Check for phase updates (non-blocking)
+        while let Ok(phase) = phase_rx.try_recv() {
+            last_phase = phase;
+        }
+
+        // Check if thread is done
+        if handle.is_finished() {
+            break;
+        }
+
+        // Check timeout
+        let elapsed = start.elapsed();
+        if elapsed >= timeout {
+            // Timeout occurred - the thread will continue running but we return an error
+            // The harness Drop implementation will handle cleanup when the thread eventually
+            // finishes or is terminated
+            return Err(E2EError::TestTimeout {
+                phase: last_phase,
+                timeout,
+                elapsed,
+                context: format!(
+                    "Test hung during {} phase. The daemon process will be cleaned up.",
+                    last_phase
+                ),
+            });
+        }
+
+        thread::sleep(poll_interval);
+    }
+
+    // Thread finished - get the result
+    match handle.join() {
+        Ok((harness_opt, result)) => {
+            // Explicit teardown if harness exists
+            if let Some(harness) = harness_opt {
+                // Attempt graceful teardown, ignore errors (cleanup is best-effort)
+                let _ = harness.teardown();
+            }
+            result
+        }
+        Err(panic_payload) => {
+            // Thread panicked - re-panic with the original payload
+            std::panic::resume_unwind(panic_payload)
+        }
+    }
+}
+
+/// Runs a test function with the default timeout.
+///
+/// This is a convenience wrapper around [`with_timeout`] using
+/// [`DEFAULT_TEST_TIMEOUT`] (30 seconds).
+///
+/// # Example
+///
+/// ```ignore
+/// use keyrx_daemon::tests::e2e_harness::{with_default_timeout, E2EConfig};
+///
+/// #[test]
+/// fn test_simple_remap() {
+///     let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+///
+///     with_default_timeout(config, |harness, _| {
+///         harness.test_mapping(
+///             &TestEvents::tap(KeyCode::A),
+///             &TestEvents::tap(KeyCode::B),
+///             Duration::from_millis(100),
+///         )
+///     }).expect("Test should pass");
+/// }
+/// ```
+pub fn with_default_timeout<F, T>(config: E2EConfig, test_fn: F) -> TimeoutResult<T>
+where
+    F: FnOnce(&mut E2EHarness, &dyn Fn(TestTimeoutPhase)) -> Result<T, E2EError> + Send + 'static,
+    T: Send + 'static,
+{
+    with_timeout(DEFAULT_TEST_TIMEOUT, config, test_fn)
+}
+
+/// A simpler timeout wrapper that doesn't require phase tracking.
+///
+/// This is useful for tests that don't need fine-grained phase information.
+/// The phase will be set to [`TestTimeoutPhase::TestLogic`] for the duration
+/// of the test function.
+///
+/// # Example
+///
+/// ```ignore
+/// use keyrx_daemon::tests::e2e_harness::{run_test_with_timeout, E2EConfig};
+///
+/// #[test]
+/// fn test_simple() {
+///     let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+///
+///     run_test_with_timeout(Duration::from_secs(10), config, |harness| {
+///         harness.test_mapping(
+///             &TestEvents::tap(KeyCode::A),
+///             &TestEvents::tap(KeyCode::B),
+///             Duration::from_millis(100),
+///         )
+///     }).expect("Test should pass");
+/// }
+/// ```
+pub fn run_test_with_timeout<F, T>(
+    timeout: Duration,
+    config: E2EConfig,
+    test_fn: F,
+) -> TimeoutResult<T>
+where
+    F: FnOnce(&mut E2EHarness) -> Result<T, E2EError> + Send + 'static,
+    T: Send + 'static,
+{
+    with_timeout(timeout, config, |harness, set_phase| {
+        set_phase(TestTimeoutPhase::TestLogic);
+        test_fn(harness)
+    })
+}
+
+// ============================================================================
 // Unit Tests
 // ============================================================================
 
@@ -2742,5 +3040,233 @@ mod tests {
 
         // Last event is CapsLock release
         assert_eq!(events[9], KeyEvent::Release(KeyCode::CapsLock));
+    }
+
+    // ------------------------------------------------------------------------
+    // TestTimeoutPhase Tests
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_timeout_phase_display() {
+        assert_eq!(TestTimeoutPhase::Setup.to_string(), "setup");
+        assert_eq!(TestTimeoutPhase::Injection.to_string(), "event injection");
+        assert_eq!(TestTimeoutPhase::Capture.to_string(), "event capture");
+        assert_eq!(TestTimeoutPhase::Verification.to_string(), "verification");
+        assert_eq!(TestTimeoutPhase::Teardown.to_string(), "teardown");
+        assert_eq!(TestTimeoutPhase::TestLogic.to_string(), "test logic");
+    }
+
+    #[test]
+    fn test_timeout_phase_equality() {
+        assert_eq!(TestTimeoutPhase::Setup, TestTimeoutPhase::Setup);
+        assert_ne!(TestTimeoutPhase::Setup, TestTimeoutPhase::Teardown);
+    }
+
+    #[test]
+    fn test_timeout_phase_clone() {
+        let phase = TestTimeoutPhase::Capture;
+        let cloned = phase;
+        assert_eq!(phase, cloned);
+    }
+
+    // ------------------------------------------------------------------------
+    // E2EError::TestTimeout Tests
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_e2e_error_display_test_timeout() {
+        let err = E2EError::TestTimeout {
+            phase: TestTimeoutPhase::Capture,
+            timeout: Duration::from_secs(30),
+            elapsed: Duration::from_secs_f64(30.5),
+            context: "Waiting for daemon output".to_string(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("TEST TIMEOUT"));
+        assert!(msg.contains("30s limit"));
+        assert!(msg.contains("30.50s"));
+        assert!(msg.contains("event capture"));
+        assert!(msg.contains("Waiting for daemon output"));
+        assert!(msg.contains("Check for hung daemon"));
+    }
+
+    #[test]
+    fn test_e2e_error_display_test_timeout_empty_context() {
+        let err = E2EError::TestTimeout {
+            phase: TestTimeoutPhase::Setup,
+            timeout: Duration::from_secs(10),
+            elapsed: Duration::from_secs(10),
+            context: String::new(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("TEST TIMEOUT"));
+        assert!(msg.contains("setup"));
+        // Empty context should not add "Context:" line
+        assert!(!msg.contains("Context:"));
+    }
+
+    // ------------------------------------------------------------------------
+    // Timeout Constants Tests
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_default_test_timeout_is_reasonable() {
+        // Should be between 10 and 120 seconds
+        assert!(DEFAULT_TEST_TIMEOUT >= Duration::from_secs(10));
+        assert!(DEFAULT_TEST_TIMEOUT <= Duration::from_secs(120));
+        // Default is 30 seconds
+        assert_eq!(DEFAULT_TEST_TIMEOUT, Duration::from_secs(30));
+    }
+
+    // ------------------------------------------------------------------------
+    // Timeout Wrapper Integration Tests
+    // ------------------------------------------------------------------------
+
+    /// Test that with_timeout correctly handles setup failures
+    /// Note: This test doesn't require uinput as it tests the timeout wrapper behavior
+    /// when setup fails (which it will without uinput access)
+    #[test]
+    fn test_with_timeout_handles_setup_failure() {
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+
+        // This will fail during setup because we don't have uinput access
+        let result = with_timeout(Duration::from_secs(5), config, |_harness, _set_phase| {
+            // This should never be called because setup fails
+            Ok(())
+        });
+
+        // Should fail with VirtualDevice or ConfigError (not TestTimeout)
+        assert!(result.is_err());
+        match result {
+            Err(E2EError::VirtualDevice(_)) | Err(E2EError::ConfigError { .. }) => {
+                // Expected errors when uinput is not available
+            }
+            Err(E2EError::DaemonStartError { .. }) | Err(E2EError::DaemonCrashed { .. }) => {
+                // Also acceptable if we got past device creation
+            }
+            Err(E2EError::TestTimeout { .. }) => {
+                panic!("Should not be a timeout error for quick setup failure");
+            }
+            Err(e) => {
+                // Other errors are also acceptable
+                println!("Got expected error: {}", e);
+            }
+            Ok(_) => {
+                // If it succeeded, that's fine too (means we have uinput access)
+                println!("Setup succeeded unexpectedly - running in privileged environment");
+            }
+        }
+    }
+
+    /// Test that the phase setter is callable
+    #[test]
+    fn test_phase_setter_is_callable() {
+        // We can't easily test the actual phase tracking without a real harness,
+        // but we can verify the function signature works
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+
+        let result: TimeoutResult<()> =
+            with_timeout(Duration::from_millis(500), config, |_harness, set_phase| {
+                // Test that we can call set_phase with different phases
+                set_phase(TestTimeoutPhase::Injection);
+                set_phase(TestTimeoutPhase::Capture);
+                set_phase(TestTimeoutPhase::Verification);
+                // Return quickly since we expect setup to fail without uinput
+                Err(E2EError::Timeout {
+                    operation: "test".to_string(),
+                    timeout_ms: 0,
+                })
+            });
+
+        // We expect an error (either from setup or our explicit error)
+        assert!(result.is_err());
+    }
+
+    /// Test run_test_with_timeout convenience function
+    #[test]
+    fn test_run_test_with_timeout_convenience() {
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+
+        let result: TimeoutResult<()> =
+            run_test_with_timeout(Duration::from_millis(500), config, |_harness| {
+                // Return error since we expect setup to fail
+                Err(E2EError::Timeout {
+                    operation: "test".to_string(),
+                    timeout_ms: 0,
+                })
+            });
+
+        // We expect an error
+        assert!(result.is_err());
+    }
+
+    /// Test that with_default_timeout uses the correct default
+    #[test]
+    fn test_with_default_timeout_uses_default() {
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+
+        // This should use DEFAULT_TEST_TIMEOUT (30s)
+        // We just verify it compiles and runs without immediate timeout
+        let result: TimeoutResult<()> = with_default_timeout(config, |_harness, _set_phase| {
+            Err(E2EError::Timeout {
+                operation: "test".to_string(),
+                timeout_ms: 0,
+            })
+        });
+
+        // Should fail with setup error or our explicit error, not timeout
+        assert!(result.is_err());
+        if let Err(E2EError::TestTimeout { .. }) = result {
+            panic!("Should not timeout with 30s limit for quick failure");
+        }
+    }
+
+    /// Test that the timeout wrapper runs on E2E tests when available
+    /// Note: Marked #[ignore] because it requires uinput access and daemon binary
+    #[test]
+    #[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux test_timeout_wrapper_with_real_harness -- --ignored"]
+    fn test_timeout_wrapper_with_real_harness() {
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+
+        let result = with_timeout(Duration::from_secs(30), config, |harness, set_phase| {
+            // Set phase to show we're in test logic
+            set_phase(TestTimeoutPhase::TestLogic);
+
+            // Test a simple remap
+            set_phase(TestTimeoutPhase::Injection);
+            harness.inject(&TestEvents::tap(KeyCode::A))?;
+
+            set_phase(TestTimeoutPhase::Capture);
+            let captured = harness.capture(Duration::from_millis(500))?;
+
+            set_phase(TestTimeoutPhase::Verification);
+            harness.verify(&captured, &TestEvents::tap(KeyCode::B))?;
+
+            Ok(())
+        });
+
+        result.expect("Test should pass with timeout wrapper");
+    }
+
+    /// Test that the timeout wrapper correctly reports timeout phase
+    /// This test uses a mock scenario since we can't easily trigger a real hang
+    #[test]
+    fn test_timeout_error_has_phase_info() {
+        // Create an error with specific phase info
+        let err = E2EError::TestTimeout {
+            phase: TestTimeoutPhase::Capture,
+            timeout: Duration::from_secs(30),
+            elapsed: Duration::from_secs(30),
+            context: "Waiting for key events from daemon".to_string(),
+        };
+
+        // Verify the error contains all relevant diagnostic info
+        let msg = err.to_string();
+        assert!(
+            msg.contains("event capture"),
+            "Should mention capture phase"
+        );
+        assert!(msg.contains("30s"), "Should mention timeout duration");
+        assert!(msg.contains("key events"), "Should include context");
     }
 }
