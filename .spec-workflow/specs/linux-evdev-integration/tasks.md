@@ -258,7 +258,7 @@
   - _Prompt: Role: Rust Developer with expertise in validation and diagnostics | Task: Implement validate subcommand that loads config, enumerates devices, shows matches without grabbing following Usability: Dry-Run Mode requirement | Restrictions: Must load and validate .krx file, enumerate keyboards, run pattern matching, print which devices match which configs, don't call grab() (dry-run only), show warnings for unmatched devices, exit code 0 if config valid and devices match, exit code 1 if config invalid or no matches | Success: validate loads config successfully, shows matched devices, shows unmatched devices as warnings, doesn't grab devices, exit codes are appropriate, helpful for debugging configuration_
   - **Completed**: Implemented as part of Task 21. Provides 3-step validation output (load config, enumerate devices, match patterns), shows [MATCH] and [SKIP] markers for devices, displays device patterns with mapping counts, and provides helpful next-step guidance.
 
-- [ ] 24. Create udev rules file
+- [x] 24. Create udev rules file
   - File: `keyrx_daemon/udev/99-keyrx.rules` (NEW)
   - Grant input group access to /dev/input/event*
   - Grant uinput group access to /dev/uinput
@@ -267,6 +267,7 @@
   - _Leverage: Standard udev rule format_
   - _Requirements: 5.1, 5.2, 5.4_
   - _Prompt: Role: Linux System Administrator with udev expertise | Task: Create udev rules file granting necessary permissions for keyrx daemon to operate without root following requirements 5.1, 5.2, and 5.4 | Restrictions: Must grant input group read access to /dev/input/event*, grant uinput group read/write access to /dev/uinput, create uinput device node if not exists, include header comments with installation instructions (copy to /etc/udev/rules.d/, reload with udevadm), test on common distributions | Success: Rules file has correct syntax, grants appropriate permissions, includes installation instructions, works on Ubuntu/Fedora/Arch, non-root user in correct groups can run daemon_
+  - **Completed**: Created comprehensive udev rules file with detailed installation instructions (5-step process), troubleshooting guide, security notes, and distribution compatibility info. Rules grant input group read access to /dev/input/event* devices and uinput group read/write access to /dev/uinput with static_node option for boot-time creation. Updated setup_linux.sh to source rules from the project file instead of embedding inline.
 
 - [ ] 25. Create systemd service file
   - File: `keyrx_daemon/systemd/keyrx.service` (NEW)
