@@ -31,24 +31,28 @@
 //! let mut daemon = Daemon::new(Path::new("config.krx"))?;
 //!
 //! // Run the event loop (blocks until shutdown signal)
-//! // daemon.run()?;  // Will be implemented in task #17
+//! daemon.run()?;
 //!
 //! // Shutdown is automatic via Drop trait
 //! # Ok::<(), keyrx_daemon::daemon::DaemonError>(())
 //! ```
 
 use std::io;
+use std::os::fd::{AsRawFd, BorrowedFd};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use thiserror::Error;
 
-use log::info;
+use log::{debug, info, trace, warn};
+use nix::poll::{poll, PollFd, PollFlags};
 
 use crate::config_loader::{load_config, ConfigError};
 use crate::device_manager::DeviceManager;
 use crate::platform::linux::UinputOutput;
-use crate::platform::DeviceError;
+use crate::platform::{DeviceError, InputDevice, OutputDevice};
+use keyrx_core::runtime::event::process_event;
 
 #[cfg(feature = "linux")]
 mod linux;
@@ -304,7 +308,7 @@ fn convert_archived_device_config(archived: &ArchivedDeviceConfig) -> DeviceConf
 /// println!("Managing {} devices", daemon.device_count());
 ///
 /// // Run event loop (blocks until shutdown)
-/// // daemon.run()?;  // Will be implemented in task #17
+/// daemon.run()?;
 /// # Ok::<(), keyrx_daemon::daemon::DaemonError>(())
 /// ```
 pub struct Daemon {
@@ -464,6 +468,244 @@ impl Daemon {
     #[must_use]
     pub fn running_flag(&self) -> Arc<AtomicBool> {
         Arc::clone(&self.running)
+    }
+
+    /// Runs the main event processing loop.
+    ///
+    /// This method polls all managed input devices for keyboard events, processes
+    /// them through the remapping engine, and injects the output events via the
+    /// virtual keyboard. The loop continues until a shutdown signal (SIGTERM or
+    /// SIGINT) is received.
+    ///
+    /// # Event Processing Flow
+    ///
+    /// For each input event:
+    /// 1. Read event from input device
+    /// 2. Look up mapping in device's lookup table
+    /// 3. Update device state (for modifier/lock mappings)
+    /// 4. Inject output event(s) via uinput
+    ///
+    /// # Multi-Device Handling
+    ///
+    /// The loop uses `poll()` to efficiently wait for events from all devices
+    /// simultaneously. This ensures fair handling across multiple keyboards
+    /// without busy-waiting.
+    ///
+    /// # Signal Handling
+    ///
+    /// - **SIGTERM/SIGINT**: Sets the running flag to false, causing graceful exit
+    /// - **SIGHUP**: Triggers configuration reload (implemented in task #18)
+    ///
+    /// # Errors
+    ///
+    /// - `DaemonError::RuntimeError`: Critical error during event processing
+    /// - `DaemonError::Device`: Device I/O error
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::path::Path;
+    /// use keyrx_daemon::daemon::Daemon;
+    ///
+    /// let mut daemon = Daemon::new(Path::new("config.krx"))?;
+    ///
+    /// // This blocks until shutdown signal received
+    /// daemon.run()?;
+    ///
+    /// println!("Daemon stopped gracefully");
+    /// # Ok::<(), keyrx_daemon::daemon::DaemonError>(())
+    /// ```
+    pub fn run(&mut self) -> Result<(), DaemonError> {
+        info!("Starting event processing loop");
+
+        // Grab all input devices before starting the loop
+        self.grab_all_devices()?;
+
+        // Track metrics for periodic logging
+        let mut event_count: u64 = 0;
+        let mut last_stats_time = Instant::now();
+        const STATS_INTERVAL: Duration = Duration::from_secs(60);
+
+        // Main event loop
+        while self.is_running() {
+            // Check for SIGHUP (reload request)
+            if self.signal_handler.check_reload() {
+                info!("Reload signal received (reload will be implemented in task #18)");
+                // TODO: Call self.reload() when implemented in task #18
+            }
+
+            // Poll devices for available events
+            let ready_devices = match self.poll_devices() {
+                Ok(devices) => devices,
+                Err(e) => {
+                    // Check if we were interrupted by signal
+                    if !self.is_running() {
+                        break;
+                    }
+                    warn!("Poll error: {}", e);
+                    continue;
+                }
+            };
+
+            // Process events from ready devices
+            for device_idx in ready_devices {
+                match self.process_device_events(device_idx) {
+                    Ok(count) => {
+                        event_count += count as u64;
+                    }
+                    Err(e) => {
+                        // Log error but continue with other devices
+                        warn!("Error processing device {}: {}", device_idx, e);
+                    }
+                }
+            }
+
+            // Periodic stats logging
+            if last_stats_time.elapsed() >= STATS_INTERVAL {
+                info!(
+                    "Event loop stats: {} events processed, {} devices active",
+                    event_count,
+                    self.device_manager.device_count()
+                );
+                last_stats_time = Instant::now();
+            }
+        }
+
+        info!(
+            "Event loop stopped. Total events processed: {}",
+            event_count
+        );
+
+        Ok(())
+    }
+
+    /// Grabs exclusive access to all managed input devices.
+    ///
+    /// This prevents other applications from receiving keyboard events
+    /// from these devices, which is essential for key remapping.
+    fn grab_all_devices(&mut self) -> Result<(), DaemonError> {
+        info!(
+            "Grabbing {} input device(s)...",
+            self.device_manager.device_count()
+        );
+
+        for device in self.device_manager.devices_mut() {
+            let name = device.info().name.clone();
+            device.input_mut().grab().map_err(|e| {
+                DaemonError::RuntimeError(format!("failed to grab device '{}': {}", name, e))
+            })?;
+            debug!("Grabbed device: {}", name);
+        }
+
+        info!("All devices grabbed successfully");
+        Ok(())
+    }
+
+    /// Polls all managed devices for available events.
+    ///
+    /// Returns a vector of device indices that have events ready to read.
+    /// Uses a 100ms timeout to allow periodic signal checking.
+    fn poll_devices(&self) -> Result<Vec<usize>, DaemonError> {
+        // Collect raw file descriptors from all devices
+        let raw_fds: Vec<i32> = self
+            .device_manager
+            .devices()
+            .map(|device| device.input().device().as_raw_fd())
+            .collect();
+
+        // SAFETY: The raw fds are valid for the duration of this function because
+        // we hold a reference to self.device_manager which owns the devices.
+        // The BorrowedFd lifetime is limited to this function scope.
+        let mut poll_fds: Vec<PollFd> = raw_fds
+            .iter()
+            .map(|&fd| {
+                // SAFETY: fd is valid because it comes from a live Device
+                let borrowed = unsafe { BorrowedFd::borrow_raw(fd) };
+                PollFd::new(borrowed, PollFlags::POLLIN)
+            })
+            .collect();
+
+        // Poll with 100ms timeout to allow signal checking
+        let timeout_ms: u16 = 100;
+        let result = poll(&mut poll_fds, timeout_ms)
+            .map_err(|e| DaemonError::RuntimeError(format!("poll failed: {}", e)))?;
+
+        // If no events ready (timeout), return empty
+        if result == 0 {
+            return Ok(Vec::new());
+        }
+
+        // Collect indices of devices with available events
+        let ready_indices: Vec<usize> = poll_fds
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, pfd)| {
+                if let Some(revents) = pfd.revents() {
+                    if revents.contains(PollFlags::POLLIN) {
+                        return Some(idx);
+                    }
+                }
+                None
+            })
+            .collect();
+
+        trace!("Poll returned {} ready device(s)", ready_indices.len());
+        Ok(ready_indices)
+    }
+
+    /// Processes all available events from a single device.
+    ///
+    /// Returns the number of events processed.
+    fn process_device_events(&mut self, device_idx: usize) -> Result<usize, DaemonError> {
+        let mut processed_count = 0;
+
+        loop {
+            // Read and process one event, collecting output events
+            let output_events = {
+                let device = match self.device_manager.get_device_mut(device_idx) {
+                    Some(d) => d,
+                    None => return Ok(processed_count),
+                };
+
+                // Read the next event from the device
+                let input_event = match device.input_mut().next_event() {
+                    Ok(event) => event,
+                    Err(DeviceError::EndOfStream) => {
+                        // No more events available
+                        break;
+                    }
+                    Err(DeviceError::Io(ref e)) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        // Would block - no more events
+                        break;
+                    }
+                    Err(e) => {
+                        return Err(DaemonError::RuntimeError(format!(
+                            "failed to read event: {}",
+                            e
+                        )));
+                    }
+                };
+
+                trace!("Input event: {:?}", input_event);
+
+                // Process through the remapping engine using the combined accessor
+                let (lookup, state) = device.lookup_and_state_mut();
+                process_event(input_event, lookup, state)
+                // device borrow ends here
+            };
+
+            // Inject output events (device_manager borrow released)
+            for output_event in output_events {
+                trace!("Output event: {:?}", output_event);
+                self.output.inject_event(output_event).map_err(|e| {
+                    DaemonError::RuntimeError(format!("failed to inject event: {}", e))
+                })?;
+            }
+
+            processed_count += 1;
+        }
+
+        Ok(processed_count)
     }
 }
 

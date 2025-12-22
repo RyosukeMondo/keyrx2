@@ -469,6 +469,19 @@ impl ManagedDevice {
     pub fn rebuild_lookup(&mut self, config: &DeviceConfig) {
         self.lookup = KeyLookup::from_device_config(config);
     }
+
+    /// Returns references to the lookup table and mutable state for event processing.
+    ///
+    /// This method allows borrowing both the lookup table (immutably) and the
+    /// device state (mutably) simultaneously, which is required for event
+    /// processing through `process_event`.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of `(&KeyLookup, &mut DeviceState)` for event processing.
+    pub fn lookup_and_state_mut(&mut self) -> (&KeyLookup, &mut DeviceState) {
+        (&self.lookup, &mut self.state)
+    }
 }
 
 /// Manager for multiple keyboard devices with configuration matching.
