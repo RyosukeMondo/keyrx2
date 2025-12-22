@@ -144,7 +144,7 @@
   - _Requirements: 1.5, 7.3_
   - _Prompt: Role: Rust Developer with expertise in dynamic device management | Task: Implement device hot-plug support in DeviceManager with refresh method to detect new and removed devices following requirements 1.5 and 7.3 | Restrictions: Must compare current device list with previous, add new matching devices (grab and create ManagedDevice), remove disconnected devices (release and cleanup), log device changes at INFO level, handle errors gracefully (continue with remaining devices), call refresh periodically or on inotify event | Success: refresh() detects new keyboard when plugged in, refresh() removes device when unplugged, state is preserved for remaining devices, new devices are grabbed correctly, compiles and handles USB keyboard plug/unplug_
 
-- [ ] 14. Write DeviceManager unit tests
+- [x] 14. Write DeviceManager unit tests
   - File: `keyrx_daemon/src/device_manager.rs` (add tests module)
   - Test pattern matching with various patterns
   - Test device enumeration filtering

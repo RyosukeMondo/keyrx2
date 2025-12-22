@@ -1457,6 +1457,164 @@ mod tests {
         }
     }
 
+    // Additional pattern matching edge cases
+    mod pattern_matching_edge_cases {
+        use super::*;
+
+        #[test]
+        fn test_unicode_device_name() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "日本語キーボード".to_string(),
+                serial: None,
+                phys: None,
+            };
+            // Wildcard should match unicode names
+            assert!(match_device(&device, "*"));
+            // Exact match with unicode
+            assert!(match_device(&device, "日本語キーボード"));
+            // Prefix pattern with unicode
+            assert!(match_device(&device, "日本語*"));
+        }
+
+        #[test]
+        fn test_empty_pattern() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "USB Keyboard".to_string(),
+                serial: None,
+                phys: None,
+            };
+            // Empty pattern should not match
+            assert!(!match_device(&device, ""));
+        }
+
+        #[test]
+        fn test_whitespace_in_pattern() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "  Spaced  Keyboard  ".to_string(),
+                serial: None,
+                phys: None,
+            };
+            // Exact match with leading/trailing spaces
+            assert!(match_device(&device, "  Spaced  Keyboard  "));
+            // Prefix pattern with spaces
+            assert!(match_device(&device, "  Spaced*"));
+        }
+
+        #[test]
+        fn test_very_long_pattern() {
+            let long_name = "A".repeat(1000);
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: long_name.clone(),
+                serial: None,
+                phys: None,
+            };
+            // Exact match with very long name
+            assert!(match_device(&device, &long_name));
+            // Prefix match with long pattern
+            assert!(match_device(&device, &format!("{}*", &long_name[..500])));
+        }
+
+        #[test]
+        fn test_special_characters_in_name() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "USB/Keyboard\\Test:Device".to_string(),
+                serial: None,
+                phys: None,
+            };
+            // Exact match with special characters
+            assert!(match_device(&device, "USB/Keyboard\\Test:Device"));
+            // Prefix with special chars
+            assert!(match_device(&device, "USB/Keyboard*"));
+        }
+
+        #[test]
+        fn test_numeric_device_name() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "12345".to_string(),
+                serial: Some("67890".to_string()),
+                phys: None,
+            };
+            // Match by numeric name
+            assert!(match_device(&device, "12345"));
+            // Match by numeric serial
+            assert!(match_device(&device, "67890"));
+            // Prefix with numbers
+            assert!(match_device(&device, "123*"));
+        }
+
+        #[test]
+        fn test_pattern_with_only_asterisk_at_end() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "Test".to_string(),
+                serial: None,
+                phys: None,
+            };
+            // Single asterisk is wildcard
+            assert!(match_device(&device, "*"));
+            // Pattern "**" is treated as prefix "*" (literal asterisk) which doesn't match "Test"
+            // This documents the actual behavior of the pattern matching
+            assert!(!match_device(&device, "**"));
+
+            // Device with asterisk in name should match "**" pattern
+            let device_with_asterisk = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event1"),
+                name: "*Special".to_string(),
+                serial: None,
+                phys: None,
+            };
+            assert!(match_device(&device_with_asterisk, "**")); // Prefix "*" matches "*Special"
+        }
+
+        #[test]
+        fn test_case_sensitivity_unicode() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "KEYBOARD".to_string(),
+                serial: None,
+                phys: None,
+            };
+            // Case insensitive should work
+            assert!(match_device(&device, "keyboard"));
+            assert!(match_device(&device, "KEYBOARD"));
+            assert!(match_device(&device, "KeyBoard"));
+        }
+
+        #[test]
+        fn test_serial_with_special_format() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "Generic Keyboard".to_string(),
+                serial: Some("00:11:22:33:44:55".to_string()),
+                phys: None,
+            };
+            // Match serial with colons
+            assert!(match_device(&device, "00:11:22:33:44:55"));
+            // Prefix match on serial
+            assert!(match_device(&device, "00:11*"));
+        }
+
+        #[test]
+        fn test_phys_path_matching() {
+            let device = KeyboardInfo {
+                path: PathBuf::from("/dev/input/event0"),
+                name: "Generic Keyboard".to_string(),
+                serial: None,
+                phys: Some("usb-0000:00:14.0-2/input0".to_string()),
+            };
+            // Match by physical path (useful for consistent device identification)
+            assert!(match_device(&device, "usb-0000:00:14.0-2/input0"));
+            // Prefix match on physical path
+            assert!(match_device(&device, "usb-0000:00:14.0*"));
+        }
+    }
+
     // RefreshResult tests - pure struct tests that don't require real devices
     mod refresh_result {
         use super::*;
