@@ -18,6 +18,10 @@ keyrx_compiler = { path = "../keyrx_compiler" }
 rkyv = { version = "0.7", features = ["validation"] }
 thiserror = "2.0"
 log = "0.4"
+# CLI argument parsing
+clap = { version = "4.5", features = ["derive"] }
+# Logging facade implementation for CLI
+env_logger = "0.11"
 
 # Linux-specific dependencies
 # evdev: Access to raw keyboard input devices via /dev/input/event*
