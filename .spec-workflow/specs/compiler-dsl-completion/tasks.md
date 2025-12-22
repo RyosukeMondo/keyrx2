@@ -237,7 +237,7 @@
   - _Requirements: 2.7_
   - **Implementation**: Added ImportStep struct to track import chain in ParseError variants. Updated all ParseError variants (except CircularImport which already has chain field) to include `import_chain: Vec<ImportStep>` field. Created format_import_chain() helper function that displays import chain with blue arrows (→) showing the path from main file through imports to error location. Updated all error formatter functions (format_invalid_prefix_error, format_range_error, format_physical_modifier_error, format_missing_prefix_error, format_import_not_found_error, format_resource_limit_error) to accept and display import_chain parameter. Import chain is displayed before error message when present. Updated all ParseError constructions throughout codebase (import_resolver.rs, parser/validators.rs, parser/core.rs) to include empty Vec::new() for import_chain (will be populated when import resolution is implemented). Updated all test patterns to match new ParseError structure. All tests pass. Format: "Import chain:\n  main.rhai → (line 5)\n  a.rhai → (line 2)\n\nError: ..." in blue._
 
-- [ ] 21. Write error formatting tests
+- [x] 21. Write error formatting tests
   - File: `keyrx_compiler/tests/error_formatting_tests.rs` (NEW)
   - Test each ParseError variant produces expected formatted output
   - Test code snippet generation with different line numbers
@@ -247,7 +247,7 @@
   - Purpose: Ensure error messages are correct and helpful
   - _Leverage: None (unit tests)_
   - _Requirements: 2.8_
-  - _Prompt: Role: QA Engineer with string comparison testing expertise | Task: Create comprehensive tests for error formatting, verifying output format for each error variant, code snippet generation, and color handling, following requirement 2.8 | Restrictions: Test with mock ParseError instances, capture formatted output, verify structure (error message, location, code snippet, caret, help text), test NO_COLOR env var disables colors, use snapshot testing if available (insta crate), verify suggestions are present | Success: All error variants tested, code snippets correct, caret positioning verified, colored/non-colored modes tested, help text present for all errors_
+  - **Implementation**: Created comprehensive test suite with 26 tests covering all error formatting functionality. Tests include: helper function strip_ansi_codes() for handling ANSI escape sequences, SyntaxError formatting with and without import chains, code snippet context display (first line, last line, middle line), caret positioning (column 1 and column 15), all ParseError variants (InvalidPrefix, ModifierIdOutOfRange, LockIdOutOfRange, PhysicalModifierInMD, MissingPrefix, ImportNotFound, CircularImport, ResourceLimitExceeded), import chain display (empty, single step, multiple steps), NO_COLOR environment variable handling (verifies content is correct with or without colors), help text presence verification, and suggestion content validation. All tests pass successfully. Tests verify proper formatting of: file:line:column locations, "Error:" labels, code snippets with 3 lines of context, caret (^) pointing to error column, "help:" sections with actionable suggestions, and import chains with blue arrows (→).
 
 ## Phase 5: Documentation (User Enablement)
 
