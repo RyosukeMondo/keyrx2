@@ -239,8 +239,8 @@
   - _Requirements: 4.1-4.3, Testability: Property-Based Testing_
   - _Prompt: Role: Property-Based Testing Expert with focus on event-driven systems | Task: Add proptest-based property tests to process_event verifying no event loss and deterministic execution following requirements 4.1-4.3 and Testability section | Restrictions: Must generate random Vec<KeyEvent> using proptest strategies, create simple config (A→B mapping), process all events, count input and output events (for Simple mapping 1:1), verify counts match, run same event sequence twice and verify outputs are identical (deterministic), test with at least 100 cases, add comments explaining invariants | Success: Property test prop_no_event_loss generates random event sequences, processes with Simple mapping, verifies input count == output count, prop_deterministic processes same sequence twice, verifies outputs are byte-for-byte identical, tests run 100+ iterations, all pass_
 
-- [ ] 23. Add criterion benchmarks for performance claims
-  - File: `keyrx_core/benches/runtime_benchmarks.rs` (NEW)
+- [x] 23. Add criterion benchmarks for performance claims
+  - File: `keyrx_core/benches/core_bench.rs` (UPDATED)
   - Add `criterion` dev-dependency to keyrx_core/Cargo.toml
   - Benchmark: key lookup (<100μs target)
   - Benchmark: state update (<10μs target)
