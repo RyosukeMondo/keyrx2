@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/virtual-e2e-testing/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-22T18:12:05.786Z",
+      "trigger": "initial",
+      "approvalId": "approval_1766427125778_2qfumztwn",
+      "approvalTitle": "Requirements for Virtual E2E Testing"
+    }
+  ]
+}

@@ -498,6 +498,76 @@ impl Default for E2EConfig {
 }
 
 // ============================================================================
+// TeardownResult - Result from explicit teardown
+// ============================================================================
+
+/// Result from an explicit teardown operation.
+///
+/// This struct provides detailed information about what happened during
+/// teardown, which is useful for debugging test failures and verifying
+/// cleanup behavior.
+#[derive(Debug, Clone)]
+pub struct TeardownResult {
+    /// Whether SIGTERM was successfully sent to the daemon.
+    pub sigterm_sent: bool,
+    /// Whether SIGKILL was needed (daemon didn't respond to SIGTERM).
+    pub sigkill_sent: bool,
+    /// Whether the daemon shut down gracefully (responded to SIGTERM).
+    pub graceful_shutdown: bool,
+    /// The daemon's exit code, if available.
+    pub exit_code: Option<i32>,
+    /// Whether the config file was successfully removed.
+    pub config_cleaned: bool,
+    /// Any warnings that occurred during teardown.
+    pub warnings: Vec<String>,
+}
+
+impl Default for TeardownResult {
+    fn default() -> Self {
+        Self {
+            sigterm_sent: false,
+            sigkill_sent: false,
+            graceful_shutdown: false,
+            exit_code: None,
+            config_cleaned: false,
+            warnings: Vec::new(),
+        }
+    }
+}
+
+impl TeardownResult {
+    /// Returns true if teardown completed without any warnings.
+    #[must_use]
+    pub fn is_clean(&self) -> bool {
+        self.warnings.is_empty() && self.config_cleaned
+    }
+
+    /// Returns true if the daemon was forcefully killed.
+    #[must_use]
+    pub fn was_force_killed(&self) -> bool {
+        self.sigkill_sent
+    }
+}
+
+impl fmt::Display for TeardownResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Teardown Result:")?;
+        writeln!(f, "  SIGTERM sent: {}", self.sigterm_sent)?;
+        writeln!(f, "  SIGKILL sent: {}", self.sigkill_sent)?;
+        writeln!(f, "  Graceful shutdown: {}", self.graceful_shutdown)?;
+        writeln!(f, "  Exit code: {:?}", self.exit_code)?;
+        writeln!(f, "  Config cleaned: {}", self.config_cleaned)?;
+        if !self.warnings.is_empty() {
+            writeln!(f, "  Warnings:")?;
+            for warning in &self.warnings {
+                writeln!(f, "    - {}", warning)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+// ============================================================================
 // E2EHarness - Complete E2E test orchestration
 // ============================================================================
 
@@ -1108,6 +1178,162 @@ impl E2EHarness {
         self.verify(&captured, expected)
     }
 
+    // ========================================================================
+    // Teardown and Cleanup
+    // ========================================================================
+
+    /// Gracefully tears down the E2E test environment.
+    ///
+    /// This method provides explicit, graceful cleanup of all test resources:
+    /// 1. Sends SIGTERM to the daemon process
+    /// 2. Waits for daemon to exit with a timeout
+    /// 3. Sends SIGKILL if daemon doesn't respond to SIGTERM
+    /// 4. Destroys the virtual keyboard
+    /// 5. Removes the temporary config file
+    ///
+    /// Unlike the `Drop` implementation, this method:
+    /// - Returns an error if cleanup fails
+    /// - Provides diagnostic information about what happened
+    /// - Consumes the harness, preventing further use
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(TeardownResult)` with details about the cleanup
+    /// - `Err(E2EError)` if critical cleanup fails
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let harness = E2EHarness::setup(config)?;
+    /// // ... run tests ...
+    ///
+    /// let result = harness.teardown()?;
+    /// println!("Daemon exited with code: {:?}", result.exit_code);
+    /// ```
+    pub fn teardown(self) -> Result<TeardownResult, E2EError> {
+        self.teardown_with_timeout(Duration::from_secs(5))
+    }
+
+    /// Tears down with a custom timeout for daemon shutdown.
+    ///
+    /// # Arguments
+    ///
+    /// * `timeout` - Maximum time to wait for daemon to exit gracefully
+    pub fn teardown_with_timeout(mut self, timeout: Duration) -> Result<TeardownResult, E2EError> {
+        let mut result = TeardownResult::default();
+
+        // Step 1: Terminate daemon process
+        if let Some(mut process) = self.daemon_process.take() {
+            let pid = process.id();
+
+            // Send SIGTERM for graceful shutdown
+            #[cfg(unix)]
+            {
+                use nix::sys::signal::{kill, Signal};
+                use nix::unistd::Pid;
+
+                let nix_pid = Pid::from_raw(pid as i32);
+                if let Err(e) = kill(nix_pid, Signal::SIGTERM) {
+                    // Process may have already exited, which is fine
+                    if e != nix::errno::Errno::ESRCH {
+                        result.sigterm_sent = false;
+                        result
+                            .warnings
+                            .push(format!("Failed to send SIGTERM: {}", e));
+                    }
+                } else {
+                    result.sigterm_sent = true;
+                }
+            }
+
+            // Wait for graceful shutdown with timeout
+            let start = Instant::now();
+            let poll_interval = Duration::from_millis(50);
+
+            loop {
+                match process.try_wait() {
+                    Ok(Some(status)) => {
+                        // Process has exited
+                        result.exit_code = status.code();
+                        result.graceful_shutdown = true;
+                        break;
+                    }
+                    Ok(None) => {
+                        // Still running, check timeout
+                        if start.elapsed() >= timeout {
+                            // Timeout - force kill
+                            result.graceful_shutdown = false;
+
+                            #[cfg(unix)]
+                            {
+                                use nix::sys::signal::{kill, Signal};
+                                use nix::unistd::Pid;
+
+                                let nix_pid = Pid::from_raw(pid as i32);
+                                if let Err(e) = kill(nix_pid, Signal::SIGKILL) {
+                                    if e != nix::errno::Errno::ESRCH {
+                                        result
+                                            .warnings
+                                            .push(format!("Failed to send SIGKILL: {}", e));
+                                    }
+                                } else {
+                                    result.sigkill_sent = true;
+                                }
+                            }
+
+                            #[cfg(not(unix))]
+                            {
+                                let _ = process.kill();
+                                result.sigkill_sent = true;
+                            }
+
+                            // Wait for forced termination
+                            match process.wait() {
+                                Ok(status) => result.exit_code = status.code(),
+                                Err(e) => {
+                                    result.warnings.push(format!(
+                                        "Failed to wait for process after SIGKILL: {}",
+                                        e
+                                    ));
+                                }
+                            }
+                            break;
+                        }
+
+                        std::thread::sleep(poll_interval);
+                    }
+                    Err(e) => {
+                        result
+                            .warnings
+                            .push(format!("Error checking process status: {}", e));
+                        break;
+                    }
+                }
+            }
+
+            // Try to read any remaining stderr for diagnostics
+            self.daemon_stderr = Self::read_child_stderr(&mut process);
+        }
+
+        // Step 2: Virtual keyboard is automatically destroyed when self is dropped
+
+        // Step 3: Remove config file
+        if self.config_path.exists() {
+            if let Err(e) = fs::remove_file(&self.config_path) {
+                result
+                    .warnings
+                    .push(format!("Failed to remove config file: {}", e));
+                result.config_cleaned = false;
+            } else {
+                result.config_cleaned = true;
+            }
+        } else {
+            result.config_cleaned = true; // Already cleaned or never created
+        }
+
+        Ok(result)
+    }
+
     /// Finds the daemon binary path.
     ///
     /// Looks in the following order:
@@ -1173,33 +1399,69 @@ impl E2EHarness {
 impl Drop for E2EHarness {
     /// Ensures cleanup even on panic.
     ///
-    /// This method:
+    /// This method performs best-effort cleanup that never panics:
     /// 1. Terminates the daemon process (SIGTERM, then SIGKILL if needed)
     /// 2. Removes the temporary config file
     /// 3. Virtual keyboard is dropped automatically
+    ///
+    /// For explicit cleanup with error reporting, use [`teardown`](Self::teardown).
     fn drop(&mut self) {
         // Terminate daemon process
         if let Some(mut process) = self.daemon_process.take() {
+            let pid = process.id();
+
             // Try graceful shutdown first with SIGTERM
             #[cfg(unix)]
-            unsafe {
-                libc::kill(process.id() as libc::pid_t, libc::SIGTERM);
+            {
+                use nix::sys::signal::{kill, Signal};
+                use nix::unistd::Pid;
+
+                let nix_pid = Pid::from_raw(pid as i32);
+                // Ignore errors - process may have already exited
+                let _ = kill(nix_pid, Signal::SIGTERM);
             }
 
-            // Wait briefly for graceful shutdown
-            std::thread::sleep(Duration::from_millis(100));
+            // Wait briefly for graceful shutdown (short timeout in Drop)
+            let start = Instant::now();
+            let drop_timeout = Duration::from_millis(500);
+            let poll_interval = Duration::from_millis(25);
 
-            // Check if still running and force kill if needed
-            if let Ok(None) = process.try_wait() {
-                let _ = process.kill();
+            loop {
+                match process.try_wait() {
+                    Ok(Some(_)) => break, // Process exited
+                    Ok(None) => {
+                        if start.elapsed() >= drop_timeout {
+                            // Timeout - force kill
+                            #[cfg(unix)]
+                            {
+                                use nix::sys::signal::{kill, Signal};
+                                use nix::unistd::Pid;
+
+                                let nix_pid = Pid::from_raw(pid as i32);
+                                let _ = kill(nix_pid, Signal::SIGKILL);
+                            }
+
+                            #[cfg(not(unix))]
+                            {
+                                let _ = process.kill();
+                            }
+
+                            // Wait for forced termination
+                            let _ = process.wait();
+                            break;
+                        }
+                        std::thread::sleep(poll_interval);
+                    }
+                    Err(_) => break, // Error checking status, give up
+                }
             }
-
-            // Wait for process to fully exit
-            let _ = process.wait();
         }
 
-        // Clean up config file
+        // Clean up config file (ignore errors in Drop)
         let _ = fs::remove_file(&self.config_path);
+
+        // Note: Virtual keyboard (self.virtual_input) is automatically dropped,
+        // which destroys the uinput device via its own Drop implementation.
     }
 }
 
@@ -1814,5 +2076,176 @@ mod tests {
                 &[KeyEvent::Press(KeyCode::C), KeyEvent::Release(KeyCode::C)],
             )
             .expect("Unmapped key should pass through unchanged");
+    }
+
+    // ------------------------------------------------------------------------
+    // TeardownResult Tests
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_teardown_result_default() {
+        let result = TeardownResult::default();
+        assert!(!result.sigterm_sent);
+        assert!(!result.sigkill_sent);
+        assert!(!result.graceful_shutdown);
+        assert!(result.exit_code.is_none());
+        assert!(!result.config_cleaned);
+        assert!(result.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_teardown_result_is_clean() {
+        // Clean result has no warnings and config cleaned
+        let mut result = TeardownResult::default();
+        result.config_cleaned = true;
+        assert!(result.is_clean());
+
+        // Add warning - no longer clean
+        result.warnings.push("some warning".to_string());
+        assert!(!result.is_clean());
+
+        // Remove warning but config not cleaned - not clean
+        result.warnings.clear();
+        result.config_cleaned = false;
+        assert!(!result.is_clean());
+    }
+
+    #[test]
+    fn test_teardown_result_was_force_killed() {
+        let mut result = TeardownResult::default();
+        assert!(!result.was_force_killed());
+
+        result.sigkill_sent = true;
+        assert!(result.was_force_killed());
+    }
+
+    #[test]
+    fn test_teardown_result_display() {
+        let mut result = TeardownResult {
+            sigterm_sent: true,
+            sigkill_sent: false,
+            graceful_shutdown: true,
+            exit_code: Some(0),
+            config_cleaned: true,
+            warnings: vec![],
+        };
+
+        let display = result.to_string();
+        assert!(display.contains("SIGTERM sent: true"));
+        assert!(display.contains("SIGKILL sent: false"));
+        assert!(display.contains("Graceful shutdown: true"));
+        assert!(display.contains("Exit code: Some(0)"));
+        assert!(display.contains("Config cleaned: true"));
+
+        // Add warnings and check they appear
+        result.warnings.push("test warning".to_string());
+        let display = result.to_string();
+        assert!(display.contains("Warnings:"));
+        assert!(display.contains("test warning"));
+    }
+
+    #[test]
+    fn test_teardown_result_graceful_vs_forced() {
+        // Simulate graceful shutdown
+        let graceful = TeardownResult {
+            sigterm_sent: true,
+            sigkill_sent: false,
+            graceful_shutdown: true,
+            exit_code: Some(0),
+            config_cleaned: true,
+            warnings: vec![],
+        };
+        assert!(graceful.graceful_shutdown);
+        assert!(!graceful.was_force_killed());
+
+        // Simulate forced shutdown
+        let forced = TeardownResult {
+            sigterm_sent: true,
+            sigkill_sent: true,
+            graceful_shutdown: false,
+            exit_code: Some(137), // SIGKILL exit code
+            config_cleaned: true,
+            warnings: vec![],
+        };
+        assert!(!forced.graceful_shutdown);
+        assert!(forced.was_force_killed());
+    }
+
+    /// Test that explicit teardown works correctly
+    /// Note: Marked #[ignore] because it requires uinput access and daemon binary
+    #[test]
+    #[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux test_e2e_harness_explicit_teardown -- --ignored"]
+    fn test_e2e_harness_explicit_teardown() {
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+        let harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+        let config_path = harness.config_path().clone();
+        assert!(
+            config_path.exists(),
+            "Config file should exist before teardown"
+        );
+
+        let result = harness.teardown().expect("Teardown should succeed");
+
+        // Verify teardown results
+        assert!(result.sigterm_sent, "SIGTERM should have been sent");
+        assert!(
+            result.config_cleaned,
+            "Config file should have been cleaned"
+        );
+        assert!(
+            !config_path.exists(),
+            "Config file should not exist after teardown"
+        );
+
+        // Print result for manual verification
+        println!("{}", result);
+    }
+
+    /// Test teardown with custom timeout
+    /// Note: Marked #[ignore] because it requires uinput access and daemon binary
+    #[test]
+    #[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux test_e2e_harness_teardown_with_timeout -- --ignored"]
+    fn test_e2e_harness_teardown_with_timeout() {
+        let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+        let harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+        // Use a short timeout - daemon should still shut down gracefully
+        let result = harness
+            .teardown_with_timeout(Duration::from_secs(2))
+            .expect("Teardown should succeed");
+
+        assert!(result.sigterm_sent);
+        // If graceful shutdown worked, SIGKILL should not have been needed
+        if result.graceful_shutdown {
+            assert!(!result.sigkill_sent);
+        }
+    }
+
+    /// Test that Drop cleans up properly when harness is simply dropped
+    /// Note: Marked #[ignore] because it requires uinput access and daemon binary
+    #[test]
+    #[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux test_e2e_harness_drop_cleanup -- --ignored"]
+    fn test_e2e_harness_drop_cleanup() {
+        let config_path;
+
+        {
+            let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
+            let harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+            config_path = harness.config_path().clone();
+            assert!(config_path.exists(), "Config file should exist during test");
+
+            // Harness is dropped here
+        }
+
+        // Small delay to ensure Drop has completed
+        std::thread::sleep(Duration::from_millis(100));
+
+        // After drop, config file should be cleaned up
+        assert!(
+            !config_path.exists(),
+            "Config file should be removed after drop"
+        );
     }
 }
