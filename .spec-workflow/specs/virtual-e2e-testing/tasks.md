@@ -277,7 +277,7 @@
 
 ## Phase 5: CI/CD Integration
 
-- [ ] 18. Update Cargo.toml with test dependencies
+- [x] 18. Update Cargo.toml with test dependencies
   - File: `keyrx_daemon/Cargo.toml` (MODIFY)
   - Add dev-dependencies: tempfile, nix (for signals)
   - Ensure evdev and uinput are available in test builds
