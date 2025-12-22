@@ -280,7 +280,7 @@ impl VirtualKeyboard {
         delay: Option<std::time::Duration>,
     ) -> Result<(), VirtualDeviceError> {
         for (i, event) in events.iter().enumerate() {
-            self.inject(event.clone())?;
+            self.inject(*event)?;
 
             // Add delay between events (but not after the last one)
             if let Some(d) = delay {
