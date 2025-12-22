@@ -6,12 +6,13 @@
 use std::path::{Path, PathBuf};
 
 use evdev::{Device, InputEventKind, Key};
+use uinput::event::keyboard::{Key as UKey, KeyPad, Keyboard, Misc};
 use uinput::Device as UInputDevice;
 
 use keyrx_core::config::KeyCode;
 use keyrx_core::runtime::event::KeyEvent;
 
-use crate::platform::{DeviceError, InputDevice};
+use crate::platform::{DeviceError, InputDevice, OutputDevice};
 
 /// Linux platform structure for keyboard input/output operations.
 ///
@@ -478,6 +479,429 @@ impl InputDevice for EvdevInput {
 
         self.device.ungrab().map_err(DeviceError::Io)?;
         self.grabbed = false;
+        Ok(())
+    }
+}
+
+// ============================================================================
+// UinputOutput - Virtual Keyboard for Event Injection
+// ============================================================================
+
+/// Virtual keyboard device for injecting keyboard events via uinput.
+///
+/// `UinputOutput` creates a virtual keyboard device using the Linux uinput
+/// kernel interface. Events injected through this device appear to applications
+/// as if they came from a real keyboard.
+///
+/// # Device Access
+///
+/// The uinput device is accessed via `/dev/uinput`. By default, this requires
+/// root access or membership in the `uinput` group with appropriate udev rules.
+///
+/// # Udev Rules Setup
+///
+/// To allow non-root access, create `/etc/udev/rules.d/99-keyrx.rules`:
+/// ```text
+/// KERNEL=="uinput", MODE="0660", GROUP="uinput", OPTIONS+="static_node=uinput"
+/// ```
+///
+/// Then add your user to the `uinput` group:
+/// ```sh
+/// sudo groupadd -f uinput
+/// sudo usermod -aG uinput $USER
+/// # Log out and back in for changes to take effect
+/// ```
+///
+/// # Example
+///
+/// ```no_run
+/// use keyrx_daemon::platform::linux::UinputOutput;
+/// use keyrx_daemon::platform::OutputDevice;
+/// use keyrx_core::runtime::event::KeyEvent;
+/// use keyrx_core::config::KeyCode;
+///
+/// // Create virtual keyboard
+/// let mut output = UinputOutput::create("keyrx")?;
+///
+/// // Inject a key press/release sequence
+/// output.inject_event(KeyEvent::Press(KeyCode::A))?;
+/// output.inject_event(KeyEvent::Release(KeyCode::A))?;
+/// # Ok::<(), keyrx_daemon::platform::DeviceError>(())
+/// ```
+#[allow(dead_code)] // Methods will be used in task #17 (Daemon event loop)
+pub struct UinputOutput {
+    /// The underlying uinput device handle.
+    device: UInputDevice,
+    /// Name of the virtual device for identification.
+    name: String,
+}
+
+#[allow(dead_code)] // Methods will be used in task #17 (Daemon event loop)
+impl UinputOutput {
+    /// Creates a new virtual keyboard device with the specified name.
+    ///
+    /// The device is configured with full keyboard capabilities (all KEY_* events)
+    /// and will appear in `/dev/input/` once created.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Name for the virtual device (visible in device listings)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(UinputOutput)` - Successfully created the virtual device
+    /// * `Err(DeviceError::PermissionDenied)` - Cannot access /dev/uinput
+    /// * `Err(DeviceError::Io)` - Other I/O error during device creation
+    ///
+    /// # Permissions
+    ///
+    /// Creating a uinput device typically requires:
+    /// - Running as root, OR
+    /// - Membership in the `uinput` group, OR
+    /// - Appropriate udev rules granting access to /dev/uinput
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::platform::linux::UinputOutput;
+    /// use keyrx_daemon::platform::DeviceError;
+    ///
+    /// match UinputOutput::create("my-virtual-keyboard") {
+    ///     Ok(device) => println!("Created virtual device: {}", device.name()),
+    ///     Err(DeviceError::PermissionDenied(msg)) => {
+    ///         eprintln!("Permission denied: {}", msg);
+    ///         eprintln!("Try: sudo groupadd -f uinput && sudo usermod -aG uinput $USER");
+    ///     }
+    ///     Err(e) => eprintln!("Error: {}", e),
+    /// }
+    /// ```
+    pub fn create(name: &str) -> Result<Self, DeviceError> {
+        // Create uinput device with keyboard capabilities
+        let device = uinput::default()
+            .map_err(|e| {
+                let err_str = e.to_string();
+                if err_str.contains("Permission denied") || err_str.contains("EACCES") {
+                    DeviceError::PermissionDenied(
+                        "cannot access /dev/uinput: permission denied.\n\
+                        To fix this, either:\n\
+                        1. Run as root, OR\n\
+                        2. Create udev rules:\n\
+                           echo 'KERNEL==\"uinput\", MODE=\"0660\", GROUP=\"uinput\"' | \\\n\
+                           sudo tee /etc/udev/rules.d/99-keyrx.rules\n\
+                           sudo groupadd -f uinput\n\
+                           sudo usermod -aG uinput $USER\n\
+                           (log out and back in)"
+                            .to_string(),
+                    )
+                } else {
+                    DeviceError::Io(std::io::Error::other(format!("uinput open failed: {}", e)))
+                }
+            })?
+            .name(name)
+            .map_err(|e| {
+                DeviceError::Io(std::io::Error::other(format!(
+                    "failed to set device name: {}",
+                    e
+                )))
+            })?
+            // Enable all keyboard events
+            .event(uinput::event::Keyboard::All)
+            .map_err(|e| {
+                DeviceError::Io(std::io::Error::other(format!(
+                    "failed to configure keyboard events: {}",
+                    e
+                )))
+            })?
+            .create()
+            .map_err(|e| {
+                DeviceError::Io(std::io::Error::other(format!(
+                    "failed to create uinput device: {}",
+                    e
+                )))
+            })?;
+
+        Ok(Self {
+            device,
+            name: name.to_string(),
+        })
+    }
+
+    /// Returns the name of the virtual device.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::platform::linux::UinputOutput;
+    ///
+    /// let output = UinputOutput::create("keyrx-virtual-keyboard")?;
+    /// assert_eq!(output.name(), "keyrx-virtual-keyboard");
+    /// # Ok::<(), keyrx_daemon::platform::DeviceError>(())
+    /// ```
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+/// Maps a keyrx KeyCode to a uinput Keyboard variant.
+///
+/// This is used by the OutputDevice implementation to convert keyrx KeyCodes
+/// to the uinput crate's key type for event injection.
+///
+/// The uinput crate organizes keys into different enums:
+/// - `Key`: Basic keyboard keys (letters, numbers, F-keys, modifiers, arrows, etc.)
+/// - `KeyPad`: Numpad keys
+/// - `Misc`: Media keys, system keys, browser keys, and special function keys
+fn keycode_to_uinput_key(keycode: KeyCode) -> Keyboard {
+    match keycode {
+        // Letters A-Z
+        KeyCode::A => Keyboard::Key(UKey::A),
+        KeyCode::B => Keyboard::Key(UKey::B),
+        KeyCode::C => Keyboard::Key(UKey::C),
+        KeyCode::D => Keyboard::Key(UKey::D),
+        KeyCode::E => Keyboard::Key(UKey::E),
+        KeyCode::F => Keyboard::Key(UKey::F),
+        KeyCode::G => Keyboard::Key(UKey::G),
+        KeyCode::H => Keyboard::Key(UKey::H),
+        KeyCode::I => Keyboard::Key(UKey::I),
+        KeyCode::J => Keyboard::Key(UKey::J),
+        KeyCode::K => Keyboard::Key(UKey::K),
+        KeyCode::L => Keyboard::Key(UKey::L),
+        KeyCode::M => Keyboard::Key(UKey::M),
+        KeyCode::N => Keyboard::Key(UKey::N),
+        KeyCode::O => Keyboard::Key(UKey::O),
+        KeyCode::P => Keyboard::Key(UKey::P),
+        KeyCode::Q => Keyboard::Key(UKey::Q),
+        KeyCode::R => Keyboard::Key(UKey::R),
+        KeyCode::S => Keyboard::Key(UKey::S),
+        KeyCode::T => Keyboard::Key(UKey::T),
+        KeyCode::U => Keyboard::Key(UKey::U),
+        KeyCode::V => Keyboard::Key(UKey::V),
+        KeyCode::W => Keyboard::Key(UKey::W),
+        KeyCode::X => Keyboard::Key(UKey::X),
+        KeyCode::Y => Keyboard::Key(UKey::Y),
+        KeyCode::Z => Keyboard::Key(UKey::Z),
+
+        // Numbers 0-9 (top row)
+        KeyCode::Num0 => Keyboard::Key(UKey::_0),
+        KeyCode::Num1 => Keyboard::Key(UKey::_1),
+        KeyCode::Num2 => Keyboard::Key(UKey::_2),
+        KeyCode::Num3 => Keyboard::Key(UKey::_3),
+        KeyCode::Num4 => Keyboard::Key(UKey::_4),
+        KeyCode::Num5 => Keyboard::Key(UKey::_5),
+        KeyCode::Num6 => Keyboard::Key(UKey::_6),
+        KeyCode::Num7 => Keyboard::Key(UKey::_7),
+        KeyCode::Num8 => Keyboard::Key(UKey::_8),
+        KeyCode::Num9 => Keyboard::Key(UKey::_9),
+
+        // Function keys F1-F12
+        KeyCode::F1 => Keyboard::Key(UKey::F1),
+        KeyCode::F2 => Keyboard::Key(UKey::F2),
+        KeyCode::F3 => Keyboard::Key(UKey::F3),
+        KeyCode::F4 => Keyboard::Key(UKey::F4),
+        KeyCode::F5 => Keyboard::Key(UKey::F5),
+        KeyCode::F6 => Keyboard::Key(UKey::F6),
+        KeyCode::F7 => Keyboard::Key(UKey::F7),
+        KeyCode::F8 => Keyboard::Key(UKey::F8),
+        KeyCode::F9 => Keyboard::Key(UKey::F9),
+        KeyCode::F10 => Keyboard::Key(UKey::F10),
+        KeyCode::F11 => Keyboard::Key(UKey::F11),
+        KeyCode::F12 => Keyboard::Key(UKey::F12),
+
+        // Extended function keys F13-F24
+        KeyCode::F13 => Keyboard::Key(UKey::F13),
+        KeyCode::F14 => Keyboard::Key(UKey::F14),
+        KeyCode::F15 => Keyboard::Key(UKey::F15),
+        KeyCode::F16 => Keyboard::Key(UKey::F16),
+        KeyCode::F17 => Keyboard::Key(UKey::F17),
+        KeyCode::F18 => Keyboard::Key(UKey::F18),
+        KeyCode::F19 => Keyboard::Key(UKey::F19),
+        KeyCode::F20 => Keyboard::Key(UKey::F20),
+        KeyCode::F21 => Keyboard::Key(UKey::F21),
+        KeyCode::F22 => Keyboard::Key(UKey::F22),
+        KeyCode::F23 => Keyboard::Key(UKey::F23),
+        KeyCode::F24 => Keyboard::Key(UKey::F24),
+
+        // Modifier keys
+        KeyCode::LShift => Keyboard::Key(UKey::LeftShift),
+        KeyCode::RShift => Keyboard::Key(UKey::RightShift),
+        KeyCode::LCtrl => Keyboard::Key(UKey::LeftControl),
+        KeyCode::RCtrl => Keyboard::Key(UKey::RightControl),
+        KeyCode::LAlt => Keyboard::Key(UKey::LeftAlt),
+        KeyCode::RAlt => Keyboard::Key(UKey::RightAlt),
+        KeyCode::LMeta => Keyboard::Key(UKey::LeftMeta),
+        KeyCode::RMeta => Keyboard::Key(UKey::RightMeta),
+
+        // Special keys
+        KeyCode::Escape => Keyboard::Key(UKey::Esc),
+        KeyCode::Enter => Keyboard::Key(UKey::Enter),
+        KeyCode::Backspace => Keyboard::Key(UKey::BackSpace),
+        KeyCode::Tab => Keyboard::Key(UKey::Tab),
+        KeyCode::Space => Keyboard::Key(UKey::Space),
+        KeyCode::CapsLock => Keyboard::Key(UKey::CapsLock),
+        KeyCode::NumLock => Keyboard::Key(UKey::NumLock),
+        KeyCode::ScrollLock => Keyboard::Key(UKey::ScrollLock),
+        KeyCode::PrintScreen => Keyboard::Key(UKey::SysRq),
+        KeyCode::Pause => Keyboard::Misc(Misc::Pause),
+        KeyCode::Insert => Keyboard::Key(UKey::Insert),
+        KeyCode::Delete => Keyboard::Key(UKey::Delete),
+        KeyCode::Home => Keyboard::Key(UKey::Home),
+        KeyCode::End => Keyboard::Key(UKey::End),
+        KeyCode::PageUp => Keyboard::Key(UKey::PageUp),
+        KeyCode::PageDown => Keyboard::Key(UKey::PageDown),
+
+        // Arrow keys
+        KeyCode::Left => Keyboard::Key(UKey::Left),
+        KeyCode::Right => Keyboard::Key(UKey::Right),
+        KeyCode::Up => Keyboard::Key(UKey::Up),
+        KeyCode::Down => Keyboard::Key(UKey::Down),
+
+        // Punctuation and symbols
+        KeyCode::LeftBracket => Keyboard::Key(UKey::LeftBrace),
+        KeyCode::RightBracket => Keyboard::Key(UKey::RightBrace),
+        KeyCode::Backslash => Keyboard::Key(UKey::BackSlash),
+        KeyCode::Semicolon => Keyboard::Key(UKey::SemiColon),
+        KeyCode::Quote => Keyboard::Key(UKey::Apostrophe),
+        KeyCode::Comma => Keyboard::Key(UKey::Comma),
+        KeyCode::Period => Keyboard::Key(UKey::Dot),
+        KeyCode::Slash => Keyboard::Key(UKey::Slash),
+        KeyCode::Grave => Keyboard::Key(UKey::Grave),
+        KeyCode::Minus => Keyboard::Key(UKey::Minus),
+        KeyCode::Equal => Keyboard::Key(UKey::Equal),
+
+        // Numpad keys (use KeyPad enum)
+        KeyCode::Numpad0 => Keyboard::KeyPad(KeyPad::_0),
+        KeyCode::Numpad1 => Keyboard::KeyPad(KeyPad::_1),
+        KeyCode::Numpad2 => Keyboard::KeyPad(KeyPad::_2),
+        KeyCode::Numpad3 => Keyboard::KeyPad(KeyPad::_3),
+        KeyCode::Numpad4 => Keyboard::KeyPad(KeyPad::_4),
+        KeyCode::Numpad5 => Keyboard::KeyPad(KeyPad::_5),
+        KeyCode::Numpad6 => Keyboard::KeyPad(KeyPad::_6),
+        KeyCode::Numpad7 => Keyboard::KeyPad(KeyPad::_7),
+        KeyCode::Numpad8 => Keyboard::KeyPad(KeyPad::_8),
+        KeyCode::Numpad9 => Keyboard::KeyPad(KeyPad::_9),
+        KeyCode::NumpadDivide => Keyboard::KeyPad(KeyPad::Slash),
+        KeyCode::NumpadMultiply => Keyboard::KeyPad(KeyPad::Asterisk),
+        KeyCode::NumpadSubtract => Keyboard::KeyPad(KeyPad::Minus),
+        KeyCode::NumpadAdd => Keyboard::KeyPad(KeyPad::Plus),
+        KeyCode::NumpadEnter => Keyboard::KeyPad(KeyPad::Enter),
+        KeyCode::NumpadDecimal => Keyboard::KeyPad(KeyPad::Dot),
+
+        // Media keys (use Misc enum)
+        KeyCode::Mute => Keyboard::Misc(Misc::Mute),
+        KeyCode::VolumeDown => Keyboard::Misc(Misc::VolumeDown),
+        KeyCode::VolumeUp => Keyboard::Misc(Misc::VolumeUp),
+        KeyCode::MediaPlayPause => Keyboard::Misc(Misc::PlayPause),
+        KeyCode::MediaStop => Keyboard::Misc(Misc::StopCD),
+        KeyCode::MediaPrevious => Keyboard::Misc(Misc::PreviousSong),
+        KeyCode::MediaNext => Keyboard::Misc(Misc::NextSong),
+
+        // System keys (use Misc enum)
+        KeyCode::Power => Keyboard::Misc(Misc::Power),
+        KeyCode::Sleep => Keyboard::Misc(Misc::Sleep),
+        KeyCode::Wake => Keyboard::Misc(Misc::WakeUp),
+
+        // Browser keys (use Misc enum)
+        KeyCode::BrowserBack => Keyboard::Misc(Misc::Back),
+        KeyCode::BrowserForward => Keyboard::Misc(Misc::Forward),
+        KeyCode::BrowserRefresh => Keyboard::Misc(Misc::Refresh),
+        KeyCode::BrowserStop => Keyboard::Misc(Misc::Stop),
+        KeyCode::BrowserSearch => Keyboard::Misc(Misc::Search),
+        KeyCode::BrowserFavorites => Keyboard::Misc(Misc::Bookmarks),
+        KeyCode::BrowserHome => Keyboard::Misc(Misc::HomePage),
+
+        // Application keys (use Misc enum)
+        KeyCode::AppMail => Keyboard::Misc(Misc::Mail),
+        KeyCode::AppCalculator => Keyboard::Misc(Misc::Calc),
+        KeyCode::AppMyComputer => Keyboard::Misc(Misc::Computer),
+
+        // Additional keys (use Misc enum)
+        KeyCode::Menu => Keyboard::Misc(Misc::Menu),
+        KeyCode::Help => Keyboard::Misc(Misc::Help),
+        KeyCode::Select => Keyboard::Misc(Misc::Select),
+        KeyCode::Execute => Keyboard::Misc(Misc::Open),
+        KeyCode::Undo => Keyboard::Misc(Misc::Undo),
+        KeyCode::Redo => Keyboard::Misc(Misc::Redo),
+        KeyCode::Cut => Keyboard::Misc(Misc::Cut),
+        KeyCode::Copy => Keyboard::Misc(Misc::Copy),
+        KeyCode::Paste => Keyboard::Misc(Misc::Paste),
+        KeyCode::Find => Keyboard::Misc(Misc::Find),
+    }
+}
+
+/// OutputDevice trait implementation for UinputOutput.
+///
+/// Enables keyboard event injection to the system via a virtual uinput device.
+///
+/// # Event Injection
+///
+/// Each event is converted to the appropriate uinput key and injected with:
+/// - `Press`: Sends a key down event
+/// - `Release`: Sends a key up event
+///
+/// After each event, `synchronize()` is called to ensure the event is delivered
+/// immediately to applications.
+///
+/// # Example
+///
+/// ```no_run
+/// use keyrx_daemon::platform::linux::UinputOutput;
+/// use keyrx_daemon::platform::OutputDevice;
+/// use keyrx_core::runtime::event::KeyEvent;
+/// use keyrx_core::config::KeyCode;
+///
+/// let mut output = UinputOutput::create("keyrx")?;
+///
+/// // Type "ab" by pressing and releasing each key
+/// output.inject_event(KeyEvent::Press(KeyCode::A))?;
+/// output.inject_event(KeyEvent::Release(KeyCode::A))?;
+/// output.inject_event(KeyEvent::Press(KeyCode::B))?;
+/// output.inject_event(KeyEvent::Release(KeyCode::B))?;
+/// # Ok::<(), keyrx_daemon::platform::DeviceError>(())
+/// ```
+#[allow(dead_code)] // Will be used in task #17 (Daemon event loop)
+impl OutputDevice for UinputOutput {
+    /// Injects a keyboard event into the virtual device.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The keyboard event to inject (Press or Release)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Event successfully injected
+    /// * `Err(DeviceError::InjectionFailed)` - Failed to inject the event
+    ///
+    /// # Synchronization
+    ///
+    /// Each event is followed by a `synchronize()` call to ensure immediate
+    /// delivery. This matches the behavior expected by applications which
+    /// typically receive events with EV_SYN/SYN_REPORT markers.
+    fn inject_event(&mut self, event: KeyEvent) -> Result<(), DeviceError> {
+        let key = match &event {
+            KeyEvent::Press(keycode) | KeyEvent::Release(keycode) => {
+                keycode_to_uinput_key(*keycode)
+            }
+        };
+
+        match event {
+            KeyEvent::Press(_) => {
+                self.device.press(&key).map_err(|e| {
+                    DeviceError::InjectionFailed(format!("failed to press key: {}", e))
+                })?;
+            }
+            KeyEvent::Release(_) => {
+                self.device.release(&key).map_err(|e| {
+                    DeviceError::InjectionFailed(format!("failed to release key: {}", e))
+                })?;
+            }
+        }
+
+        // Synchronize to ensure event is delivered immediately
+        self.device.synchronize().map_err(|e| {
+            DeviceError::InjectionFailed(format!("failed to synchronize events: {}", e))
+        })?;
+
         Ok(())
     }
 }
