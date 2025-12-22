@@ -1,8 +1,12 @@
-//! Property-based tests for deterministic serialization
+//! Property-based tests for deterministic serialization and parser robustness
 //!
-//! These tests use proptest to verify that serialization is deterministic
-//! and that round-trip serialization/deserialization preserves data.
+//! These tests use proptest to verify that:
+//! - Serialization is deterministic
+//! - Round-trip serialization/deserialization preserves data
+//! - Parser handles randomly generated valid scripts without panicking
+//! - Parser produces valid ConfigRoot objects
 
+use keyrx_compiler::parser::Parser;
 use keyrx_compiler::serialize::{deserialize, serialize};
 use keyrx_core::config::{
     BaseKeyMapping, Condition, ConditionItem, ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode,
@@ -546,5 +550,496 @@ mod edge_case_tests {
         let archived = deserialize(&bytes).expect("Deserialization failed");
 
         assert_eq!(archived.devices[0].mappings.len(), 4);
+    }
+}
+
+// ============================================================================
+// Parser Property Tests - Test Rhai Script Generation and Parsing
+// ============================================================================
+
+/// Strategy for generating random valid KeyCode names as strings
+fn keycode_name_strategy() -> impl Strategy<Value = String> {
+    prop_oneof![
+        // Letters
+        Just("VK_A"),
+        Just("VK_B"),
+        Just("VK_C"),
+        Just("VK_D"),
+        Just("VK_E"),
+        Just("VK_F"),
+        Just("VK_G"),
+        Just("VK_H"),
+        Just("VK_I"),
+        Just("VK_J"),
+        Just("VK_K"),
+        Just("VK_L"),
+        Just("VK_M"),
+        Just("VK_N"),
+        Just("VK_Z"),
+        // Numbers
+        Just("VK_Num0"),
+        Just("VK_Num1"),
+        Just("VK_Num2"),
+        Just("VK_Num9"),
+        // Function keys
+        Just("VK_F1"),
+        Just("VK_F12"),
+        // Special keys
+        Just("VK_Escape"),
+        Just("VK_Enter"),
+        Just("VK_Backspace"),
+        Just("VK_Tab"),
+        Just("VK_Space"),
+        Just("VK_CapsLock"),
+        // Arrow keys
+        Just("VK_Left"),
+        Just("VK_Right"),
+        Just("VK_Up"),
+        Just("VK_Down"),
+        // Modifiers
+        Just("VK_LShift"),
+        Just("VK_RShift"),
+        Just("VK_LCtrl"),
+        Just("VK_RCtrl"),
+        Just("VK_LAlt"),
+        Just("VK_RAlt"),
+    ]
+    .prop_map(|s| s.to_string())
+}
+
+/// Strategy for generating random valid modifier IDs as strings (MD_00 to MD_FE)
+fn modifier_id_strategy() -> impl Strategy<Value = String> {
+    (0u8..=0xFE).prop_map(|id| format!("MD_{:02X}", id))
+}
+
+/// Strategy for generating random valid lock IDs as strings (LK_00 to LK_FE)
+fn lock_id_strategy() -> impl Strategy<Value = String> {
+    (0u8..=0xFE).prop_map(|id| format!("LK_{:02X}", id))
+}
+
+/// Strategy for generating random valid condition strings (MD_XX or LK_XX)
+fn condition_string_strategy() -> impl Strategy<Value = String> {
+    prop_oneof![modifier_id_strategy(), lock_id_strategy(),]
+}
+
+/// Strategy for generating random valid Rhai script statements
+/// This generates map(), tap_hold(), when(), when_not() calls with valid syntax
+fn rhai_statement_strategy() -> impl Strategy<Value = String> {
+    prop_oneof![
+        // Simple mapping: map("VK_X", "VK_Y")
+        (keycode_name_strategy(), keycode_name_strategy())
+            .prop_map(|(from, to)| format!("map(\"{}\", \"{}\");", from, to)),
+        // Modifier mapping: map("VK_X", "MD_XX")
+        (keycode_name_strategy(), modifier_id_strategy())
+            .prop_map(|(from, to)| format!("map(\"{}\", \"{}\");", from, to)),
+        // Lock mapping: map("VK_X", "LK_XX")
+        (keycode_name_strategy(), lock_id_strategy())
+            .prop_map(|(from, to)| format!("map(\"{}\", \"{}\");", from, to)),
+        // TapHold mapping: tap_hold("VK_X", "VK_Y", "MD_XX", 200)
+        (
+            keycode_name_strategy(),
+            keycode_name_strategy(),
+            modifier_id_strategy(),
+            100u16..1000
+        )
+            .prop_map(|(from, tap, hold, threshold)| {
+                format!(
+                    "tap_hold(\"{}\", \"{}\", \"{}\", {});",
+                    from, tap, hold, threshold
+                )
+            }),
+        // Modified output: map("VK_X", with_shift("VK_Y"))
+        (keycode_name_strategy(), keycode_name_strategy())
+            .prop_map(|(from, to)| format!("map(\"{}\", with_shift(\"{}\"));", from, to)),
+        // Modified output with ctrl
+        (keycode_name_strategy(), keycode_name_strategy())
+            .prop_map(|(from, to)| format!("map(\"{}\", with_ctrl(\"{}\"));", from, to)),
+        // Modified output with alt
+        (keycode_name_strategy(), keycode_name_strategy())
+            .prop_map(|(from, to)| format!("map(\"{}\", with_alt(\"{}\"));", from, to)),
+        // Modified output with win
+        (keycode_name_strategy(), keycode_name_strategy())
+            .prop_map(|(from, to)| format!("map(\"{}\", with_win(\"{}\"));", from, to)),
+    ]
+}
+
+/// Strategy for generating random valid conditional blocks
+/// when("MD_XX") { map("VK_X", "VK_Y"); }
+fn conditional_block_strategy() -> impl Strategy<Value = String> {
+    (
+        condition_string_strategy(),
+        prop::collection::vec(rhai_statement_strategy(), 1..5),
+    )
+        .prop_map(|(condition, statements)| {
+            format!(
+                "when_start(\"{}\");\n{}\nwhen_end();",
+                condition,
+                statements.join("\n")
+            )
+        })
+}
+
+/// Strategy for generating when_not blocks
+fn when_not_block_strategy() -> impl Strategy<Value = String> {
+    (
+        condition_string_strategy(),
+        prop::collection::vec(rhai_statement_strategy(), 1..5),
+    )
+        .prop_map(|(condition, statements)| {
+            format!(
+                "when_not_start(\"{}\");\n{}\nwhen_not_end();",
+                condition,
+                statements.join("\n")
+            )
+        })
+}
+
+/// Strategy for generating random device blocks with statements
+fn device_block_strategy() -> impl Strategy<Value = String> {
+    (
+        prop_oneof![
+            Just("*".to_string()),
+            Just("USB Keyboard".to_string()),
+            Just("Laptop Keyboard".to_string()),
+        ],
+        prop::collection::vec(
+            prop_oneof![
+                rhai_statement_strategy(),
+                conditional_block_strategy(),
+                when_not_block_strategy(),
+            ],
+            1..10,
+        ),
+    )
+        .prop_map(|(pattern, statements)| {
+            format!(
+                "device_start(\"{}\");\n{}\ndevice_end();",
+                pattern,
+                statements.join("\n")
+            )
+        })
+}
+
+/// Strategy for generating complete valid Rhai scripts
+fn rhai_script_strategy() -> impl Strategy<Value = String> {
+    prop::collection::vec(device_block_strategy(), 1..5).prop_map(|blocks| blocks.join("\n\n"))
+}
+
+// ============================================================================
+// Parser Property Tests
+// ============================================================================
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        cases: 100,  // Fewer cases for parser tests since they're slower
+        .. ProptestConfig::default()
+    })]
+
+    /// Test property: Parser handles randomly generated valid scripts without panicking
+    ///
+    /// Verifies that the parser can handle any valid Rhai script structure.
+    #[test]
+    fn test_parser_handles_random_valid_scripts(script in rhai_script_strategy()) {
+        // Create a temporary file for the script
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        // Parse the script
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        // Should succeed without panicking
+        prop_assert!(result.is_ok(), "Parser failed on valid script:\n{}\n\nError: {:?}", script, result.err());
+
+        // Verify the result is valid
+        if let Ok(config) = result {
+            prop_assert!(config.devices.len() > 0, "Config should have at least one device");
+            prop_assert_eq!(config.version.major, 1);
+            prop_assert_eq!(config.version.minor, 0);
+            prop_assert_eq!(config.version.patch, 0);
+        }
+    }
+
+    /// Test property: Parsed ConfigRoot can be serialized successfully
+    ///
+    /// Verifies that parser output is valid enough to be serialized.
+    #[test]
+    fn test_parsed_config_can_be_serialized(script in rhai_script_strategy()) {
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        if let Ok(config) = parser.parse_script(&script_path) {
+            // Serialization should succeed
+            let result = serialize(&config);
+            prop_assert!(result.is_ok(), "Serialization failed for parsed config: {:?}", result.err());
+        }
+    }
+
+    /// Test property: Simple map() statements produce correct mappings
+    #[test]
+    fn test_simple_map_statements(
+        from in keycode_name_strategy(),
+        to in keycode_name_strategy()
+    ) {
+        let script = format!(
+            "device_start(\"*\");\nmap(\"{}\", \"{}\");\ndevice_end();",
+            from, to
+        );
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        prop_assert!(result.is_ok(), "Parser failed on simple map: {}", script);
+
+        if let Ok(config) = result {
+            prop_assert_eq!(config.devices.len(), 1);
+            prop_assert!(config.devices[0].mappings.len() >= 1);
+        }
+    }
+
+    /// Test property: tap_hold() statements produce valid TapHold mappings
+    #[test]
+    fn test_tap_hold_statements(
+        from in keycode_name_strategy(),
+        tap in keycode_name_strategy(),
+        hold in modifier_id_strategy(),
+        threshold in 100u16..1000
+    ) {
+        let script = format!(
+            "device_start(\"*\");\ntap_hold(\"{}\", \"{}\", \"{}\", {});\ndevice_end();",
+            from, tap, hold, threshold
+        );
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        prop_assert!(result.is_ok(), "Parser failed on tap_hold: {}", script);
+
+        if let Ok(config) = result {
+            prop_assert_eq!(config.devices.len(), 1);
+            prop_assert_eq!(config.devices[0].mappings.len(), 1);
+        }
+    }
+
+    /// Test property: Conditional blocks produce valid Conditional mappings
+    #[test]
+    fn test_conditional_blocks(
+        condition in condition_string_strategy(),
+        from in keycode_name_strategy(),
+        to in keycode_name_strategy()
+    ) {
+        let script = format!(
+            "device_start(\"*\");\nwhen_start(\"{}\");\nmap(\"{}\", \"{}\");\nwhen_end();\ndevice_end();",
+            condition, from, to
+        );
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        prop_assert!(result.is_ok(), "Parser failed on conditional: {}", script);
+
+        if let Ok(config) = result {
+            prop_assert_eq!(config.devices.len(), 1);
+            prop_assert!(config.devices[0].mappings.len() >= 1);
+        }
+    }
+
+    /// Test property: Multiple devices can be parsed
+    #[test]
+    fn test_multiple_devices(
+        pattern1 in prop_oneof![Just("*"), Just("USB Keyboard")],
+        pattern2 in prop_oneof![Just("Laptop"), Just("External")],
+        from in keycode_name_strategy(),
+        to in keycode_name_strategy()
+    ) {
+        let script = format!(
+            "device_start(\"{}\");\nmap(\"{}\", \"{}\");\ndevice_end();\n\ndevice_start(\"{}\");\nmap(\"{}\", \"{}\");\ndevice_end();",
+            pattern1, from, to, pattern2, from, to
+        );
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        prop_assert!(result.is_ok(), "Parser failed on multiple devices: {}", script);
+
+        if let Ok(config) = result {
+            prop_assert_eq!(config.devices.len(), 2);
+        }
+    }
+
+    /// Test property: Round-trip parsing produces consistent results
+    ///
+    /// Parse → serialize → deserialize should produce equivalent config
+    #[test]
+    fn test_parser_round_trip(script in rhai_script_strategy()) {
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        if let Ok(config) = parser.parse_script(&script_path) {
+            // Serialize
+            if let Ok(bytes) = serialize(&config) {
+                // Deserialize
+                let result = deserialize(&bytes);
+                prop_assert!(result.is_ok(), "Round-trip deserialization failed");
+
+                if let Ok(archived) = result {
+                    // Compare key properties
+                    prop_assert_eq!(archived.devices.len(), config.devices.len());
+                    prop_assert_eq!(archived.version.major, config.version.major);
+                    prop_assert_eq!(archived.version.minor, config.version.minor);
+                    prop_assert_eq!(archived.version.patch, config.version.patch);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod parser_edge_case_tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_device_block() {
+        let script = "device_start(\"*\");\ndevice_end();";
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        // Empty device should be valid
+        assert!(result.is_ok());
+        if let Ok(config) = result {
+            assert_eq!(config.devices.len(), 1);
+            assert_eq!(config.devices[0].mappings.len(), 0);
+        }
+    }
+
+    #[test]
+    fn test_many_mappings_in_device() {
+        let mut script = String::from("device_start(\"*\");\n");
+        for i in 0..100 {
+            script.push_str(&format!(
+                "map(\"VK_F{}\", \"VK_F{}\");\n",
+                (i % 24) + 1,
+                ((i + 1) % 24) + 1
+            ));
+        }
+        script.push_str("device_end();");
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        assert!(result.is_ok());
+        if let Ok(config) = result {
+            assert_eq!(config.devices.len(), 1);
+            assert_eq!(config.devices[0].mappings.len(), 100);
+        }
+    }
+
+    #[test]
+    fn test_nested_conditionals() {
+        let script = r#"
+device_start("*");
+when_start("MD_00");
+map("VK_H", "VK_Left");
+when_end();
+device_end();
+        "#;
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        assert!(result.is_ok());
+        if let Ok(config) = result {
+            assert_eq!(config.devices.len(), 1);
+            assert!(config.devices[0].mappings.len() >= 1);
+        }
+    }
+
+    #[test]
+    fn test_all_modifier_helpers() {
+        let script = r#"
+device_start("*");
+map("VK_1", with_shift("VK_1"));
+map("VK_2", with_ctrl("VK_C"));
+map("VK_3", with_alt("VK_F4"));
+map("VK_4", with_win("VK_L"));
+map("VK_5", with_mods("VK_C", true, true, false, false));
+device_end();
+        "#;
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        assert!(result.is_ok());
+        if let Ok(config) = result {
+            assert_eq!(config.devices.len(), 1);
+            assert_eq!(config.devices[0].mappings.len(), 5);
+        }
+    }
+
+    #[test]
+    fn test_mix_of_all_mapping_types() {
+        let script = r#"
+device_start("*");
+map("VK_A", "VK_B");
+map("VK_CapsLock", "MD_00");
+map("VK_ScrollLock", "LK_01");
+tap_hold("VK_Space", "VK_Space", "MD_01", 200);
+map("VK_1", with_shift("VK_1"));
+when_start("MD_00");
+map("VK_H", "VK_Left");
+when_end();
+device_end();
+        "#;
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let script_path = temp_dir.path().join("test.rhai");
+        std::fs::write(&script_path, &script).expect("Failed to write script");
+
+        let mut parser = Parser::new();
+        let result = parser.parse_script(&script_path);
+
+        assert!(result.is_ok());
+        if let Ok(config) = result {
+            assert_eq!(config.devices.len(), 1);
+            assert_eq!(config.devices[0].mappings.len(), 6);
+        }
     }
 }
