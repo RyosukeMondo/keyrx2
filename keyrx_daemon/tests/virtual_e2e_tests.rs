@@ -774,3 +774,418 @@ fn test_multiple_conditionals_same_layer() {
         .inject(&TestEvents::release(KeyCode::CapsLock))
         .expect("Failed to release modifier");
 }
+
+// ============================================================================
+// Modified Output Tests - Requirement 5.5
+// ============================================================================
+
+/// Test Shift+Key output sequence.
+///
+/// Verifies that a modified output mapping produces the correct event sequence:
+/// Press: Press(LShift) → Press(key)
+/// Release: Release(key) → Release(LShift)
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_shift -- --ignored"]
+fn test_modified_output_shift() {
+    // A → Shift+1 (outputs '!' on most layouts)
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::Num1,
+        true,  // shift
+        false, // ctrl
+        false, // alt
+        false, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // Test press event produces: Press(LShift), Press(Num1)
+    let press_captured = harness
+        .inject_and_capture(&TestEvents::press(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture press");
+
+    let expected_press = vec![
+        KeyEvent::Press(KeyCode::LShift),
+        KeyEvent::Press(KeyCode::Num1),
+    ];
+    harness
+        .verify(&press_captured, &expected_press)
+        .expect("Press A should produce Press(LShift), Press(Num1)");
+
+    // Test release event produces: Release(Num1), Release(LShift)
+    let release_captured = harness
+        .inject_and_capture(&TestEvents::release(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture release");
+
+    let expected_release = vec![
+        KeyEvent::Release(KeyCode::Num1),
+        KeyEvent::Release(KeyCode::LShift),
+    ];
+    harness
+        .verify(&release_captured, &expected_release)
+        .expect("Release A should produce Release(Num1), Release(LShift)");
+}
+
+/// Test Ctrl+Key combination.
+///
+/// Verifies that Ctrl modifier is correctly applied to the output.
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_ctrl -- --ignored"]
+fn test_modified_output_ctrl() {
+    // A → Ctrl+C (copy shortcut)
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::C,
+        false, // shift
+        true,  // ctrl
+        false, // alt
+        false, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // Test press event produces: Press(LCtrl), Press(C)
+    let press_captured = harness
+        .inject_and_capture(&TestEvents::press(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture press");
+
+    let expected_press = vec![KeyEvent::Press(KeyCode::LCtrl), KeyEvent::Press(KeyCode::C)];
+    harness
+        .verify(&press_captured, &expected_press)
+        .expect("Press A should produce Press(LCtrl), Press(C)");
+
+    // Test release event produces: Release(C), Release(LCtrl)
+    let release_captured = harness
+        .inject_and_capture(&TestEvents::release(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture release");
+
+    let expected_release = vec![
+        KeyEvent::Release(KeyCode::C),
+        KeyEvent::Release(KeyCode::LCtrl),
+    ];
+    harness
+        .verify(&release_captured, &expected_release)
+        .expect("Release A should produce Release(C), Release(LCtrl)");
+}
+
+/// Test Alt+Key combination.
+///
+/// Verifies that Alt modifier is correctly applied to the output.
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_alt -- --ignored"]
+fn test_modified_output_alt() {
+    // A → Alt+Tab (window switcher)
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::Tab,
+        false, // shift
+        false, // ctrl
+        true,  // alt
+        false, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // Test press event produces: Press(LAlt), Press(Tab)
+    let press_captured = harness
+        .inject_and_capture(&TestEvents::press(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture press");
+
+    let expected_press = vec![
+        KeyEvent::Press(KeyCode::LAlt),
+        KeyEvent::Press(KeyCode::Tab),
+    ];
+    harness
+        .verify(&press_captured, &expected_press)
+        .expect("Press A should produce Press(LAlt), Press(Tab)");
+
+    // Test release event produces: Release(Tab), Release(LAlt)
+    let release_captured = harness
+        .inject_and_capture(&TestEvents::release(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture release");
+
+    let expected_release = vec![
+        KeyEvent::Release(KeyCode::Tab),
+        KeyEvent::Release(KeyCode::LAlt),
+    ];
+    harness
+        .verify(&release_captured, &expected_release)
+        .expect("Release A should produce Release(Tab), Release(LAlt)");
+}
+
+/// Test Ctrl+Shift+Key multiple modifier combination.
+///
+/// Verifies correct ordering when multiple modifiers are used:
+/// Press order: LShift → LCtrl → key
+/// Release order: key → LCtrl → LShift
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_ctrl_shift -- --ignored"]
+fn test_modified_output_ctrl_shift() {
+    // A → Ctrl+Shift+S (save as shortcut)
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::S,
+        true,  // shift
+        true,  // ctrl
+        false, // alt
+        false, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // Test press event produces: Press(LShift), Press(LCtrl), Press(S)
+    // Note: Order is shift, ctrl, alt, win, key
+    let press_captured = harness
+        .inject_and_capture(&TestEvents::press(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture press");
+
+    let expected_press = vec![
+        KeyEvent::Press(KeyCode::LShift),
+        KeyEvent::Press(KeyCode::LCtrl),
+        KeyEvent::Press(KeyCode::S),
+    ];
+    harness
+        .verify(&press_captured, &expected_press)
+        .expect("Press A should produce Press(LShift), Press(LCtrl), Press(S)");
+
+    // Test release event produces: Release(S), Release(LCtrl), Release(LShift)
+    // Reverse order of modifiers
+    let release_captured = harness
+        .inject_and_capture(&TestEvents::release(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture release");
+
+    let expected_release = vec![
+        KeyEvent::Release(KeyCode::S),
+        KeyEvent::Release(KeyCode::LCtrl),
+        KeyEvent::Release(KeyCode::LShift),
+    ];
+    harness
+        .verify(&release_captured, &expected_release)
+        .expect("Release A should produce Release(S), Release(LCtrl), Release(LShift)");
+}
+
+/// Test Ctrl+Alt+Key combination (common for system shortcuts).
+///
+/// Verifies correct ordering for Ctrl+Alt combinations.
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_ctrl_alt -- --ignored"]
+fn test_modified_output_ctrl_alt() {
+    // A → Ctrl+Alt+Delete style shortcut
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::Delete,
+        false, // shift
+        true,  // ctrl
+        true,  // alt
+        false, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // Test press event produces: Press(LCtrl), Press(LAlt), Press(Delete)
+    let press_captured = harness
+        .inject_and_capture(&TestEvents::press(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture press");
+
+    let expected_press = vec![
+        KeyEvent::Press(KeyCode::LCtrl),
+        KeyEvent::Press(KeyCode::LAlt),
+        KeyEvent::Press(KeyCode::Delete),
+    ];
+    harness
+        .verify(&press_captured, &expected_press)
+        .expect("Press A should produce Press(LCtrl), Press(LAlt), Press(Delete)");
+
+    // Test release event produces: Release(Delete), Release(LAlt), Release(LCtrl)
+    let release_captured = harness
+        .inject_and_capture(&TestEvents::release(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture release");
+
+    let expected_release = vec![
+        KeyEvent::Release(KeyCode::Delete),
+        KeyEvent::Release(KeyCode::LAlt),
+        KeyEvent::Release(KeyCode::LCtrl),
+    ];
+    harness
+        .verify(&release_captured, &expected_release)
+        .expect("Release A should produce Release(Delete), Release(LAlt), Release(LCtrl)");
+}
+
+/// Test all modifiers (Shift+Ctrl+Alt+Win).
+///
+/// Verifies correct ordering when all four modifiers are used.
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_all_modifiers -- --ignored"]
+fn test_modified_output_all_modifiers() {
+    // A → Shift+Ctrl+Alt+Win+Z (hypothetical super shortcut)
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::Z,
+        true, // shift
+        true, // ctrl
+        true, // alt
+        true, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // Test press event produces: Press(LShift), Press(LCtrl), Press(LAlt), Press(LMeta), Press(Z)
+    let press_captured = harness
+        .inject_and_capture(&TestEvents::press(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture press");
+
+    let expected_press = vec![
+        KeyEvent::Press(KeyCode::LShift),
+        KeyEvent::Press(KeyCode::LCtrl),
+        KeyEvent::Press(KeyCode::LAlt),
+        KeyEvent::Press(KeyCode::LMeta),
+        KeyEvent::Press(KeyCode::Z),
+    ];
+    harness
+        .verify(&press_captured, &expected_press)
+        .expect("Press A should produce all modifiers then Z");
+
+    // Test release event produces: Release(Z), Release(LMeta), Release(LAlt), Release(LCtrl), Release(LShift)
+    let release_captured = harness
+        .inject_and_capture(&TestEvents::release(KeyCode::A), Duration::from_millis(100))
+        .expect("Failed to inject and capture release");
+
+    let expected_release = vec![
+        KeyEvent::Release(KeyCode::Z),
+        KeyEvent::Release(KeyCode::LMeta),
+        KeyEvent::Release(KeyCode::LAlt),
+        KeyEvent::Release(KeyCode::LCtrl),
+        KeyEvent::Release(KeyCode::LShift),
+    ];
+    harness
+        .verify(&release_captured, &expected_release)
+        .expect("Release A should release Z then all modifiers in reverse");
+}
+
+/// Test complete modified output tap sequence.
+///
+/// Verifies that a full tap (press+release) produces the complete correct sequence.
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_complete_tap -- --ignored"]
+fn test_modified_output_complete_tap() {
+    // A → Shift+1 complete tap
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::Num1,
+        true,  // shift
+        false, // ctrl
+        false, // alt
+        false, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // Inject a complete tap (press + release)
+    let captured = harness
+        .inject_and_capture(&TestEvents::tap(KeyCode::A), Duration::from_millis(150))
+        .expect("Failed to inject and capture tap");
+
+    // Expected full sequence:
+    // Press(LShift), Press(Num1), Release(Num1), Release(LShift)
+    let expected = vec![
+        KeyEvent::Press(KeyCode::LShift),
+        KeyEvent::Press(KeyCode::Num1),
+        KeyEvent::Release(KeyCode::Num1),
+        KeyEvent::Release(KeyCode::LShift),
+    ];
+    harness
+        .verify(&captured, &expected)
+        .expect("Tap A should produce complete Shift+1 sequence");
+}
+
+/// Test multiple modified output taps in sequence.
+///
+/// Verifies that multiple modified output mappings work correctly in sequence.
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_multiple_taps -- --ignored"]
+fn test_modified_output_multiple_taps() {
+    // A → Shift+1
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::Num1,
+        true,  // shift
+        false, // ctrl
+        false, // alt
+        false, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // First tap
+    let captured1 = harness
+        .inject_and_capture(&TestEvents::tap(KeyCode::A), Duration::from_millis(150))
+        .expect("Failed to inject first tap");
+
+    let expected_tap = vec![
+        KeyEvent::Press(KeyCode::LShift),
+        KeyEvent::Press(KeyCode::Num1),
+        KeyEvent::Release(KeyCode::Num1),
+        KeyEvent::Release(KeyCode::LShift),
+    ];
+    harness
+        .verify(&captured1, &expected_tap)
+        .expect("First tap should produce complete Shift+1 sequence");
+
+    // Second tap - verify no state leakage
+    let captured2 = harness
+        .inject_and_capture(&TestEvents::tap(KeyCode::A), Duration::from_millis(150))
+        .expect("Failed to inject second tap");
+
+    harness
+        .verify(&captured2, &expected_tap)
+        .expect("Second tap should produce same complete Shift+1 sequence");
+
+    // Third tap
+    let captured3 = harness
+        .inject_and_capture(&TestEvents::tap(KeyCode::A), Duration::from_millis(150))
+        .expect("Failed to inject third tap");
+
+    harness
+        .verify(&captured3, &expected_tap)
+        .expect("Third tap should produce same complete Shift+1 sequence");
+}
+
+/// Test modified output with unmapped key interleaving.
+///
+/// Verifies that modified output mappings don't affect unmapped keys.
+#[test]
+#[ignore = "requires uinput access and daemon binary - run with: sudo cargo test -p keyrx_daemon --features linux --test virtual_e2e_tests test_modified_output_with_passthrough -- --ignored"]
+fn test_modified_output_with_passthrough() {
+    // A → Shift+1, but B is unmapped
+    let config = E2EConfig::modified_output(
+        KeyCode::A,
+        KeyCode::Num1,
+        true,  // shift
+        false, // ctrl
+        false, // alt
+        false, // win
+    );
+    let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
+
+    // First test unmapped key passes through
+    let b_captured = harness
+        .inject_and_capture(&TestEvents::tap(KeyCode::B), Duration::from_millis(100))
+        .expect("Failed to inject B");
+    harness
+        .verify(&b_captured, &TestEvents::tap(KeyCode::B))
+        .expect("B should pass through unchanged");
+
+    // Then test modified output still works
+    let a_captured = harness
+        .inject_and_capture(&TestEvents::tap(KeyCode::A), Duration::from_millis(150))
+        .expect("Failed to inject A");
+    let expected = vec![
+        KeyEvent::Press(KeyCode::LShift),
+        KeyEvent::Press(KeyCode::Num1),
+        KeyEvent::Release(KeyCode::Num1),
+        KeyEvent::Release(KeyCode::LShift),
+    ];
+    harness
+        .verify(&a_captured, &expected)
+        .expect("A should produce Shift+1");
+
+    // And unmapped key still passes through after
+    let c_captured = harness
+        .inject_and_capture(&TestEvents::tap(KeyCode::C), Duration::from_millis(100))
+        .expect("Failed to inject C");
+    harness
+        .verify(&c_captured, &TestEvents::tap(KeyCode::C))
+        .expect("C should pass through unchanged");
+}
