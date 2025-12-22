@@ -230,7 +230,7 @@
   - _Requirements: 2.1-2.4, Testability: Property-Based Testing_
   - _Prompt: Role: Property-Based Testing Expert with Rust and proptest expertise | Task: Add proptest-based property tests to DeviceState verifying state invariants hold for random inputs following requirements 2.1-2.4 and Testability section | Restrictions: Must add proptest to dev-dependencies, use proptest! macro, generate random modifier IDs (0..=255u8), test that IDs >254 don't set bits (invalid IDs rejected), generate random set/clear sequences and verify state matches expected, test lock toggle with random number of toggles (verify final state = toggles % 2), run tests with at least 100 cases (default), add comments explaining invariants being tested | Success: Property test prop_modifier_state_valid generates random IDs, verifies only bits 0-254 can be set, prop_lock_toggle_cycles generates random toggle counts, verifies final state matches parity, tests run 100+ iterations, all pass_
 
-- [ ] 22. Add property-based tests for event processing
+- [x] 22. Add property-based tests for event processing
   - File: `keyrx_core/src/runtime/event.rs` (add proptest tests)
   - Test: no event loss (input count == output count for Simple mappings)
   - Test: deterministic execution (same input → same output)

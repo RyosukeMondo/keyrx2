@@ -622,4 +622,225 @@ mod tests {
         // Equal values should have equal hashes
         assert_eq!(hasher1.finish(), hasher2.finish());
     }
+
+    // Property-based tests using proptest
+    #[cfg(test)]
+    mod proptests {
+        use super::*;
+        use proptest::prelude::*;
+
+        // Strategy to generate arbitrary KeyCode values (A-Z range for simplicity)
+        fn keycode_strategy() -> impl Strategy<Value = KeyCode> {
+            prop::sample::select(vec![
+                KeyCode::A,
+                KeyCode::B,
+                KeyCode::C,
+                KeyCode::D,
+                KeyCode::E,
+                KeyCode::F,
+                KeyCode::G,
+                KeyCode::H,
+                KeyCode::I,
+                KeyCode::J,
+                KeyCode::K,
+                KeyCode::L,
+                KeyCode::M,
+                KeyCode::N,
+                KeyCode::O,
+                KeyCode::P,
+                KeyCode::Q,
+                KeyCode::R,
+                KeyCode::S,
+                KeyCode::T,
+                KeyCode::U,
+                KeyCode::V,
+                KeyCode::W,
+                KeyCode::X,
+                KeyCode::Y,
+                KeyCode::Z,
+            ])
+        }
+
+        // Strategy to generate arbitrary KeyEvent values
+        fn keyevent_strategy() -> impl Strategy<Value = KeyEvent> {
+            (keycode_strategy(), prop::bool::ANY).prop_map(|(keycode, is_press)| {
+                if is_press {
+                    KeyEvent::Press(keycode)
+                } else {
+                    KeyEvent::Release(keycode)
+                }
+            })
+        }
+
+        proptest! {
+            /// Property test: No event loss for Simple mappings
+            ///
+            /// Invariant: For Simple mappings (1:1), the number of input events
+            /// must equal the number of output events. Every input event produces
+            /// exactly one output event, no events are lost or duplicated.
+            #[test]
+            fn prop_no_event_loss(events in prop::collection::vec(keyevent_strategy(), 1..100)) {
+                // Create config with Simple mapping A → B
+                let config = create_test_config(vec![KeyMapping::simple(KeyCode::A, KeyCode::B)]);
+                let lookup = KeyLookup::from_device_config(&config);
+                let mut state = DeviceState::new();
+
+                // Process all events
+                let mut total_output_count = 0;
+                for event in &events {
+                    let outputs = process_event(*event, &lookup, &mut state);
+                    total_output_count += outputs.len();
+                }
+
+                // For Simple mapping (1:1), input count must equal output count
+                // (passthrough also produces 1 output per 1 input)
+                prop_assert_eq!(events.len(), total_output_count,
+                    "Event loss detected: {} inputs produced {} outputs",
+                    events.len(), total_output_count);
+            }
+
+            /// Property test: Deterministic execution
+            ///
+            /// Invariant: Processing the same event sequence twice with the same
+            /// initial state must produce identical outputs. The event processing
+            /// is deterministic and has no hidden state or randomness.
+            #[test]
+            fn prop_deterministic(events in prop::collection::vec(keyevent_strategy(), 1..50)) {
+                // Create config with Simple mapping A → B
+                let config = create_test_config(vec![KeyMapping::simple(KeyCode::A, KeyCode::B)]);
+                let lookup = KeyLookup::from_device_config(&config);
+
+                // First run
+                let mut state1 = DeviceState::new();
+                let mut outputs1 = Vec::new();
+                for event in &events {
+                    let result = process_event(*event, &lookup, &mut state1);
+                    outputs1.extend(result);
+                }
+
+                // Second run (identical initial state)
+                let mut state2 = DeviceState::new();
+                let mut outputs2 = Vec::new();
+                for event in &events {
+                    let result = process_event(*event, &lookup, &mut state2);
+                    outputs2.extend(result);
+                }
+
+                // Outputs must be byte-for-byte identical
+                prop_assert_eq!(outputs1, outputs2,
+                    "Non-deterministic behavior: same inputs produced different outputs");
+
+                // Final states must also be identical
+                // (We can't directly compare DeviceState since it doesn't implement PartialEq,
+                // but we can verify that the outputs are identical, which is sufficient for determinism)
+            }
+
+            /// Property test: Modifier events produce no output
+            ///
+            /// Invariant: Modifier mappings never produce output events, they only
+            /// update internal state. This ensures modifiers are purely stateful.
+            #[test]
+            fn prop_modifier_no_output(events in prop::collection::vec(keyevent_strategy(), 1..50)) {
+                // Create config with Modifier mapping: A activates MD_00
+                let config = create_test_config(vec![KeyMapping::modifier(KeyCode::A, 0)]);
+                let lookup = KeyLookup::from_device_config(&config);
+                let mut state = DeviceState::new();
+
+                // Process all events
+                for event in &events {
+                    let outputs = process_event(*event, &lookup, &mut state);
+
+                    // If event is for key A (modifier key), output must be empty
+                    if event.keycode() == KeyCode::A {
+                        prop_assert!(outputs.is_empty(),
+                            "Modifier mapping produced output: {:?}", outputs);
+                    }
+                }
+            }
+
+            /// Property test: Lock events produce no output
+            ///
+            /// Invariant: Lock mappings never produce output events, they only
+            /// toggle internal state. This ensures locks are purely stateful.
+            #[test]
+            fn prop_lock_no_output(events in prop::collection::vec(keyevent_strategy(), 1..50)) {
+                // Create config with Lock mapping: A activates LK_00
+                let config = create_test_config(vec![KeyMapping::lock(KeyCode::A, 0)]);
+                let lookup = KeyLookup::from_device_config(&config);
+                let mut state = DeviceState::new();
+
+                // Process all events
+                for event in &events {
+                    let outputs = process_event(*event, &lookup, &mut state);
+
+                    // If event is for key A (lock key), output must be empty
+                    if event.keycode() == KeyCode::A {
+                        prop_assert!(outputs.is_empty(),
+                            "Lock mapping produced output: {:?}", outputs);
+                    }
+                }
+            }
+
+            /// Property test: Passthrough preserves event type
+            ///
+            /// Invariant: When no mapping exists, the output event must have the
+            /// same keycode and type (Press/Release) as the input event.
+            #[test]
+            fn prop_passthrough_preserves_event(events in prop::collection::vec(keyevent_strategy(), 1..50)) {
+                // Create empty config (all events passthrough)
+                let config = create_test_config(vec![]);
+                let lookup = KeyLookup::from_device_config(&config);
+                let mut state = DeviceState::new();
+
+                // Process all events
+                for event in &events {
+                    let outputs = process_event(*event, &lookup, &mut state);
+
+                    // Must produce exactly one output
+                    prop_assert_eq!(outputs.len(), 1,
+                        "Passthrough produced {} outputs for 1 input", outputs.len());
+
+                    // Output must be identical to input
+                    prop_assert_eq!(outputs[0], *event,
+                        "Passthrough modified event: {:?} became {:?}", event, outputs[0]);
+                }
+            }
+
+            /// Property test: Simple mapping preserves event type
+            ///
+            /// Invariant: Simple mappings change the keycode but preserve the
+            /// event type (Press stays Press, Release stays Release).
+            #[test]
+            fn prop_simple_preserves_type(events in prop::collection::vec(keyevent_strategy(), 1..50)) {
+                // Create config with Simple mapping A → B
+                let config = create_test_config(vec![KeyMapping::simple(KeyCode::A, KeyCode::B)]);
+                let lookup = KeyLookup::from_device_config(&config);
+                let mut state = DeviceState::new();
+
+                // Process all events
+                for event in &events {
+                    let outputs = process_event(*event, &lookup, &mut state);
+
+                    // Must produce exactly one output (simple is 1:1)
+                    prop_assert_eq!(outputs.len(), 1,
+                        "Simple mapping produced {} outputs for 1 input", outputs.len());
+
+                    // Verify event type is preserved
+                    match (event, &outputs[0]) {
+                        (KeyEvent::Press(_), KeyEvent::Press(_)) => {
+                            // Press → Press: OK
+                        }
+                        (KeyEvent::Release(_), KeyEvent::Release(_)) => {
+                            // Release → Release: OK
+                        }
+                        _ => {
+                            return Err(proptest::test_runner::TestCaseError::fail(
+                                alloc::format!("Event type not preserved: {:?} became {:?}", event, outputs[0])
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
