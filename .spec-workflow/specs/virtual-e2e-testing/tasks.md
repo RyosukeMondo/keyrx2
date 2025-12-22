@@ -95,7 +95,7 @@
     Success: next_event returns events with timeout, collect_events gathers all pending events, drain clears buffer
     After completion: Mark task [-] as in-progress before starting, use log-implementation tool to record what was built, then mark [x] as complete_
 
-- [-] 7. Implement OutputCapture assertion helpers
+- [x] 7. Implement OutputCapture assertion helpers
   - File: `keyrx_daemon/src/test_utils/output_capture.rs` (continue)
   - Implement assert_events(captured, expected) with detailed diff
   - Show expected vs actual with markers for mismatches
