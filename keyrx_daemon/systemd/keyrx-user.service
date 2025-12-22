@@ -1,0 +1,98 @@
+# keyrx - Keyboard remapping daemon systemd service (User Service)
+# =================================================================
+#
+# This is a user-level systemd service for running keyrx daemon
+# without root privileges. User services are managed per-user and
+# start when the user logs in (with lingering enabled).
+#
+# WHEN TO USE THIS VS SYSTEM SERVICE:
+#   - User service: Single user desktop, per-user configuration
+#   - System service: Multi-user systems, system-wide configuration
+#
+# PREREQUISITES:
+#   1. Install udev rules (see keyrx_daemon/udev/99-keyrx.rules)
+#   2. Add your user to required groups: sudo usermod -aG input,uinput $USER
+#   3. Log out and log back in (or: newgrp input && newgrp uinput)
+#   4. Ensure uinput module is loaded: sudo modprobe uinput
+#
+# INSTALLATION:
+#   1. Create user systemd directory:
+#      mkdir -p ~/.config/systemd/user
+#
+#   2. Copy this file to user systemd directory:
+#      cp keyrx-user.service ~/.config/systemd/user/keyrx.service
+#
+#   3. Copy the daemon binary:
+#      mkdir -p ~/.local/bin
+#      cp target/release/keyrx_daemon ~/.local/bin/
+#
+#   4. Create configuration directory:
+#      mkdir -p ~/.config/keyrx
+#
+#   5. Compile your configuration:
+#      keyrx_compiler config.rhai -o ~/.config/keyrx/config.krx
+#
+#   6. Reload user systemd and enable the service:
+#      systemctl --user daemon-reload
+#      systemctl --user enable keyrx.service
+#      systemctl --user start keyrx.service
+#
+#   7. (Optional) Enable lingering to start service at boot without login:
+#      loginctl enable-linger $USER
+#
+# USAGE:
+#   Start:    systemctl --user start keyrx
+#   Stop:     systemctl --user stop keyrx
+#   Restart:  systemctl --user restart keyrx
+#   Reload:   systemctl --user reload keyrx  (reloads config without restart)
+#   Status:   systemctl --user status keyrx
+#   Logs:     journalctl --user -u keyrx -f
+#
+# TROUBLESHOOTING:
+#   - Check status: systemctl --user status keyrx
+#   - View logs: journalctl --user -u keyrx --no-pager -n 50
+#   - Test config: ~/.local/bin/keyrx_daemon validate --config ~/.config/keyrx/config.krx
+#   - List devices: ~/.local/bin/keyrx_daemon list-devices
+#   - Check permissions: ls -la /dev/input/event* /dev/uinput
+#   - Verify group membership: groups $USER
+#   - Check lingering status: loginctl show-user $USER | grep Linger
+#
+# NOTE ON WAYLAND:
+#   Under Wayland, keyboard remapping at the evdev level works globally
+#   across all applications. This is different from X11-based remapping
+#   which may not work in all contexts.
+#
+# Tested on: Ubuntu 22.04+, Fedora 38+, Arch Linux (rolling)
+
+[Unit]
+Description=keyrx Keyboard Remapping Daemon (User Service)
+Documentation=https://github.com/keyrx/keyrx
+
+# Wait for graphical session (ensures input devices are ready)
+After=graphical-session.target
+
+# Limit restart attempts to prevent restart loops
+# Max 5 restarts within 30 seconds before giving up
+StartLimitIntervalSec=30
+StartLimitBurst=5
+
+[Service]
+Type=simple
+
+# Main daemon command
+# %h expands to user's home directory
+ExecStart=%h/.local/bin/keyrx_daemon run --config %h/.config/keyrx/config.krx
+
+# Reload configuration on SIGHUP (systemctl --user reload keyrx)
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=on-failure
+RestartSec=1
+
+# Environment for better debugging (optional)
+# Uncomment to enable debug logging:
+# Environment=RUST_LOG=debug
+
+[Install]
+WantedBy=default.target

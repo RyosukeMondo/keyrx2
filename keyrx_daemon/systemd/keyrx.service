@@ -1,0 +1,123 @@
+# keyrx - Keyboard remapping daemon systemd service (System-wide)
+# ================================================================
+#
+# This service file runs keyrx daemon as a system service.
+# The daemon intercepts keyboard events and applies remappings
+# defined in the .krx configuration file.
+#
+# PREREQUISITES:
+#   1. Install udev rules (see keyrx_daemon/udev/99-keyrx.rules)
+#   2. Ensure uinput module is loaded: sudo modprobe uinput
+#   3. Compile your configuration: keyrx_compiler config.rhai -o /etc/keyrx/config.krx
+#
+# INSTALLATION:
+#   1. Copy this file to the systemd system units directory:
+#      sudo cp keyrx.service /etc/systemd/system/
+#
+#   2. Copy the daemon binary:
+#      sudo cp target/release/keyrx_daemon /usr/local/bin/
+#
+#   3. Create configuration directory:
+#      sudo mkdir -p /etc/keyrx
+#
+#   4. Copy your compiled configuration:
+#      sudo cp config.krx /etc/keyrx/config.krx
+#
+#   5. Create the keyrx user and group (optional, for non-root operation):
+#      sudo useradd -r -s /usr/sbin/nologin -M -d /nonexistent keyrx
+#      sudo usermod -aG input,uinput keyrx
+#
+#   6. Reload systemd and enable the service:
+#      sudo systemctl daemon-reload
+#      sudo systemctl enable keyrx.service
+#      sudo systemctl start keyrx.service
+#
+# USAGE:
+#   Start:    sudo systemctl start keyrx
+#   Stop:     sudo systemctl stop keyrx
+#   Restart:  sudo systemctl restart keyrx
+#   Reload:   sudo systemctl reload keyrx  (reloads config without restart)
+#   Status:   sudo systemctl status keyrx
+#   Logs:     journalctl -u keyrx -f
+#
+# CONFIGURATION:
+#   Config path: /etc/keyrx/config.krx (default)
+#   Override via: Environment=KEYRX_CONFIG=/path/to/config.krx
+#   Or via drop-in: sudo systemctl edit keyrx
+#
+# TROUBLESHOOTING:
+#   - Check status: sudo systemctl status keyrx
+#   - View logs: journalctl -u keyrx --no-pager -n 50
+#   - Test config: keyrx_daemon validate --config /etc/keyrx/config.krx
+#   - List devices: keyrx_daemon list-devices
+#   - Check permissions: ls -la /dev/input/event* /dev/uinput
+#   - Verify groups: groups keyrx
+#
+# Tested on: Ubuntu 22.04+, Fedora 38+, Arch Linux (rolling)
+
+[Unit]
+Description=keyrx Keyboard Remapping Daemon
+Documentation=https://github.com/keyrx/keyrx
+
+# Start after local filesystems are mounted (needed for config files)
+After=local-fs.target
+Wants=local-fs.target
+
+# Start after systemd-udevd to ensure input devices are ready
+After=systemd-udevd.service
+
+# Limit restart attempts to prevent restart loops
+# Max 5 restarts within 30 seconds before giving up
+StartLimitIntervalSec=30
+StartLimitBurst=5
+
+[Service]
+Type=simple
+
+# Non-root operation: run as dedicated user with required groups
+# Comment these out to run as root (not recommended)
+User=keyrx
+Group=keyrx
+SupplementaryGroups=input uinput
+
+# Configuration path (can be overridden with systemctl edit)
+Environment=KEYRX_CONFIG=/etc/keyrx/config.krx
+
+# Main daemon command
+ExecStart=/usr/local/bin/keyrx_daemon run --config ${KEYRX_CONFIG}
+
+# Reload configuration on SIGHUP (systemctl reload keyrx)
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=on-failure
+RestartSec=1
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+LockPersonality=yes
+
+# Allow access to input devices (required for keyboard capture/injection)
+DeviceAllow=/dev/input/event* rw
+DeviceAllow=/dev/uinput rw
+
+# Restrict capabilities to minimum required
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# System call filtering (allow only necessary syscalls)
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+[Install]
+WantedBy=multi-user.target
