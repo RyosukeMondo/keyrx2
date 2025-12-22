@@ -243,7 +243,7 @@
     Success: Tests verify modifier sets internal state, lock toggles, conditionals work correctly
     After completion: Mark task [-] as in-progress before starting, use log-implementation tool to record what was built, then mark [x] as complete_
 
-- [ ] 16. Add modified output tests
+- [x] 16. Add modified output tests
   - File: `keyrx_daemon/tests/virtual_e2e_tests.rs` (continue)
   - Test Shift+Key output sequence (modifier ordering)
   - Test Ctrl+Key combination
