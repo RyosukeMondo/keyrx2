@@ -1466,6 +1466,275 @@ impl Drop for E2EHarness {
 }
 
 // ============================================================================
+// TestEvents - Helper for concise test event creation
+// ============================================================================
+
+/// Helper struct for creating test events concisely.
+///
+/// `TestEvents` provides associated functions for creating common event patterns
+/// used in E2E tests. All methods return `Vec<KeyEvent>` for compatibility with
+/// [`E2EHarness::inject`].
+///
+/// # Example
+///
+/// ```ignore
+/// use keyrx_daemon::tests::e2e_harness::TestEvents;
+/// use keyrx_core::config::KeyCode;
+///
+/// // Single key tap
+/// let events = TestEvents::tap(KeyCode::A);
+/// assert_eq!(events.len(), 2);
+///
+/// // Multiple taps
+/// let events = TestEvents::taps(&[KeyCode::A, KeyCode::B, KeyCode::C]);
+/// assert_eq!(events.len(), 6);
+///
+/// // Type a word
+/// let events = TestEvents::type_keys(&[KeyCode::H, KeyCode::E, KeyCode::L, KeyCode::L, KeyCode::O]);
+/// ```
+pub struct TestEvents;
+
+impl TestEvents {
+    /// Creates a Press event for a single key.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let events = TestEvents::press(KeyCode::A);
+    /// assert_eq!(events, vec![KeyEvent::Press(KeyCode::A)]);
+    /// ```
+    pub fn press(key: KeyCode) -> Vec<KeyEvent> {
+        vec![KeyEvent::Press(key)]
+    }
+
+    /// Creates a Release event for a single key.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let events = TestEvents::release(KeyCode::A);
+    /// assert_eq!(events, vec![KeyEvent::Release(KeyCode::A)]);
+    /// ```
+    pub fn release(key: KeyCode) -> Vec<KeyEvent> {
+        vec![KeyEvent::Release(key)]
+    }
+
+    /// Creates a complete key tap (Press + Release).
+    ///
+    /// This is the most common pattern for testing key remapping.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let events = TestEvents::tap(KeyCode::A);
+    /// assert_eq!(events, vec![
+    ///     KeyEvent::Press(KeyCode::A),
+    ///     KeyEvent::Release(KeyCode::A),
+    /// ]);
+    /// ```
+    pub fn tap(key: KeyCode) -> Vec<KeyEvent> {
+        vec![KeyEvent::Press(key), KeyEvent::Release(key)]
+    }
+
+    /// Creates multiple Press events for a sequence of keys.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let events = TestEvents::presses(&[KeyCode::LShift, KeyCode::A]);
+    /// assert_eq!(events, vec![
+    ///     KeyEvent::Press(KeyCode::LShift),
+    ///     KeyEvent::Press(KeyCode::A),
+    /// ]);
+    /// ```
+    pub fn presses(keys: &[KeyCode]) -> Vec<KeyEvent> {
+        keys.iter().map(|&k| KeyEvent::Press(k)).collect()
+    }
+
+    /// Creates multiple Release events for a sequence of keys.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let events = TestEvents::releases(&[KeyCode::A, KeyCode::LShift]);
+    /// assert_eq!(events, vec![
+    ///     KeyEvent::Release(KeyCode::A),
+    ///     KeyEvent::Release(KeyCode::LShift),
+    /// ]);
+    /// ```
+    pub fn releases(keys: &[KeyCode]) -> Vec<KeyEvent> {
+        keys.iter().map(|&k| KeyEvent::Release(k)).collect()
+    }
+
+    /// Creates multiple key taps in sequence.
+    ///
+    /// Each key is pressed and released before the next key.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let events = TestEvents::taps(&[KeyCode::A, KeyCode::B]);
+    /// assert_eq!(events, vec![
+    ///     KeyEvent::Press(KeyCode::A),
+    ///     KeyEvent::Release(KeyCode::A),
+    ///     KeyEvent::Press(KeyCode::B),
+    ///     KeyEvent::Release(KeyCode::B),
+    /// ]);
+    /// ```
+    pub fn taps(keys: &[KeyCode]) -> Vec<KeyEvent> {
+        keys.iter()
+            .flat_map(|&k| vec![KeyEvent::Press(k), KeyEvent::Release(k)])
+            .collect()
+    }
+
+    /// Creates events for typing a sequence of keys.
+    ///
+    /// This is an alias for [`taps`](Self::taps) with a more intuitive name
+    /// for simulating keyboard typing.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Type "hello"
+    /// let events = TestEvents::type_keys(&[
+    ///     KeyCode::H, KeyCode::E, KeyCode::L, KeyCode::L, KeyCode::O
+    /// ]);
+    /// ```
+    pub fn type_keys(keys: &[KeyCode]) -> Vec<KeyEvent> {
+        Self::taps(keys)
+    }
+
+    /// Creates events for a modified key press (e.g., Shift+A).
+    ///
+    /// The modifier is pressed first, then the key is tapped, then the
+    /// modifier is released. This produces the correct event sequence for
+    /// modified key combinations.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Shift+A (for typing uppercase 'A')
+    /// let events = TestEvents::modified(KeyCode::LShift, KeyCode::A);
+    /// assert_eq!(events, vec![
+    ///     KeyEvent::Press(KeyCode::LShift),
+    ///     KeyEvent::Press(KeyCode::A),
+    ///     KeyEvent::Release(KeyCode::A),
+    ///     KeyEvent::Release(KeyCode::LShift),
+    /// ]);
+    /// ```
+    pub fn modified(modifier: KeyCode, key: KeyCode) -> Vec<KeyEvent> {
+        vec![
+            KeyEvent::Press(modifier),
+            KeyEvent::Press(key),
+            KeyEvent::Release(key),
+            KeyEvent::Release(modifier),
+        ]
+    }
+
+    /// Creates events for a key press with multiple modifiers.
+    ///
+    /// Modifiers are pressed in order, then the key is tapped, then modifiers
+    /// are released in reverse order.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Ctrl+Shift+C
+    /// let events = TestEvents::with_modifiers(
+    ///     &[KeyCode::LCtrl, KeyCode::LShift],
+    ///     KeyCode::C,
+    /// );
+    /// assert_eq!(events, vec![
+    ///     KeyEvent::Press(KeyCode::LCtrl),
+    ///     KeyEvent::Press(KeyCode::LShift),
+    ///     KeyEvent::Press(KeyCode::C),
+    ///     KeyEvent::Release(KeyCode::C),
+    ///     KeyEvent::Release(KeyCode::LShift),
+    ///     KeyEvent::Release(KeyCode::LCtrl),
+    /// ]);
+    /// ```
+    pub fn with_modifiers(modifiers: &[KeyCode], key: KeyCode) -> Vec<KeyEvent> {
+        let mut events = Vec::with_capacity(modifiers.len() * 2 + 2);
+
+        // Press modifiers in order
+        for &modifier in modifiers {
+            events.push(KeyEvent::Press(modifier));
+        }
+
+        // Tap the key
+        events.push(KeyEvent::Press(key));
+        events.push(KeyEvent::Release(key));
+
+        // Release modifiers in reverse order
+        for &modifier in modifiers.iter().rev() {
+            events.push(KeyEvent::Release(modifier));
+        }
+
+        events
+    }
+
+    /// Creates events for holding a modifier while typing multiple keys.
+    ///
+    /// The modifier is held down while all keys are tapped in sequence,
+    /// then the modifier is released.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Shift held while typing "ABC"
+    /// let events = TestEvents::hold_while_typing(
+    ///     KeyCode::LShift,
+    ///     &[KeyCode::A, KeyCode::B, KeyCode::C],
+    /// );
+    /// // Produces: Press(LShift), Press(A), Release(A), Press(B), Release(B), ...
+    /// ```
+    pub fn hold_while_typing(modifier: KeyCode, keys: &[KeyCode]) -> Vec<KeyEvent> {
+        let mut events = Vec::with_capacity(keys.len() * 2 + 2);
+
+        // Press modifier
+        events.push(KeyEvent::Press(modifier));
+
+        // Tap each key
+        for &key in keys {
+            events.push(KeyEvent::Press(key));
+            events.push(KeyEvent::Release(key));
+        }
+
+        // Release modifier
+        events.push(KeyEvent::Release(modifier));
+
+        events
+    }
+
+    /// Creates events from raw event data for custom patterns.
+    ///
+    /// This is useful when you need a specific event sequence that doesn't
+    /// fit the other helper methods.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Custom pattern: press A, press B, release A, release B
+    /// let events = TestEvents::from_events(&[
+    ///     KeyEvent::Press(KeyCode::A),
+    ///     KeyEvent::Press(KeyCode::B),
+    ///     KeyEvent::Release(KeyCode::A),
+    ///     KeyEvent::Release(KeyCode::B),
+    /// ]);
+    /// ```
+    pub fn from_events(events: &[KeyEvent]) -> Vec<KeyEvent> {
+        events.to_vec()
+    }
+
+    /// Creates an empty event sequence.
+    ///
+    /// Useful for testing scenarios where no events are expected.
+    pub fn empty() -> Vec<KeyEvent> {
+        Vec::new()
+    }
+}
+
+// ============================================================================
 // Unit Tests
 // ============================================================================
 
@@ -2247,5 +2516,231 @@ mod tests {
             !config_path.exists(),
             "Config file should be removed after drop"
         );
+    }
+
+    // ------------------------------------------------------------------------
+    // TestEvents Tests
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_test_events_press() {
+        let events = TestEvents::press(KeyCode::A);
+        assert_eq!(events, vec![KeyEvent::Press(KeyCode::A)]);
+    }
+
+    #[test]
+    fn test_test_events_release() {
+        let events = TestEvents::release(KeyCode::A);
+        assert_eq!(events, vec![KeyEvent::Release(KeyCode::A)]);
+    }
+
+    #[test]
+    fn test_test_events_tap() {
+        let events = TestEvents::tap(KeyCode::A);
+        assert_eq!(
+            events,
+            vec![KeyEvent::Press(KeyCode::A), KeyEvent::Release(KeyCode::A),]
+        );
+    }
+
+    #[test]
+    fn test_test_events_presses() {
+        let events = TestEvents::presses(&[KeyCode::LShift, KeyCode::A]);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Press(KeyCode::LShift),
+                KeyEvent::Press(KeyCode::A),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_test_events_releases() {
+        let events = TestEvents::releases(&[KeyCode::A, KeyCode::LShift]);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Release(KeyCode::A),
+                KeyEvent::Release(KeyCode::LShift),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_test_events_taps() {
+        let events = TestEvents::taps(&[KeyCode::A, KeyCode::B]);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Press(KeyCode::A),
+                KeyEvent::Release(KeyCode::A),
+                KeyEvent::Press(KeyCode::B),
+                KeyEvent::Release(KeyCode::B),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_test_events_type_keys() {
+        // type_keys is an alias for taps
+        let events =
+            TestEvents::type_keys(&[KeyCode::H, KeyCode::E, KeyCode::L, KeyCode::L, KeyCode::O]);
+        assert_eq!(events.len(), 10); // 5 keys * 2 events each
+
+        // Verify first key
+        assert_eq!(events[0], KeyEvent::Press(KeyCode::H));
+        assert_eq!(events[1], KeyEvent::Release(KeyCode::H));
+
+        // Verify last key
+        assert_eq!(events[8], KeyEvent::Press(KeyCode::O));
+        assert_eq!(events[9], KeyEvent::Release(KeyCode::O));
+    }
+
+    #[test]
+    fn test_test_events_modified() {
+        let events = TestEvents::modified(KeyCode::LShift, KeyCode::A);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Press(KeyCode::LShift),
+                KeyEvent::Press(KeyCode::A),
+                KeyEvent::Release(KeyCode::A),
+                KeyEvent::Release(KeyCode::LShift),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_test_events_with_modifiers_single() {
+        let events = TestEvents::with_modifiers(&[KeyCode::LCtrl], KeyCode::C);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Press(KeyCode::LCtrl),
+                KeyEvent::Press(KeyCode::C),
+                KeyEvent::Release(KeyCode::C),
+                KeyEvent::Release(KeyCode::LCtrl),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_test_events_with_modifiers_multiple() {
+        let events = TestEvents::with_modifiers(&[KeyCode::LCtrl, KeyCode::LShift], KeyCode::C);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Press(KeyCode::LCtrl),
+                KeyEvent::Press(KeyCode::LShift),
+                KeyEvent::Press(KeyCode::C),
+                KeyEvent::Release(KeyCode::C),
+                KeyEvent::Release(KeyCode::LShift),
+                KeyEvent::Release(KeyCode::LCtrl),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_test_events_with_modifiers_empty() {
+        // Edge case: no modifiers is just a tap
+        let events = TestEvents::with_modifiers(&[], KeyCode::A);
+        assert_eq!(
+            events,
+            vec![KeyEvent::Press(KeyCode::A), KeyEvent::Release(KeyCode::A),]
+        );
+    }
+
+    #[test]
+    fn test_test_events_hold_while_typing() {
+        let events =
+            TestEvents::hold_while_typing(KeyCode::LShift, &[KeyCode::A, KeyCode::B, KeyCode::C]);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Press(KeyCode::LShift),
+                KeyEvent::Press(KeyCode::A),
+                KeyEvent::Release(KeyCode::A),
+                KeyEvent::Press(KeyCode::B),
+                KeyEvent::Release(KeyCode::B),
+                KeyEvent::Press(KeyCode::C),
+                KeyEvent::Release(KeyCode::C),
+                KeyEvent::Release(KeyCode::LShift),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_test_events_hold_while_typing_empty() {
+        // Edge case: no keys is just press/release modifier
+        let events = TestEvents::hold_while_typing(KeyCode::LShift, &[]);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Press(KeyCode::LShift),
+                KeyEvent::Release(KeyCode::LShift),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_test_events_from_events() {
+        let input = vec![
+            KeyEvent::Press(KeyCode::A),
+            KeyEvent::Press(KeyCode::B),
+            KeyEvent::Release(KeyCode::A),
+            KeyEvent::Release(KeyCode::B),
+        ];
+        let events = TestEvents::from_events(&input);
+        assert_eq!(events, input);
+    }
+
+    #[test]
+    fn test_test_events_empty() {
+        let events = TestEvents::empty();
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_test_events_presses_empty() {
+        let events = TestEvents::presses(&[]);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_test_events_releases_empty() {
+        let events = TestEvents::releases(&[]);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_test_events_taps_empty() {
+        let events = TestEvents::taps(&[]);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_test_events_type_keys_empty() {
+        let events = TestEvents::type_keys(&[]);
+        assert!(events.is_empty());
+    }
+
+    /// Test a complex vim-style navigation pattern using TestEvents
+    #[test]
+    fn test_test_events_vim_navigation_pattern() {
+        // Simulate: hold CapsLock, press HJKL for arrow navigation
+        let events = TestEvents::hold_while_typing(
+            KeyCode::CapsLock,
+            &[KeyCode::H, KeyCode::J, KeyCode::K, KeyCode::L],
+        );
+
+        // 1 press + 4*(press+release) + 1 release = 10 events
+        assert_eq!(events.len(), 10);
+
+        // First event is CapsLock press
+        assert_eq!(events[0], KeyEvent::Press(KeyCode::CapsLock));
+
+        // Last event is CapsLock release
+        assert_eq!(events[9], KeyEvent::Release(KeyCode::CapsLock));
     }
 }
