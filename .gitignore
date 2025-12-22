@@ -26,3 +26,10 @@ desktop.ini
 # Backup files
 *.bak
 *.tmp
+
+# Spec workflow artifacts (implementation logs are transient)
+.spec-workflow/specs/*/Implementation Logs/
+logs/
+
+# Coverage reports (regenerated)
+coverage/
