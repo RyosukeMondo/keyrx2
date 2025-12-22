@@ -143,7 +143,7 @@
   - _Requirements: 5.1_
   - _Prompt: Role: Rust Software Architect with expertise in trait design and platform abstraction | Task: Define InputDevice and OutputDevice traits with method signatures for event retrieval and injection, define DeviceError enum using thiserror crate, following requirement 5.1 | Restrictions: InputDevice must have next_event() -> Result<KeyEvent, DeviceError>, grab() -> Result<(), DeviceError>, release() -> Result<(), DeviceError>, OutputDevice must have inject_event(event: KeyEvent) -> Result<(), DeviceError>, DeviceError variants must use #[error("...")] attributes from thiserror, include Io variant with #[from] std::io::Error, add comprehensive doc comments explaining trait contracts and when each error variant occurs | Success: Traits compile with correct signatures, DeviceError has all required variants (NotFound, PermissionDenied, EndOfStream, InjectionFailed, Io), thiserror derives Display and Error traits, doc comments explain grab/release semantics (exclusive device access), traits are public and exported from platform module_
 
-- [ ] 14. Implement MockInput device
+- [x] 14. Implement MockInput device
   - File: `keyrx_daemon/src/platform/mock.rs` (NEW)
   - Define `MockInput` struct: `events: VecDeque<KeyEvent>`, `grabbed: bool`
   - Implement `InputDevice` trait: next_event pops from queue, grab sets flag, release clears flag
@@ -154,7 +154,7 @@
   - _Requirements: 5.2, 5.5_
   - _Prompt: Role: Rust Developer with expertise in mock implementations and test infrastructure | Task: Implement MockInput struct with VecDeque for event queue, implement InputDevice trait where next_event pops events and returns EndOfStream when empty, grab/release update grabbed flag, following requirements 5.2 and 5.5 | Restrictions: Must use VecDeque::pop_front for next_event (FIFO order), return Ok(event) if queue not empty, Err(DeviceError::EndOfStream) if empty, grab sets grabbed = true, release sets grabbed = false, new() converts Vec to VecDeque, is_grabbed() returns grabbed field, must have zero OS dependencies (no libc, no evdev, pure Rust), add doc comments with usage examples | Success: MockInput::new creates instance with preloaded events, next_event returns events in FIFO order, returns EndOfStream when exhausted, grab/release update grabbed field, is_grabbed allows test verification, compiles without OS-specific dependencies_
 
-- [ ] 15. Implement MockOutput device
+- [x] 15. Implement MockOutput device
   - File: `keyrx_daemon/src/platform/mock.rs` (continue)
   - Define `MockOutput` struct: `events: Vec<KeyEvent>`
   - Implement `OutputDevice` trait: inject_event appends to Vec
@@ -165,7 +165,7 @@
   - _Requirements: 5.3, 5.5_
   - _Prompt: Role: Rust Developer with expertise in mock implementations and test utilities | Task: Implement MockOutput struct with Vec<KeyEvent> for capturing injected events, implement OutputDevice trait where inject_event appends to Vec, following requirements 5.3 and 5.5 | Restrictions: Must use Vec::push for inject_event, always return Ok(()) (mock never fails unless explicitly configured), new() creates empty Vec, events() returns slice reference for test assertions, must have zero OS dependencies, add optional fail_mode field (bool) to simulate InjectionFailed error if needed for error testing, add doc comments | Success: MockOutput::new creates empty instance, inject_event appends to Vec and returns Ok(()), events() returns all injected events in order, compiles without OS-specific dependencies, can be used in tests to verify output event sequences_
 
-- [ ] 16. Write platform mock tests
+- [x] 16. Write platform mock tests
   - File: `keyrx_daemon/src/platform/mock.rs` (add tests module)
   - Test MockInput: event sequence, grab/release, EndOfStream
   - Test MockOutput: event capture, ordering
@@ -176,7 +176,7 @@
 
 ## Phase 5: Event Processor and Config Loader
 
-- [ ] 17. Implement ConfigLoader
+- [x] 17. Implement ConfigLoader
   - File: `keyrx_daemon/src/config_loader.rs` (NEW)
   - Define `load_config<P: AsRef<Path>>(path: P) -> Result<ConfigRoot, ConfigError>`
   - Define `ConfigError` enum: `Io`, `Deserialize` (wraps DeserializeError)

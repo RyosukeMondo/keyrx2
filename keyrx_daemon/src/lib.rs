@@ -2,6 +2,7 @@
 //!
 //! This library provides platform abstraction and event processing for the KeyRx daemon.
 
+pub mod config_loader;
 pub mod platform;
 
 #[cfg(feature = "web")]
