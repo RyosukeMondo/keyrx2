@@ -4,6 +4,7 @@
 
 pub mod config_loader;
 pub mod platform;
+pub mod processor;
 
 #[cfg(feature = "web")]
 pub mod web;
