@@ -14,6 +14,7 @@ web = ["dep:axum", "dep:tower-http", "dep:tokio", "dep:serde", "dep:serde_json"]
 
 [dependencies]
 keyrx_core = { path = "../keyrx_core" }
+thiserror = "2.0"
 
 # Linux-specific dependencies
 evdev = { version = "0.12", optional = true }

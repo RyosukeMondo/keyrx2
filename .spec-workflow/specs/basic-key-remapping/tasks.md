@@ -132,7 +132,7 @@
 
 ## Phase 4: Platform Abstraction Layer
 
-- [ ] 13. Define platform traits
+- [x] 13. Define platform traits
   - File: `keyrx_daemon/src/platform/mod.rs` (NEW)
   - Define `InputDevice` trait: `next_event()`, `grab()`, `release()`
   - Define `OutputDevice` trait: `inject_event()`
