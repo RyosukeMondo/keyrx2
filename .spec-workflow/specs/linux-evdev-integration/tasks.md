@@ -211,7 +211,7 @@
   - _Requirements: 4.2_
   - _Prompt: Role: Rust Developer with expertise in resource cleanup | Task: Implement Daemon shutdown method that releases all resources in correct order following requirement 4.2 | Restrictions: Must release all grabbed devices first (restore normal input), destroy uinput device second, log each step at INFO level, handle errors gracefully (log warning but continue cleanup), ensure no orphaned resources, call from Drop trait for automatic cleanup | Success: shutdown() releases all devices, destroys uinput device, logs completion, no orphaned devices/resources, handles errors gracefully, Drop ensures cleanup on panic_
 
-- [ ] 20. Write Daemon integration tests
+- [x] 20. Write Daemon integration tests
   - File: `keyrx_daemon/tests/daemon_tests.rs` (NEW)
   - Test daemon initialization and shutdown
   - Test signal handling (SIGTERM, SIGINT)
@@ -220,6 +220,7 @@
   - _Leverage: Mock devices where possible_
   - _Requirements: 4.1-4.4_
   - _Prompt: Role: Integration Test Engineer with daemon testing expertise | Task: Create integration tests for Daemon lifecycle including initialization, shutdown, signals, and reload following requirements 4.1-4.4 | Restrictions: Use mock devices for most tests (avoid real hardware dependency), test signal handling with signal::kill, test reload by modifying config file, verify cleanup on shutdown (no orphaned resources), mark real-device tests #[ignore], use timeout for daemon operations | Success: Initialization test verifies all components created, shutdown test verifies all resources released, signal test verifies graceful stop on SIGTERM, reload test verifies new config applied, tests pass in CI without real devices_
+  - **Completed**: Created comprehensive integration test suite with 29 tests covering signal handler installation, reload state management, daemon initialization error handling, shutdown verification, configuration reload, exit codes, and concurrency stress tests. 19 tests run without real devices, 10 tests marked `#[ignore]` for real-device scenarios.
 
 ## Phase 5: CLI and systemd Integration
 
