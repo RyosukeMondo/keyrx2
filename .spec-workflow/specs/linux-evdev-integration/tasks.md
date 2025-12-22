@@ -189,7 +189,7 @@
   - _Requirements: 4.1, 4.9, 7.1_
   - _Prompt: Role: Rust Developer with expertise in event-driven systems and polling | Task: Implement Daemon run method with multi-device event loop, processing events from all devices and outputting via shared uinput following requirements 4.1, 4.9, and 7.1 | Restrictions: Must iterate all managed devices, use non-blocking or select/poll for fair handling, process each event through process_event, inject output via shared UinputOutput, check running flag between iterations, handle device errors gracefully (log and continue or remove device), log at DEBUG level for each event, measure and log latency periodically | Success: run() processes events from all devices, events are remapped correctly, output appears in applications, Ctrl+C stops the loop gracefully, device errors don't crash daemon, latency stays under 1ms_
 
-- [ ] 18. Implement configuration reload
+- [x] 18. Implement configuration reload
   - File: `keyrx_daemon/src/daemon.rs` (continue)
   - Implement `reload(&mut self) -> Result<(), DaemonError>`
   - Reload .krx file
