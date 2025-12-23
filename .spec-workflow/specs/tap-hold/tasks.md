@@ -12,7 +12,7 @@
   - _Requirements: 4.3, 4.4_
   - _Prompt: Implement the task for spec tap-hold, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer specializing in no_std embedded systems | Task: Add timestamp_us field to KeyEvent struct in keyrx_core/src/runtime/event.rs, update constructors, ensure no_std compatibility | Restrictions: Must maintain no_std, no heap allocation, backward compatible with existing code | Success: KeyEvent has timestamp field, all existing code compiles, no performance regression | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts, then mark [x] when done_
 
-- [ ] 2. Create Clock trait for time abstraction
+- [x] 2. Create Clock trait for time abstraction
   - File: `keyrx_core/src/runtime/clock.rs` (new file)
   - Define Clock trait with `now(&self) -> u64` method
   - Implement SystemClock (uses timestamp from events)
