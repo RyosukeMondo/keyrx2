@@ -24,17 +24,21 @@
 //!
 //! # Running Tests
 //!
-//! Tests that require uinput access are marked with `#[ignore]` and must be run with
-//! elevated privileges:
+//! Tests that require uinput access use the [`skip_if_no_uinput!`] macro for runtime
+//! permission checking. Tests will automatically run when uinput is accessible, or
+//! gracefully skip with a message when permissions are not available.
 //!
 //! ```bash
-//! # Run all virtual E2E tests (requires uinput access)
-//! sudo cargo test -p keyrx_daemon --features linux -- --ignored
+//! # Run all tests (E2E tests auto-skip if uinput not accessible)
+//! cargo test -p keyrx_daemon --features linux
 //!
-//! # Run a specific test
-//! sudo cargo test -p keyrx_daemon --features linux test_virtual_keyboard_inject -- --ignored
+//! # To run E2E tests, ensure uinput access is configured:
+//! # Option 1: Add user to uinput group (recommended, persistent)
+//! sudo usermod -aG uinput $USER
+//! # Log out and back in, then run tests normally
 //!
-//! # Run regular unit tests (no sudo required)
+//! # Option 2: Temporarily grant access (session only)
+//! sudo chmod 666 /dev/uinput
 //! cargo test -p keyrx_daemon --features linux
 //! ```
 //!
@@ -116,6 +120,7 @@
 //! assert_events_msg(&captured, &expected, "Testing A→B remapping");
 //! ```
 
+use std::fs::OpenOptions;
 use std::io;
 use thiserror::Error;
 
@@ -127,6 +132,114 @@ pub use output_capture::{
     EventComparison, OutputCapture,
 };
 pub use virtual_keyboard::VirtualKeyboard;
+
+/// Checks if uinput is accessible for virtual device operations.
+///
+/// Returns `true` if `/dev/uinput` exists and is readable/writable by the current process,
+/// AND at least one `/dev/input/event*` device is accessible for reading (needed to capture
+/// events from virtual devices).
+///
+/// Most E2E tests need both permissions:
+/// - uinput access to create virtual keyboards
+/// - input access to read events from those virtual keyboards
+///
+/// # Example
+///
+/// ```ignore
+/// if can_access_uinput() {
+///     // Run tests that require uinput + input access
+/// } else {
+///     eprintln!("Skipping: uinput or input devices not accessible");
+/// }
+/// ```
+pub fn can_access_uinput() -> bool {
+    // Check uinput access (for creating virtual devices)
+    let uinput_ok = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/uinput")
+        .is_ok();
+
+    // Check input device access (for reading events from virtual devices)
+    let input_ok = can_access_input_devices();
+
+    uinput_ok && input_ok
+}
+
+/// Checks if input devices are accessible for reading.
+///
+/// Returns `true` if any `/dev/input/event*` device is readable by the current process.
+/// This is used to determine whether tests requiring input device access can run.
+pub fn can_access_input_devices() -> bool {
+    for i in 0..20 {
+        let path = format!("/dev/input/event{}", i);
+        if OpenOptions::new().read(true).open(&path).is_ok() {
+            return true;
+        }
+    }
+    false
+}
+
+/// Skips the current test if uinput is not accessible.
+///
+/// This macro checks for uinput access at runtime and returns early from the test
+/// function with a skip message if access is not available. This allows E2E tests
+/// to run automatically when permissions are configured, while gracefully skipping
+/// on systems without uinput access.
+///
+/// # Usage
+///
+/// ```ignore
+/// #[test]
+/// fn test_virtual_keyboard() {
+///     skip_if_no_uinput!();
+///     // Test body - only runs if uinput is accessible
+/// }
+/// ```
+///
+/// # Note
+///
+/// Tests that skip via this macro will show as "passed" in test output, not "ignored".
+/// The skip message is printed to stderr for visibility.
+#[macro_export]
+macro_rules! skip_if_no_uinput {
+    () => {
+        if !$crate::test_utils::can_access_uinput() {
+            eprintln!(
+                "SKIPPED: {} - uinput/input not accessible (add user to 'uinput' and 'input' groups or run with sudo)",
+                module_path!()
+            );
+            return;
+        }
+    };
+}
+
+/// Skips the current test if input devices are not accessible.
+///
+/// This macro checks for `/dev/input/event*` access at runtime and returns early
+/// from the test function with a skip message if access is not available.
+///
+/// # Usage
+///
+/// ```ignore
+/// #[test]
+/// fn test_evdev_device() {
+///     skip_if_no_input_access!();
+///     // Test body - only runs if input devices are accessible
+/// }
+/// ```
+#[macro_export]
+macro_rules! skip_if_no_input_access {
+    () => {
+        if !$crate::test_utils::can_access_input_devices() {
+            eprintln!(
+                "SKIPPED: {} - input devices not accessible (add user to 'input' group or run with sudo)",
+                module_path!()
+            );
+            return;
+        }
+    };
+}
 
 /// Errors that can occur during virtual device operations.
 ///
@@ -213,8 +326,8 @@ impl VirtualDeviceError {
     pub fn uinput_permission_denied() -> Self {
         VirtualDeviceError::PermissionDenied {
             message: "cannot access /dev/uinput".to_string(),
-            fix_instruction: "Add your user to the 'input' group: sudo usermod -aG input $USER\n\
-                              Then log out and back in, or run: sudo chmod 666 /dev/uinput"
+            fix_instruction: "Add your user to the 'uinput' group: sudo usermod -aG uinput $USER\n\
+                              Then log out and back in (or run: newgrp uinput)"
                 .to_string(),
         }
     }
@@ -263,7 +376,7 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("permission denied"));
         assert!(msg.contains("/dev/uinput"));
-        assert!(msg.contains("'input' group"));
+        assert!(msg.contains("'uinput' group"));
     }
 
     #[test]

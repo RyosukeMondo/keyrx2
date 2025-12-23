@@ -356,6 +356,8 @@ mod tests {
 
         // For now, just verify the function exists and returns an error type
         let result1 = VirtualKeyboard::create("test");
+        // Small delay to ensure different timestamp
+        std::thread::sleep(std::time::Duration::from_millis(2));
         let result2 = VirtualKeyboard::create("test");
 
         // Both should be the same type of result (either Ok or same Err variant)
@@ -375,10 +377,9 @@ mod tests {
     }
 
     /// Test that create returns a VirtualKeyboard when uinput is accessible
-    /// Note: Marked #[ignore] because it requires uinput access
     #[test]
-    #[ignore = "requires uinput access - run with: sudo cargo test -p keyrx_daemon --features linux test_virtual_keyboard_create -- --ignored"]
     fn test_virtual_keyboard_create() {
+        crate::skip_if_no_uinput!();
         let keyboard =
             VirtualKeyboard::create("test-create").expect("Failed to create virtual keyboard");
 
@@ -387,10 +388,9 @@ mod tests {
     }
 
     /// Test that inject works correctly
-    /// Note: Marked #[ignore] because it requires uinput access
     #[test]
-    #[ignore = "requires uinput access - run with: sudo cargo test -p keyrx_daemon --features linux test_virtual_keyboard_inject -- --ignored"]
     fn test_virtual_keyboard_inject() {
+        crate::skip_if_no_uinput!();
         let mut keyboard =
             VirtualKeyboard::create("test-inject").expect("Failed to create virtual keyboard");
 
@@ -404,10 +404,9 @@ mod tests {
     }
 
     /// Test that inject_sequence works correctly
-    /// Note: Marked #[ignore] because it requires uinput access
     #[test]
-    #[ignore = "requires uinput access - run with: sudo cargo test -p keyrx_daemon --features linux test_virtual_keyboard_inject_sequence -- --ignored"]
     fn test_virtual_keyboard_inject_sequence() {
+        crate::skip_if_no_uinput!();
         use std::time::Duration;
 
         let mut keyboard =
@@ -426,10 +425,9 @@ mod tests {
     }
 
     /// Test that destroy works and prevents further injection
-    /// Note: Marked #[ignore] because it requires uinput access
     #[test]
-    #[ignore = "requires uinput access - run with: sudo cargo test -p keyrx_daemon --features linux test_virtual_keyboard_destroy -- --ignored"]
     fn test_virtual_keyboard_destroy() {
+        crate::skip_if_no_uinput!();
         let mut keyboard =
             VirtualKeyboard::create("test-destroy").expect("Failed to create virtual keyboard");
 
@@ -444,10 +442,9 @@ mod tests {
     }
 
     /// Test that Drop cleans up the device
-    /// Note: Marked #[ignore] because it requires uinput access
     #[test]
-    #[ignore = "requires uinput access - run with: sudo cargo test -p keyrx_daemon --features linux test_virtual_keyboard_drop -- --ignored"]
     fn test_virtual_keyboard_drop() {
+        crate::skip_if_no_uinput!();
         {
             let _keyboard =
                 VirtualKeyboard::create("test-drop").expect("Failed to create virtual keyboard");
@@ -457,10 +454,9 @@ mod tests {
     }
 
     /// Test that double destroy is handled gracefully
-    /// Note: Marked #[ignore] because it requires uinput access
     #[test]
-    #[ignore = "requires uinput access - run with: sudo cargo test -p keyrx_daemon --features linux test_virtual_keyboard_double_destroy -- --ignored"]
     fn test_virtual_keyboard_double_destroy() {
+        crate::skip_if_no_uinput!();
         let mut keyboard = VirtualKeyboard::create("test-double-destroy")
             .expect("Failed to create virtual keyboard");
 
@@ -472,10 +468,9 @@ mod tests {
     }
 
     /// Test device name uniqueness across rapid creates
-    /// Note: Marked #[ignore] because it requires uinput access
     #[test]
-    #[ignore = "requires uinput access - run with: sudo cargo test -p keyrx_daemon --features linux test_virtual_keyboard_name_uniqueness -- --ignored"]
     fn test_virtual_keyboard_name_uniqueness() {
+        crate::skip_if_no_uinput!();
         let kb1 = VirtualKeyboard::create("test-unique").expect("Failed to create first keyboard");
         let kb2 = VirtualKeyboard::create("test-unique").expect("Failed to create second keyboard");
 

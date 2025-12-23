@@ -173,12 +173,12 @@ use keyrx_core::config::mappings::{
 
 /// Converts an archived KeyCode to an owned KeyCode.
 ///
-/// For enums with `#[repr(u16)]` and no data fields, the archived and owned
-/// representations are identical, so we can safely transmute.
+/// Uses rkyv's Deserialize trait for safe conversion.
 fn convert_archived_keycode(archived: &ArchivedKeyCode) -> KeyCode {
-    // SAFETY: ArchivedKeyCode has the same representation as KeyCode for simple
-    // #[repr(u16)] enums with no data fields. rkyv generates identical layout.
-    unsafe { std::mem::transmute_copy(archived) }
+    use rkyv::Deserialize;
+    archived
+        .deserialize(&mut rkyv::Infallible)
+        .expect("KeyCode deserialization is infallible")
 }
 
 /// Converts an archived ConditionItem to an owned ConditionItem.
@@ -1005,8 +1005,8 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input and /dev/uinput devices"]
         fn test_daemon_new_real_devices() {
+            crate::skip_if_no_uinput!();
             use keyrx_compiler::serialize::serialize;
             use keyrx_core::config::{
                 ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping, Metadata, Version,
@@ -1065,8 +1065,8 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input and /dev/uinput devices"]
         fn test_daemon_reload_success() {
+            crate::skip_if_no_uinput!();
             use keyrx_compiler::serialize::serialize;
             use keyrx_core::config::{
                 ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping, Metadata, Version,
@@ -1135,8 +1135,8 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input and /dev/uinput devices"]
         fn test_daemon_reload_preserves_device_count() {
+            crate::skip_if_no_uinput!();
             use keyrx_compiler::serialize::serialize;
             use keyrx_core::config::{
                 ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping, Metadata, Version,
@@ -1187,8 +1187,8 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input and /dev/uinput devices"]
         fn test_daemon_reload_missing_file() {
+            crate::skip_if_no_uinput!();
             use keyrx_compiler::serialize::serialize;
             use keyrx_core::config::{
                 ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping, Metadata, Version,
@@ -1249,8 +1249,8 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input and /dev/uinput devices"]
         fn test_daemon_shutdown_releases_devices() {
+            crate::skip_if_no_uinput!();
             use keyrx_compiler::serialize::serialize;
             use keyrx_core::config::{
                 ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping, Metadata, Version,
@@ -1309,8 +1309,8 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input and /dev/uinput devices"]
         fn test_daemon_shutdown_idempotent() {
+            crate::skip_if_no_uinput!();
             use keyrx_compiler::serialize::serialize;
             use keyrx_core::config::{
                 ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping, Metadata, Version,
@@ -1358,8 +1358,8 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input and /dev/uinput devices"]
         fn test_daemon_drop_calls_shutdown() {
+            crate::skip_if_no_uinput!();
             use keyrx_compiler::serialize::serialize;
             use keyrx_core::config::{
                 ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping, Metadata, Version,

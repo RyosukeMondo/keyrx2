@@ -870,9 +870,21 @@ impl RefreshResult {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::OpenOptions;
     use std::path::PathBuf;
 
     use super::*;
+
+    /// Checks if input devices are accessible for reading.
+    fn can_access_input_devices() -> bool {
+        for i in 0..20 {
+            let path = format!("/dev/input/event{}", i);
+            if OpenOptions::new().read(true).open(&path).is_ok() {
+                return true;
+            }
+        }
+        false
+    }
 
     #[test]
     fn test_required_keys_constant() {
@@ -889,8 +901,11 @@ mod tests {
 
     // Integration tests that require real devices
     #[test]
-    #[ignore = "Requires access to /dev/input devices"]
     fn test_enumerate_keyboards_real_devices() {
+        if !can_access_input_devices() {
+            eprintln!("SKIPPED: input devices not accessible");
+            return;
+        }
         let result = enumerate_keyboards();
         assert!(result.is_ok(), "Should not error on enumeration");
 
@@ -910,8 +925,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Requires access to /dev/input devices"]
     fn test_open_keyboard_event0() {
+        if !can_access_input_devices() {
+            eprintln!("SKIPPED: input devices not accessible");
+            return;
+        }
         let path = Path::new("/dev/input/event0");
         let result = open_keyboard(path);
 
@@ -1376,8 +1394,11 @@ mod tests {
 
         // Integration tests that require real devices
         #[test]
-        #[ignore = "Requires access to /dev/input devices"]
         fn test_device_manager_discover_real_devices() {
+            if !can_access_input_devices() {
+                eprintln!("SKIPPED: input devices not accessible");
+                return;
+            }
             let configs = vec![create_config("*")];
 
             match DeviceManager::discover(&configs) {
@@ -1403,8 +1424,11 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input devices"]
         fn test_device_manager_specific_pattern() {
+            if !can_access_input_devices() {
+                eprintln!("SKIPPED: input devices not accessible");
+                return;
+            }
             // Test with a specific pattern that might not match any device
             let configs = vec![create_config("NonExistentKeyboard")];
 
@@ -1418,8 +1442,11 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input devices"]
         fn test_device_manager_rebuild_lookups() {
+            if !can_access_input_devices() {
+                eprintln!("SKIPPED: input devices not accessible");
+                return;
+            }
             let initial_configs = vec![create_config_with_mapping("*", KeyCode::A, KeyCode::B)];
 
             let updated_configs = vec![create_config_with_mapping("*", KeyCode::A, KeyCode::C)];
@@ -1437,8 +1464,11 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Requires access to /dev/input devices"]
         fn test_device_manager_refresh_real_devices() {
+            if !can_access_input_devices() {
+                eprintln!("SKIPPED: input devices not accessible");
+                return;
+            }
             let configs = vec![create_config("*")];
 
             match DeviceManager::discover(&configs) {
