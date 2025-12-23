@@ -7,6 +7,7 @@ mod keycode_map;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use evdev::{Device, InputEventKind};
 use uinput::Device as UInputDevice;
@@ -67,6 +68,17 @@ impl Default for LinuxPlatform {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Converts a `SystemTime` to microseconds since UNIX epoch.
+///
+/// This is used to extract timestamps from evdev events for tap-hold
+/// timing calculations. Falls back to 0 if the conversion fails
+/// (e.g., for times before UNIX epoch).
+fn systemtime_to_micros(time: SystemTime) -> u64 {
+    time.duration_since(UNIX_EPOCH)
+        .map(|d| d.as_micros() as u64)
+        .unwrap_or(0)
 }
 
 /// Wrapper for evdev input device with keyrx interface.
@@ -402,19 +414,24 @@ impl InputDevice for EvdevInput {
                 if let InputEventKind::Key(key) = event.kind() {
                     let value = event.value();
 
+                    // Extract timestamp from the event and convert to microseconds.
+                    // The evdev timestamp() returns SystemTime; we convert to microseconds
+                    // since UNIX epoch. If the conversion fails, fall back to 0.
+                    let timestamp_us = systemtime_to_micros(event.timestamp());
+
                     // value: 0 = release, 1 = press, 2 = repeat (ignored)
                     match value {
                         1 => {
                             // Key press
                             if let Some(keycode) = evdev_to_keycode(key.code()) {
-                                return Ok(KeyEvent::Press(keycode));
+                                return Ok(KeyEvent::press(keycode).with_timestamp(timestamp_us));
                             }
                             // Unknown key - continue reading for known keys
                         }
                         0 => {
                             // Key release
                             if let Some(keycode) = evdev_to_keycode(key.code()) {
-                                return Ok(KeyEvent::Release(keycode));
+                                return Ok(KeyEvent::release(keycode).with_timestamp(timestamp_us));
                             }
                             // Unknown key - continue reading for known keys
                         }
@@ -820,27 +837,21 @@ impl OutputDevice for UinputOutput {
             .as_mut()
             .ok_or_else(|| DeviceError::InjectionFailed("device has been destroyed".to_string()))?;
 
-        let key = match &event {
-            KeyEvent::Press(keycode) | KeyEvent::Release(keycode) => {
-                keycode_to_uinput_key(*keycode)
-            }
-        };
+        let keycode = event.keycode();
+        let key = keycode_to_uinput_key(keycode);
 
-        match &event {
-            KeyEvent::Press(keycode) => {
-                device.press(&key).map_err(|e| {
-                    DeviceError::InjectionFailed(format!("failed to press key: {}", e))
-                })?;
-                // Track this key as held
-                self.held_keys.insert(*keycode);
-            }
-            KeyEvent::Release(keycode) => {
-                device.release(&key).map_err(|e| {
-                    DeviceError::InjectionFailed(format!("failed to release key: {}", e))
-                })?;
-                // Remove from held keys
-                self.held_keys.remove(keycode);
-            }
+        if event.is_press() {
+            device
+                .press(&key)
+                .map_err(|e| DeviceError::InjectionFailed(format!("failed to press key: {}", e)))?;
+            // Track this key as held
+            self.held_keys.insert(keycode);
+        } else {
+            device.release(&key).map_err(|e| {
+                DeviceError::InjectionFailed(format!("failed to release key: {}", e))
+            })?;
+            // Remove from held keys
+            self.held_keys.remove(&keycode);
         }
 
         // Synchronize to ensure event is delivered immediately
@@ -895,6 +906,45 @@ mod tests {
             .open("/dev/uinput")
             .is_ok();
         uinput_ok && can_access_input_devices()
+    }
+
+    // ============================================
+    // Timestamp Conversion Tests
+    // ============================================
+
+    /// Test systemtime_to_micros with a known timestamp
+    #[test]
+    fn test_systemtime_to_micros_valid() {
+        use std::time::Duration;
+
+        // Create a SystemTime 1 second after UNIX epoch
+        let time = UNIX_EPOCH + Duration::from_secs(1);
+        let micros = systemtime_to_micros(time);
+        assert_eq!(micros, 1_000_000);
+
+        // Create a SystemTime 1.5 seconds after UNIX epoch
+        let time = UNIX_EPOCH + Duration::from_micros(1_500_000);
+        let micros = systemtime_to_micros(time);
+        assert_eq!(micros, 1_500_000);
+    }
+
+    /// Test systemtime_to_micros at UNIX epoch
+    #[test]
+    fn test_systemtime_to_micros_epoch() {
+        let micros = systemtime_to_micros(UNIX_EPOCH);
+        assert_eq!(micros, 0);
+    }
+
+    /// Test systemtime_to_micros with current time (should be non-zero)
+    #[test]
+    fn test_systemtime_to_micros_now() {
+        let now = SystemTime::now();
+        let micros = systemtime_to_micros(now);
+        // Should be a large number (billions of microseconds since 1970)
+        assert!(
+            micros > 1_000_000_000_000_000,
+            "Timestamp should be in reasonable range"
+        );
     }
 
     // ============================================

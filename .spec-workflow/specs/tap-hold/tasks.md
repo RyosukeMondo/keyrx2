@@ -76,7 +76,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 5.1_
   - _Prompt: Implement the task for spec tap-hold, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer with integration expertise | Task: Replace stubbed TapHold branch in process_event with actual TapHoldProcessor call in keyrx_core/src/runtime/event.rs | Restrictions: Maintain existing function signature, no breaking changes to other mapping types | Success: TapHold mappings now produce output events instead of empty vector | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts, then mark [x] when done_
 
-- [ ] 8. Pass timestamps from daemon to core
+- [x] 8. Pass timestamps from daemon to core
   - File: `keyrx_daemon/src/platform/linux.rs`
   - Extract timestamp from evdev event
   - Convert to microseconds and pass to KeyEvent

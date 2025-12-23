@@ -216,23 +216,16 @@ impl VirtualKeyboard {
             .as_mut()
             .ok_or_else(|| VirtualDeviceError::creation_failed("device has been destroyed"))?;
 
-        let key = match &event {
-            KeyEvent::Press(keycode) | KeyEvent::Release(keycode) => {
-                keycode_to_uinput_key(*keycode)
-            }
-        };
+        let key = keycode_to_uinput_key(event.keycode());
 
-        match &event {
-            KeyEvent::Press(_) => {
-                device.press(&key).map_err(|e| {
-                    VirtualDeviceError::Io(std::io::Error::other(format!("press failed: {}", e)))
-                })?;
-            }
-            KeyEvent::Release(_) => {
-                device.release(&key).map_err(|e| {
-                    VirtualDeviceError::Io(std::io::Error::other(format!("release failed: {}", e)))
-                })?;
-            }
+        if event.is_press() {
+            device.press(&key).map_err(|e| {
+                VirtualDeviceError::Io(std::io::Error::other(format!("press failed: {}", e)))
+            })?;
+        } else {
+            device.release(&key).map_err(|e| {
+                VirtualDeviceError::Io(std::io::Error::other(format!("release failed: {}", e)))
+            })?;
         }
 
         // Synchronize to ensure the event is delivered immediately
@@ -332,16 +325,16 @@ mod tests {
     fn test_tap_events_helper() {
         let events = VirtualKeyboard::tap_events(KeyCode::A);
         assert_eq!(events.len(), 2);
-        assert!(matches!(events[0], KeyEvent::Press(KeyCode::A)));
-        assert!(matches!(events[1], KeyEvent::Release(KeyCode::A)));
+        assert_eq!(events[0], KeyEvent::Press(KeyCode::A));
+        assert_eq!(events[1], KeyEvent::Release(KeyCode::A));
     }
 
     #[test]
     fn test_tap_events_modifier() {
         let events = VirtualKeyboard::tap_events(KeyCode::LShift);
         assert_eq!(events.len(), 2);
-        assert!(matches!(events[0], KeyEvent::Press(KeyCode::LShift)));
-        assert!(matches!(events[1], KeyEvent::Release(KeyCode::LShift)));
+        assert_eq!(events[0], KeyEvent::Press(KeyCode::LShift));
+        assert_eq!(events[1], KeyEvent::Release(KeyCode::LShift));
     }
 
     /// Test that device creation fails gracefully without uinput access

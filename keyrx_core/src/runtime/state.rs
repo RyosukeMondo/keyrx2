@@ -637,18 +637,22 @@ mod tests {
 
     #[test]
     fn test_tap_hold_processor_accessors() {
-        use crate::runtime::tap_hold::TapHoldConfig;
         use crate::config::KeyCode;
+        use crate::runtime::tap_hold::TapHoldConfig;
 
         let mut state = DeviceState::new();
 
         // Test mutable accessor - register a tap-hold config
         let config = TapHoldConfig::new(KeyCode::Escape, 0, 200_000);
-        let added = state.tap_hold_processor().register_tap_hold(KeyCode::CapsLock, config);
+        let added = state
+            .tap_hold_processor()
+            .register_tap_hold(KeyCode::CapsLock, config);
         assert!(added);
 
         // Test immutable accessor - verify the config was registered
-        assert!(state.tap_hold_processor_ref().is_tap_hold_key(KeyCode::CapsLock));
+        assert!(state
+            .tap_hold_processor_ref()
+            .is_tap_hold_key(KeyCode::CapsLock));
         assert!(!state.tap_hold_processor_ref().is_tap_hold_key(KeyCode::A));
     }
 }

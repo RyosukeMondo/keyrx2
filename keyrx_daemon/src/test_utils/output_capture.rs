@@ -679,9 +679,10 @@ impl EventAssertionResult {
 
 /// Formats a KeyEvent for display in assertion output.
 fn format_event(event: &KeyEvent) -> String {
-    match event {
-        KeyEvent::Press(key) => format!("Press({:?})", key),
-        KeyEvent::Release(key) => format!("Release({:?})", key),
+    if event.is_press() {
+        format!("Press({:?})", event.keycode())
+    } else {
+        format!("Release({:?})", event.keycode())
     }
 }
 
@@ -1261,17 +1262,17 @@ mod tests {
         assert_eq!(result.missing, 0);
 
         // Check the comparison details
-        assert!(matches!(
+        assert_eq!(
             result.comparisons[0],
             EventComparison::Match(KeyEvent::Press(KeyCode::A))
-        ));
-        assert!(matches!(
+        );
+        assert_eq!(
             result.comparisons[1],
             EventComparison::Mismatch {
                 captured: KeyEvent::Release(KeyCode::B),
                 expected: KeyEvent::Release(KeyCode::A),
             }
-        ));
+        );
     }
 
     #[test]
@@ -1291,14 +1292,14 @@ mod tests {
         assert_eq!(result.extras, 2);
         assert_eq!(result.missing, 0);
 
-        assert!(matches!(
+        assert_eq!(
             result.comparisons[2],
             EventComparison::Extra(KeyEvent::Press(KeyCode::B))
-        ));
-        assert!(matches!(
+        );
+        assert_eq!(
             result.comparisons[3],
             EventComparison::Extra(KeyEvent::Release(KeyCode::B))
-        ));
+        );
     }
 
     #[test]
@@ -1318,14 +1319,14 @@ mod tests {
         assert_eq!(result.extras, 0);
         assert_eq!(result.missing, 2);
 
-        assert!(matches!(
+        assert_eq!(
             result.comparisons[2],
             EventComparison::Missing(KeyEvent::Press(KeyCode::B))
-        ));
-        assert!(matches!(
+        );
+        assert_eq!(
             result.comparisons[3],
             EventComparison::Missing(KeyEvent::Release(KeyCode::B))
-        ));
+        );
     }
 
     #[test]
