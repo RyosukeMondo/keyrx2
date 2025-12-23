@@ -14,6 +14,7 @@ arrayvec = { workspace = true }
 serde = { workspace = true }
 bitvec = { workspace = true }
 hashbrown = { workspace = true }
+log = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

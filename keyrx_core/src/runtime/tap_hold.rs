@@ -25,6 +25,15 @@
 //!                   Release
 //! ```
 //!
+//! # Debug Logging
+//!
+//! This module includes trace-level logging for state transitions when compiled
+//! in debug mode (`cfg(debug_assertions)`). This logging is completely compiled
+//! out in release builds, ensuring zero runtime overhead in production.
+//!
+//! To see the logs, initialize a logger (e.g., `env_logger`) and set the log
+//! level to `trace`.
+//!
 //! # Example
 //!
 //! ```rust
@@ -42,6 +51,53 @@
 //! ```
 
 use arrayvec::ArrayVec;
+
+/// Logs a tap-hold state transition in debug builds.
+///
+/// This macro is a no-op in release builds to ensure zero overhead.
+#[cfg(debug_assertions)]
+macro_rules! log_transition {
+    ($key:expr, $old_state:expr, $new_state:expr, $elapsed_us:expr, $reason:expr) => {
+        log::trace!(
+            "tap-hold: {:?} {} -> {} (elapsed: {}us, reason: {})",
+            $key,
+            $old_state,
+            $new_state,
+            $elapsed_us,
+            $reason
+        );
+    };
+    ($key:expr, $old_state:expr, $new_state:expr, $reason:expr) => {
+        log::trace!(
+            "tap-hold: {:?} {} -> {} (reason: {})",
+            $key,
+            $old_state,
+            $new_state,
+            $reason
+        );
+    };
+}
+
+/// No-op in release builds.
+#[cfg(not(debug_assertions))]
+macro_rules! log_transition {
+    ($key:expr, $old_state:expr, $new_state:expr, $elapsed_us:expr, $reason:expr) => {};
+    ($key:expr, $old_state:expr, $new_state:expr, $reason:expr) => {};
+}
+
+/// Logs a tap-hold event in debug builds.
+#[cfg(debug_assertions)]
+macro_rules! log_event {
+    ($($arg:tt)*) => {
+        log::trace!($($arg)*);
+    };
+}
+
+/// No-op in release builds.
+#[cfg(not(debug_assertions))]
+macro_rules! log_event {
+    ($($arg:tt)*) => {};
+}
 
 use crate::config::KeyCode;
 
@@ -77,6 +133,23 @@ impl TapHoldPhase {
     /// Returns true if the phase is Hold.
     pub const fn is_hold(&self) -> bool {
         matches!(self, TapHoldPhase::Hold)
+    }
+
+    /// Returns the phase name as a static string.
+    ///
+    /// Used for logging and debugging purposes.
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            TapHoldPhase::Idle => "Idle",
+            TapHoldPhase::Pending => "Pending",
+            TapHoldPhase::Hold => "Hold",
+        }
+    }
+}
+
+impl core::fmt::Display for TapHoldPhase {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -289,8 +362,11 @@ impl TapHoldState {
             "transition_to_pending called from non-Idle phase: {:?}",
             self.phase
         );
+        #[cfg(debug_assertions)]
+        let old_phase = self.phase;
         self.phase = TapHoldPhase::Pending;
         self.press_time = timestamp;
+        log_transition!(self.key, old_phase, self.phase, "key pressed");
     }
 
     /// Transitions from Pending to Hold.
@@ -306,15 +382,26 @@ impl TapHoldState {
             "transition_to_hold called from non-Pending phase: {:?}",
             self.phase
         );
+        #[cfg(debug_assertions)]
+        let old_phase = self.phase;
         self.phase = TapHoldPhase::Hold;
+        log_transition!(
+            self.key,
+            old_phase,
+            self.phase,
+            "threshold exceeded or permissive hold"
+        );
     }
 
     /// Transitions back to Idle.
     ///
     /// Called on key release in any active phase.
     pub fn transition_to_idle(&mut self) {
+        #[cfg(debug_assertions)]
+        let old_phase = self.phase;
         self.phase = TapHoldPhase::Idle;
         self.press_time = 0;
+        log_transition!(self.key, old_phase, self.phase, "key released");
     }
 
     /// Resets the state to Idle.
@@ -793,8 +880,21 @@ impl<const N: usize> TapHoldProcessor<N> {
 
         // Check if already in pending registry (shouldn't happen, but handle gracefully)
         if self.pending.contains(key) {
+            log_event!(
+                "tap-hold: {:?} press ignored - already in pending registry",
+                key
+            );
             return outputs;
         }
+
+        log_event!(
+            "tap-hold: {:?} press at {}us, threshold={}us, tap={:?}, hold_mod={}",
+            key,
+            timestamp_us,
+            config.threshold_us(),
+            config.tap_key(),
+            config.hold_modifier()
+        );
 
         // Create new pending state and add to registry
         let mut state = TapHoldState::new(key, config);
@@ -803,6 +903,7 @@ impl<const N: usize> TapHoldProcessor<N> {
         if !self.pending.add(state) {
             // Registry full - caller should handle this as passthrough
             // No outputs, key will be handled as normal key
+            log_event!("tap-hold: {:?} registry full, treating as normal key", key);
         }
 
         outputs
@@ -835,9 +936,16 @@ impl<const N: usize> TapHoldProcessor<N> {
             return outputs;
         };
 
+        #[cfg(debug_assertions)]
+        let elapsed = state.elapsed(timestamp_us);
+
         match state.phase() {
             TapHoldPhase::Idle => {
                 // Shouldn't be in registry if Idle, but handle gracefully
+                log_event!(
+                    "tap-hold: {:?} release ignored - was in Idle phase (unexpected)",
+                    key
+                );
                 self.pending.remove(key);
             }
             TapHoldPhase::Pending => {
@@ -845,6 +953,12 @@ impl<const N: usize> TapHoldProcessor<N> {
                 if state.is_threshold_exceeded(timestamp_us) {
                     // Threshold exceeded during pending - this is a hold that wasn't detected
                     // Activate modifier briefly then deactivate (user held key but we didn't catch timeout)
+                    log_event!(
+                        "tap-hold: {:?} release after {}us (threshold {}us) -> late HOLD (missed timeout)",
+                        key,
+                        elapsed,
+                        state.threshold_us()
+                    );
                     let _ =
                         outputs.try_push(TapHoldOutput::activate_modifier(state.hold_modifier()));
                     let _ =
@@ -852,6 +966,13 @@ impl<const N: usize> TapHoldProcessor<N> {
                 } else {
                     // Quick release - this is a TAP
                     // Emit press and release of the tap key
+                    log_event!(
+                        "tap-hold: {:?} release after {}us (threshold {}us) -> TAP, emit {:?}",
+                        key,
+                        elapsed,
+                        state.threshold_us(),
+                        state.tap_key()
+                    );
                     let _ =
                         outputs.try_push(TapHoldOutput::key_press(state.tap_key(), timestamp_us));
                     let _ =
@@ -861,6 +982,12 @@ impl<const N: usize> TapHoldProcessor<N> {
             }
             TapHoldPhase::Hold => {
                 // Release from hold state - deactivate the modifier
+                log_event!(
+                    "tap-hold: {:?} release from Hold after {}us, deactivating modifier {}",
+                    key,
+                    elapsed,
+                    state.hold_modifier()
+                );
                 let _ = outputs.try_push(TapHoldOutput::deactivate_modifier(state.hold_modifier()));
                 self.pending.remove(key);
             }
@@ -891,6 +1018,12 @@ impl<const N: usize> TapHoldProcessor<N> {
         let timeouts = self.pending.check_timeouts(current_time);
 
         for timeout in timeouts {
+            log_event!(
+                "tap-hold: {:?} timeout at {}us -> HOLD, activating modifier {}",
+                timeout.key,
+                current_time,
+                timeout.hold_modifier
+            );
             let _ = outputs.try_push(TapHoldOutput::activate_modifier(timeout.hold_modifier));
         }
 
@@ -963,6 +1096,12 @@ impl<const N: usize> TapHoldProcessor<N> {
         let results = self.pending.trigger_permissive_hold();
 
         for result in results {
+            log_event!(
+                "tap-hold: {:?} permissive hold triggered by {:?}, activating modifier {}",
+                result.key,
+                key,
+                result.hold_modifier
+            );
             let _ = outputs.try_push(TapHoldOutput::activate_modifier(result.hold_modifier));
         }
 
