@@ -34,7 +34,7 @@
 
 ## Phase 2: State Machine Implementation
 
-- [ ] 4. Implement PendingKeyRegistry
+- [x] 4. Implement PendingKeyRegistry
   - File: `keyrx_core/src/runtime/tap_hold.rs` (extend)
   - Create PendingKeyRegistry<const N: usize> using ArrayVec
   - Implement add, remove, get, get_mut, iter methods
