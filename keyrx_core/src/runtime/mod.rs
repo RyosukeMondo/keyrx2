@@ -36,3 +36,7 @@ pub use clock::{Clock, SystemClock, VirtualClock};
 pub use event::{process_event, KeyEvent, KeyEventType};
 pub use lookup::KeyLookup;
 pub use state::DeviceState;
+pub use tap_hold::{
+    PendingKeyRegistry, TapHoldConfig, TapHoldPhase, TapHoldState, TimeoutResult,
+    DEFAULT_MAX_PENDING,
+};
