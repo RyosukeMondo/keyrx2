@@ -54,7 +54,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 3.1, 3.2_
   - _Prompt: Implement the task for spec tap-hold, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Developer with DFA/state machine expertise | Task: Implement TapHoldProcessor with process_event method handling all state transitions in keyrx_core/src/runtime/tap_hold.rs | Restrictions: Return ArrayVec of output events, integrate with DeviceState for modifier management | Success: All state transitions work correctly, output events match expected tap/hold behavior | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts, then mark [x] when done_
 
-- [ ] 6. Implement Permissive Hold logic
+- [x] 6. Implement Permissive Hold logic
   - File: `keyrx_core/src/runtime/tap_hold.rs` (extend)
   - Detect other key press while in Pending state
   - Immediately transition to Hold when interrupted
