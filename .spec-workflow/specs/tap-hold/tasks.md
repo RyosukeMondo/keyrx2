@@ -118,7 +118,7 @@
   - _Requirements: 3.1, 3.3_
   - _Prompt: Implement the task for spec tap-hold, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with keyboard behavior expertise | Task: Write unit tests for Permissive Hold behavior - interrupting key press immediately confirms Hold | Restrictions: Verify modifier state before processing interrupting key | Success: Permissive Hold works correctly in all tested scenarios | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts, then mark [x] when done_
 
-- [ ] 12. Integration tests with compiled configs
+- [-] 12. Integration tests with compiled configs
   - File: `keyrx_core/tests/tap_hold_integration.rs` (new file)
   - Compile example tap_hold config to .krx
   - Load config and process simulated events
