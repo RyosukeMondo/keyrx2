@@ -1169,6 +1169,21 @@ mod tests {
         assert!(TapHoldPhase::Hold.is_hold());
     }
 
+    #[test]
+    fn test_phase_as_str() {
+        assert_eq!(TapHoldPhase::Idle.as_str(), "Idle");
+        assert_eq!(TapHoldPhase::Pending.as_str(), "Pending");
+        assert_eq!(TapHoldPhase::Hold.as_str(), "Hold");
+    }
+
+    #[test]
+    fn test_phase_display() {
+        use alloc::format;
+        assert_eq!(format!("{}", TapHoldPhase::Idle), "Idle");
+        assert_eq!(format!("{}", TapHoldPhase::Pending), "Pending");
+        assert_eq!(format!("{}", TapHoldPhase::Hold), "Hold");
+    }
+
     // --- TapHoldConfig Tests ---
 
     #[test]
