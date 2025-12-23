@@ -1,11 +1,12 @@
 //! Device state management with bit vectors
 //!
 //! This module provides `DeviceState` for tracking modifier and lock state
-//! using efficient 255-bit vectors.
+//! using efficient 255-bit vectors, plus tap-hold processor state.
 
 use bitvec::prelude::*;
 
 use crate::config::{Condition, ConditionItem};
+use crate::runtime::tap_hold::{TapHoldProcessor, DEFAULT_MAX_PENDING};
 
 /// Maximum valid modifier/lock ID (0-254, ID 255 is reserved)
 const MAX_VALID_ID: u8 = 254;
@@ -32,6 +33,8 @@ pub struct DeviceState {
     modifiers: BitVec<u8, Lsb0>,
     /// Lock state (255 bits, IDs 0-254)
     locks: BitVec<u8, Lsb0>,
+    /// Tap-hold processor for dual-function keys
+    tap_hold: TapHoldProcessor<DEFAULT_MAX_PENDING>,
 }
 
 impl DeviceState {
@@ -48,6 +51,7 @@ impl DeviceState {
         Self {
             modifiers: bitvec![u8, Lsb0; 0; 255],
             locks: bitvec![u8, Lsb0; 0; 255],
+            tap_hold: TapHoldProcessor::new(),
         }
     }
 
@@ -257,6 +261,18 @@ impl DeviceState {
             ConditionItem::ModifierActive(id) => self.is_modifier_active(*id),
             ConditionItem::LockActive(id) => self.is_lock_active(*id),
         }
+    }
+
+    /// Returns a mutable reference to the tap-hold processor
+    ///
+    /// The processor manages the state machine for dual-function (tap-hold) keys.
+    pub fn tap_hold_processor(&mut self) -> &mut TapHoldProcessor<DEFAULT_MAX_PENDING> {
+        &mut self.tap_hold
+    }
+
+    /// Returns an immutable reference to the tap-hold processor
+    pub fn tap_hold_processor_ref(&self) -> &TapHoldProcessor<DEFAULT_MAX_PENDING> {
+        &self.tap_hold
     }
 }
 
@@ -617,5 +633,22 @@ mod tests {
                 assert!(state.is_lock_active(id3));
             }
         }
+    }
+
+    #[test]
+    fn test_tap_hold_processor_accessors() {
+        use crate::runtime::tap_hold::TapHoldConfig;
+        use crate::config::KeyCode;
+
+        let mut state = DeviceState::new();
+
+        // Test mutable accessor - register a tap-hold config
+        let config = TapHoldConfig::new(KeyCode::Escape, 0, 200_000);
+        let added = state.tap_hold_processor().register_tap_hold(KeyCode::CapsLock, config);
+        assert!(added);
+
+        // Test immutable accessor - verify the config was registered
+        assert!(state.tap_hold_processor_ref().is_tap_hold_key(KeyCode::CapsLock));
+        assert!(!state.tap_hold_processor_ref().is_tap_hold_key(KeyCode::A));
     }
 }

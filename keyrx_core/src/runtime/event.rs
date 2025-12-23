@@ -9,6 +9,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use crate::config::KeyCode;
+use crate::runtime::tap_hold::{TapHoldConfig, TapHoldOutput};
 use crate::runtime::{DeviceState, KeyLookup};
 
 /// Type of keyboard event (press or release)
@@ -185,13 +186,30 @@ pub fn process_event(
     // Look up the mapping for this key
     let mapping = lookup.find_mapping(event.keycode(), state);
 
+    // Check for permissive hold: if this is a press event and there are pending
+    // tap-hold keys, we need to trigger permissive hold BEFORE processing this key.
+    // This ensures the modifier is active when this key is processed.
+    let mut prefix_events = Vec::new();
+    if event.is_press() {
+        // Check if any tap-hold keys are pending and this isn't a tap-hold key itself
+        let is_tap_hold_key = matches!(mapping, Some(BaseKeyMapping::TapHold { .. }));
+        if !is_tap_hold_key && state.tap_hold_processor_ref().has_pending_keys() {
+            // Trigger permissive hold for all pending keys
+            let outputs = state
+                .tap_hold_processor()
+                .process_other_key_press(event.keycode());
+            prefix_events = convert_tap_hold_outputs(outputs, state, event.timestamp_us());
+        }
+    }
+
     // If no mapping found, pass through the original event
     let Some(mapping) = mapping else {
-        return alloc::vec![event];
+        prefix_events.push(event);
+        return prefix_events;
     };
 
     // Process the mapping based on its type
-    match mapping {
+    let mut result = match mapping {
         BaseKeyMapping::Simple { to, .. } => {
             // Simple remapping: replace keycode while preserving Press/Release and timestamp
             alloc::vec![event.with_keycode(*to)]
@@ -212,9 +230,29 @@ pub fn process_event(
             }
             Vec::new()
         }
-        BaseKeyMapping::TapHold { .. } => {
-            // TODO: TapHold deferred to advanced-input-logic spec
-            Vec::new()
+        BaseKeyMapping::TapHold {
+            from,
+            tap,
+            hold_modifier,
+            threshold_ms,
+        } => {
+            // Register the tap-hold configuration if not already registered
+            let processor = state.tap_hold_processor();
+            if !processor.is_tap_hold_key(*from) {
+                let config = TapHoldConfig::from_ms(*tap, *hold_modifier, *threshold_ms);
+                processor.register_tap_hold(*from, config);
+            }
+
+            // Process the event through the tap-hold processor
+            let timestamp = event.timestamp_us();
+            let outputs = if event.is_press() {
+                processor.process_press(*from, timestamp)
+            } else {
+                processor.process_release(*from, timestamp)
+            };
+
+            // Convert TapHoldOutput to KeyEvent and apply state changes
+            convert_tap_hold_outputs(outputs, state, timestamp)
         }
         BaseKeyMapping::ModifiedOutput {
             to,
@@ -264,7 +302,53 @@ pub fn process_event(
 
             events
         }
+    };
+
+    // Prepend prefix events (from permissive hold) to the result
+    if !prefix_events.is_empty() {
+        prefix_events.append(&mut result);
+        prefix_events
+    } else {
+        result
     }
+}
+
+/// Converts TapHoldOutput events to KeyEvents and applies state changes
+///
+/// This helper handles the conversion of tap-hold processor outputs:
+/// - KeyEvent outputs are converted to KeyEvent structs
+/// - Modifier activation/deactivation updates DeviceState
+fn convert_tap_hold_outputs(
+    outputs: arrayvec::ArrayVec<TapHoldOutput, 4>,
+    state: &mut DeviceState,
+    _timestamp: u64,
+) -> Vec<KeyEvent> {
+    let mut events = Vec::new();
+
+    for output in outputs {
+        match output {
+            TapHoldOutput::KeyEvent {
+                key,
+                is_press,
+                timestamp_us,
+            } => {
+                let event = if is_press {
+                    KeyEvent::press(key).with_timestamp(timestamp_us)
+                } else {
+                    KeyEvent::release(key).with_timestamp(timestamp_us)
+                };
+                events.push(event);
+            }
+            TapHoldOutput::ActivateModifier { modifier_id } => {
+                state.set_modifier(modifier_id);
+            }
+            TapHoldOutput::DeactivateModifier { modifier_id } => {
+                state.clear_modifier(modifier_id);
+            }
+        }
+    }
+
+    events
 }
 
 #[cfg(test)]
@@ -761,6 +845,118 @@ mod tests {
 
         let release = KeyEvent::release(KeyCode::A);
         assert_eq!(release.event_type(), KeyEventType::Release);
+    }
+
+    // --- Tap-Hold Integration Tests ---
+
+    #[test]
+    fn test_process_event_tap_hold_tap_behavior() {
+        // Test TapHold mapping: quick press and release produces tap key
+        // CapsLock: tap=Escape, hold=modifier 0, threshold=200ms
+        let config = create_test_config(vec![KeyMapping::tap_hold(
+            KeyCode::CapsLock,
+            KeyCode::Escape,
+            0,
+            200, // 200ms threshold
+        )]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Press CapsLock at t=0
+        let input_press = KeyEvent::press(KeyCode::CapsLock).with_timestamp(0);
+        let output = process_event(input_press, &lookup, &mut state);
+        assert!(
+            output.is_empty(),
+            "Press should produce no output (pending)"
+        );
+
+        // Quick release at t=100ms (under 200ms threshold) - this is a TAP
+        let input_release = KeyEvent::release(KeyCode::CapsLock).with_timestamp(100_000);
+        let output = process_event(input_release, &lookup, &mut state);
+        assert_eq!(
+            output.len(),
+            2,
+            "Tap should produce press+release of tap key"
+        );
+        assert_eq!(output[0].keycode(), KeyCode::Escape);
+        assert!(output[0].is_press());
+        assert_eq!(output[1].keycode(), KeyCode::Escape);
+        assert!(output[1].is_release());
+    }
+
+    #[test]
+    fn test_process_event_tap_hold_hold_behavior() {
+        // Test TapHold: hold past threshold, then release
+        let config = create_test_config(vec![KeyMapping::tap_hold(
+            KeyCode::CapsLock,
+            KeyCode::Escape,
+            0,
+            200, // 200ms threshold
+        )]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Press CapsLock at t=0
+        let input_press = KeyEvent::press(KeyCode::CapsLock).with_timestamp(0);
+        let _ = process_event(input_press, &lookup, &mut state);
+
+        // Simulate timeout check (would be called by daemon)
+        // For now, we test the "delayed hold" behavior: release after threshold
+        // Release at t=300ms (over 200ms threshold)
+        let input_release = KeyEvent::release(KeyCode::CapsLock).with_timestamp(300_000);
+        let output = process_event(input_release, &lookup, &mut state);
+
+        // Should activate and immediately deactivate the hold modifier
+        // (since we didn't call check_timeouts, the release handles the delayed hold)
+        assert!(
+            output.is_empty(),
+            "Hold release should produce no key events"
+        );
+        // The modifier state should be clean (activated then deactivated)
+        assert!(
+            !state.is_modifier_active(0),
+            "Modifier should be inactive after release"
+        );
+    }
+
+    #[test]
+    fn test_process_event_tap_hold_permissive_hold() {
+        // Test Permissive Hold: press tap-hold key, then press another key
+        let config = create_test_config(vec![
+            KeyMapping::tap_hold(
+                KeyCode::CapsLock,
+                KeyCode::Escape,
+                0,
+                200, // 200ms threshold
+            ),
+            KeyMapping::simple(KeyCode::A, KeyCode::B),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Press CapsLock at t=0 (enters pending state)
+        let input_press = KeyEvent::press(KeyCode::CapsLock).with_timestamp(0);
+        let _ = process_event(input_press, &lookup, &mut state);
+        assert!(!state.is_modifier_active(0), "Modifier not active yet");
+
+        // Press A at t=50ms (before threshold) - should trigger permissive hold
+        let input_a = KeyEvent::press(KeyCode::A).with_timestamp(50_000);
+        let output = process_event(input_a, &lookup, &mut state);
+
+        // Modifier should now be active (permissive hold triggered)
+        assert!(
+            state.is_modifier_active(0),
+            "Modifier should be active after permissive hold"
+        );
+
+        // Output should include the remapped key (A -> B)
+        // The B event should come after permissive hold activation
+        assert!(
+            output
+                .iter()
+                .any(|e| e.keycode() == KeyCode::B && e.is_press()),
+            "Should output Press(B)"
+        );
     }
 
     // Property-based tests using proptest
