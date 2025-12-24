@@ -1144,7 +1144,7 @@ mod tests {
         assert!(!state.is_modifier_active(0), "Modifier still not active");
 
         // Check timeouts at t=250ms (after threshold) - should trigger hold
-        let timeout_events = check_tap_hold_timeouts(250_000, &mut state);
+        let _timeout_events = check_tap_hold_timeouts(250_000, &mut state);
         assert!(
             state.is_modifier_active(0),
             "Modifier should be active after timeout"

@@ -230,7 +230,6 @@ fn handle_record(
 
     // Setup signal handler
     let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
 
     // We can't use signal-hook simple registration because we are in a loop.
     // We'll check the flag.
