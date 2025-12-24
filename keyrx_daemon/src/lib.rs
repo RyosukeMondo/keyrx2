@@ -7,7 +7,7 @@
 pub mod test_utils;
 
 pub mod config_loader;
-#[cfg(feature = "linux")]
+#[cfg(any(feature = "linux", feature = "windows"))]
 pub mod daemon;
 pub mod device_manager;
 pub mod platform;

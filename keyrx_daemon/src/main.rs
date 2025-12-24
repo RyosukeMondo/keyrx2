@@ -92,10 +92,10 @@ mod exit_codes {
     /// Configuration error (file not found, parse error).
     pub const CONFIG_ERROR: i32 = 1;
     /// Permission error (cannot access devices, cannot create uinput).
-    #[cfg(feature = "linux")]
+    #[cfg(any(feature = "linux", feature = "windows"))]
     pub const PERMISSION_ERROR: i32 = 2;
     /// Runtime error (device disconnected with no fallback).
-    #[cfg(feature = "linux")]
+    #[cfg(any(feature = "linux", feature = "windows"))]
     pub const RUNTIME_ERROR: i32 = 3;
 }
 
@@ -146,12 +146,112 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
     Ok(())
 }
 
-#[cfg(not(feature = "linux"))]
+#[cfg(feature = "windows")]
+fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, String)> {
+    use keyrx_daemon::daemon::Daemon;
+    use keyrx_daemon::platform::windows::tray::{TrayControlEvent, TrayIconController};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE, WM_QUIT,
+    };
+
+    // Initialize logging
+    init_logging(debug);
+
+    log::info!(
+        "Starting keyrx daemon (Windows) with config: {}",
+        config_path.display()
+    );
+
+    // Create the daemon
+    let mut daemon = Daemon::new(config_path).map_err(daemon_error_to_exit)?;
+
+    // Create the tray icon
+    let tray = TrayIconController::new()
+        .map_err(|e| (exit_codes::RUNTIME_ERROR, format!("Tray error: {}", e)))?;
+
+    // Check for administrative privileges
+    if !is_admin() {
+        log::warn!("Daemon is not running with administrative privileges. Key remapping may not work for elevated applications.");
+    }
+
+    log::info!("Daemon initialized. Running message loop...");
+
+    // Windows low-level hooks REQUIRE a message loop on the thread that installed them.
+    // Our Daemon::new() calls grab() which installs the hook.
+    unsafe {
+        let mut msg: MSG = std::mem::zeroed();
+        loop {
+            // Process ALL available messages
+            while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
+                if msg.message == WM_QUIT {
+                    return Ok(());
+                }
+
+                TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+
+            // Process daemon events (active remapping)
+            if let Err(e) = daemon.process_pending_events() {
+                log::error!("Error processing events: {}", e);
+            }
+
+            // Poll tray events
+            if let Some(event) = tray.poll_event() {
+                match event {
+                    TrayControlEvent::Reload => {
+                        log::info!("Reloading config...");
+                        let _ = daemon.reload();
+                    }
+                    TrayControlEvent::Exit => {
+                        log::info!("Exiting...");
+                        return Ok(());
+                    }
+                }
+            }
+
+            // Small sleep to prevent 100% CPU usage
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+    }
+}
+
+#[cfg(feature = "windows")]
+fn is_admin() -> bool {
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows_sys::Win32::Security::{
+        GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY,
+    };
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+
+    unsafe {
+        let mut token: HANDLE = std::ptr::null_mut();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+            return false;
+        }
+
+        let mut elevation: TOKEN_ELEVATION = std::mem::zeroed();
+        let mut size = std::mem::size_of::<TOKEN_ELEVATION>() as u32;
+
+        let result = GetTokenInformation(
+            token,
+            TokenElevation,
+            &mut elevation as *mut _ as *mut _,
+            size,
+            &mut size,
+        );
+
+        CloseHandle(token);
+        result != 0 && elevation.TokenIsElevated != 0
+    }
+}
+
+#[cfg(not(any(feature = "linux", feature = "windows")))]
 fn handle_run(_config_path: &std::path::Path, _debug: bool) -> Result<(), (i32, String)> {
     Err((
         exit_codes::CONFIG_ERROR,
-        "The 'run' command is only available on Linux. \
-         Build with --features linux to enable."
+        "The 'run' command is only available on Linux and Windows. \
+         Build with --features linux or --features windows to enable."
             .to_string(),
     ))
 }
@@ -575,7 +675,7 @@ fn handle_validate(_config_path: &std::path::Path) -> Result<(), (i32, String)> 
 }
 
 /// Initializes the logging system.
-#[cfg(feature = "linux")]
+#[cfg(any(feature = "linux", feature = "windows"))]
 fn init_logging(debug: bool) {
     use env_logger::Builder;
     use log::LevelFilter;
@@ -593,7 +693,7 @@ fn init_logging(debug: bool) {
 }
 
 /// Converts a DaemonError to an exit code and message.
-#[cfg(feature = "linux")]
+#[cfg(any(feature = "linux", feature = "windows"))]
 fn daemon_error_to_exit(error: keyrx_daemon::daemon::DaemonError) -> (i32, String) {
     use keyrx_daemon::daemon::DaemonError;
 

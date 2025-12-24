@@ -17,9 +17,71 @@ use crate::platform::DeviceError;
 
 #[cfg(feature = "linux")]
 mod linux;
+#[cfg(feature = "windows")]
+mod windows;
 
 #[cfg(feature = "linux")]
-pub use linux::{enumerate_keyboards, match_device, DeviceManager, ManagedDevice, RefreshResult};
+pub use linux::{enumerate_keyboards, DeviceManager, ManagedDevice, RefreshResult};
+#[cfg(feature = "windows")]
+pub use windows::{DeviceManager, ManagedDevice, RefreshResult};
+
+/// Matches a device against a pattern string.
+pub fn match_device(device: &KeyboardInfo, pattern: &str) -> bool {
+    // Wildcard pattern matches everything
+    if pattern == "*" {
+        return true;
+    }
+
+    // Check for prefix pattern (ends with *)
+    if let Some(prefix) = pattern.strip_suffix('*') {
+        let prefix_lower = prefix.to_lowercase();
+
+        // Match against device name
+        if device.name.to_lowercase().starts_with(&prefix_lower) {
+            return true;
+        }
+
+        // Match against serial if available
+        if let Some(ref serial) = device.serial {
+            if serial.to_lowercase().starts_with(&prefix_lower) {
+                return true;
+            }
+        }
+
+        // Match against physical path if available
+        if let Some(ref phys) = device.phys {
+            if phys.to_lowercase().starts_with(&prefix_lower) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Exact match (case-insensitive)
+    let pattern_lower = pattern.to_lowercase();
+
+    // Match against device name
+    if device.name.to_lowercase() == pattern_lower {
+        return true;
+    }
+
+    // Match against serial if available
+    if let Some(ref serial) = device.serial {
+        if serial.to_lowercase() == pattern_lower {
+            return true;
+        }
+    }
+
+    // Match against physical path if available
+    if let Some(ref phys) = device.phys {
+        if phys.to_lowercase() == pattern_lower {
+            return true;
+        }
+    }
+
+    false
+}
 
 /// Errors that can occur during device discovery.
 #[derive(Debug, thiserror::Error)]

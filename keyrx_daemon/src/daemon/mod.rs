@@ -38,27 +38,36 @@
 //! ```
 
 use std::io;
+#[cfg(feature = "linux")]
 use std::os::fd::{AsRawFd, BorrowedFd};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+#[cfg(feature = "linux")]
+use std::time::{Duration, Instant};
+use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 use log::{debug, info, trace, warn};
+#[cfg(feature = "linux")]
 use nix::poll::{poll, PollFd, PollFlags};
 
 use crate::config_loader::{load_config, ConfigError};
 use crate::device_manager::DeviceManager;
+#[cfg(feature = "linux")]
 use crate::platform::linux::UinputOutput;
 use crate::platform::{DeviceError, InputDevice, OutputDevice};
 use keyrx_core::runtime::event::{check_tap_hold_timeouts, process_event};
 
 #[cfg(feature = "linux")]
 mod linux;
+#[cfg(feature = "windows")]
+mod windows;
 
 #[cfg(feature = "linux")]
 pub use linux::{install_signal_handlers, SignalHandler};
+#[cfg(feature = "windows")]
+pub use windows::{install_signal_handlers, SignalHandler};
 
 /// Returns the current time in microseconds since UNIX epoch.
 ///
@@ -329,7 +338,10 @@ pub struct Daemon {
     device_manager: DeviceManager,
 
     /// Virtual keyboard for output injection.
+    #[cfg(feature = "linux")]
     output: UinputOutput,
+    #[cfg(feature = "windows")]
+    output: crate::platform::windows::output::WindowsKeyboardOutput,
 
     /// Running flag for event loop control.
     running: Arc<AtomicBool>,
@@ -404,9 +416,12 @@ impl Daemon {
             device_manager.device_count()
         );
 
-        // Step 3: Create uinput virtual keyboard
+        // Step 3: Create virtual keyboard
         info!("Creating virtual keyboard...");
+        #[cfg(feature = "linux")]
         let output = UinputOutput::create("keyrx Virtual Keyboard")?;
+        #[cfg(feature = "windows")]
+        let output = crate::platform::windows::output::WindowsKeyboardOutput::new();
         info!("Virtual keyboard created");
 
         // Step 4: Install signal handlers
@@ -459,12 +474,23 @@ impl Daemon {
 
     /// Returns a reference to the output device.
     #[must_use]
+    #[cfg(feature = "linux")]
     pub fn output(&self) -> &UinputOutput {
+        &self.output
+    }
+    #[must_use]
+    #[cfg(feature = "windows")]
+    pub fn output(&self) -> &crate::platform::windows::output::WindowsKeyboardOutput {
         &self.output
     }
 
     /// Returns a mutable reference to the output device.
+    #[cfg(feature = "linux")]
     pub fn output_mut(&mut self) -> &mut UinputOutput {
+        &mut self.output
+    }
+    #[cfg(feature = "windows")]
+    pub fn output_mut(&mut self) -> &mut crate::platform::windows::output::WindowsKeyboardOutput {
         &mut self.output
     }
 
@@ -608,6 +634,8 @@ impl Daemon {
     /// println!("Daemon stopped gracefully");
     /// # Ok::<(), keyrx_daemon::daemon::DaemonError>(())
     /// ```
+    /// Blocks until a shutdown signal is received.
+    #[cfg(feature = "linux")]
     pub fn run(&mut self) -> Result<(), DaemonError> {
         info!("Starting event processing loop");
 
@@ -681,9 +709,9 @@ impl Daemon {
     }
 
     /// Grabs exclusive access to all managed input devices.
-    ///
     /// This prevents other applications from receiving keyboard events
     /// from these devices, which is essential for key remapping.
+    #[cfg(feature = "linux")]
     fn grab_all_devices(&mut self) -> Result<(), DaemonError> {
         info!(
             "Grabbing {} input device(s)...",
@@ -706,6 +734,8 @@ impl Daemon {
     ///
     /// Returns a vector of device indices that have events ready to read.
     /// Uses a 100ms timeout to allow periodic signal checking.
+    /// Uses a 100ms timeout to allow periodic signal checking.
+    #[cfg(feature = "linux")]
     fn poll_devices(&self) -> Result<Vec<usize>, DaemonError> {
         // Collect raw file descriptors from all devices
         let raw_fds: Vec<i32> = self
@@ -752,6 +782,46 @@ impl Daemon {
 
         trace!("Poll returned {} ready device(s)", ready_indices.len());
         Ok(ready_indices)
+    }
+
+    /// Processes all pending events from all devices.
+    ///
+    /// On Windows, this is called from the main message loop.
+    #[cfg(feature = "windows")]
+    pub fn process_pending_events(&mut self) -> Result<(), DaemonError> {
+        // Check for tap-hold timeouts
+        if let Err(e) = self.check_tap_hold_timeouts() {
+            log::error!("Error checking tap-hold timeouts: {}", e);
+        }
+
+        // Process events from all devices
+        for device_idx in 0..self.device_manager.device_count() {
+            let mut device_events = Vec::new();
+
+            // Collect all currently available events (non-blocking)
+            {
+                let device = self.device_manager.get_device_mut(device_idx).unwrap();
+                while let Ok(event) = device.input_mut().next_event() {
+                    device_events.push(event);
+                }
+            }
+
+            // Process collected events
+            for event in device_events {
+                let device = self.device_manager.get_device_mut(device_idx).unwrap();
+                let (lookup, state) = device.lookup_and_state_mut();
+
+                let output_events = process_event(event, lookup, state);
+
+                for out_event in output_events {
+                    self.output.inject_event(out_event).map_err(|e| {
+                        DaemonError::RuntimeError(format!("failed to inject event: {}", e))
+                    })?;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Performs graceful shutdown of the daemon.
@@ -836,6 +906,7 @@ impl Daemon {
     /// Processes all available events from a single device.
     ///
     /// Returns the number of events processed.
+    #[cfg(feature = "linux")]
     fn process_device_events(&mut self, device_idx: usize) -> Result<usize, DaemonError> {
         let mut processed_count = 0;
 

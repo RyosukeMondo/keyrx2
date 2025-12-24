@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2024-12-24
+## [0.1.0] - 2024-12-25
+
+### Added
+
+#### Windows Platform Integration
+
+- **Low-level Keyboard Hook Capture**
+  - Implemented `WH_KEYBOARD_LL` hook for transparent event interception
+  - Suppression of injected events to prevent infinite remapping loops
+  - Bidirectional KeyCode mapping for Windows Virtual Key (VK) codes
+  - Thread-safe event routing via crossbeam-channel
+- **Event Injection**
+  - `SendInput` API integration for synthetic key event delivery
+  - Correct handling of extended keys and modifier ordering
+- **System Tray Interface**
+  - Native system tray icon for daemon control
+  - Context menu for "Reload Config" and "Exit" actions
+  - Event loop integration for responsive UI updates
+- **Windows Message Loop**
+  - Required Win32 message loop on the main thread for hook processing
+  - Clean integration with the existing daemon architecture
+- **Documentation**
+  - [docs/user-guide/windows-setup.md](docs/user-guide/windows-setup.md) - Windows installation and usage guide
 
 ### Changed
 

@@ -3,7 +3,7 @@
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL%203.0+-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![Platform: Linux](https://img.shields.io/badge/Linux-Supported-green.svg)](docs/user-guide/linux-setup.md)
-[![Platform: Windows](https://img.shields.io/badge/Windows-Planned-yellow.svg)](#platform-support)
+[![Platform: Windows](https://img.shields.io/badge/Windows-Supported-green.svg)](docs/user-guide/windows-setup.md)
 
 **Advanced keyboard remapping with layer support, tap-hold behavior, and conditional mappings.**
 
@@ -136,7 +136,21 @@ sudo ./target/release/keyrx_daemon run --config my-config.krx
 
 For non-root operation and systemd integration, see the [Linux Setup Guide](docs/user-guide/linux-setup.md).
 
-### 6. Test in Browser (Optional)
+### 6. Run the Daemon (Windows)
+
+Build and run the daemon:
+
+```powershell
+# Build the daemon with windows feature
+cargo build --release -p keyrx_daemon --features windows
+
+# Run the daemon with your configuration
+.\target\release\keyrx_daemon.exe run --config my-config.krx
+```
+
+The daemon will appear in your system tray. You can right-click the icon to reload the configuration or exit the application. For more details, see the [Windows Setup Guide](docs/user-guide/windows-setup.md).
+
+### 7. Test in Browser (Optional)
 
 You can also test configurations in the browser using the WASM simulator:
 
@@ -153,6 +167,7 @@ Then open http://localhost:5173 and load your `.krx` file.
 
 - **[DSL Manual](docs/user-guide/dsl-manual.md)** - Complete reference for the KeyRx DSL with syntax, functions, and examples
 - **[Linux Setup Guide](docs/user-guide/linux-setup.md)** - Linux installation, permissions, and systemd integration
+- **[Windows Setup Guide](docs/user-guide/windows-setup.md)** - Windows installation, tray icon usage, and troubleshooting
 - **[Examples](examples/)** - Six example configurations from basic to advanced
 - **[Compiler README](keyrx_compiler/README.md)** - CLI commands and usage
 - **[Core README](keyrx_core/README.md)** - Architecture and library API
@@ -468,10 +483,12 @@ Modified events
 - Comprehensive setup guide: [docs/user-guide/linux-setup.md](docs/user-guide/linux-setup.md)
 - Tested on Ubuntu 20.04+, Arch Linux, Fedora
 
-### Windows ⚠️ Planned
-- Low-level keyboard hooks implementation in progress
-- Current implementation is a stub (not functional)
-- Contributions welcome!
+### Windows ✅ Supported
+- **Low-level Keyboard Hooks** for input capture and suppression
+- **SendInput API** for output injection
+- **System Tray Icon** for daemon control (Reload, Exit)
+- Comprehensive setup guide: [docs/user-guide/windows-setup.md](docs/user-guide/windows-setup.md)
+- Tested on Windows 10 and Windows 11
 
 ### macOS ❌ Not Planned
 - Not currently on the roadmap
