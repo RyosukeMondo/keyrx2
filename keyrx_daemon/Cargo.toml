@@ -10,7 +10,7 @@ repository.workspace = true
 default = ["web"]
 linux = ["dep:evdev", "dep:uinput", "dep:nix", "dep:signal-hook"]
 windows = ["dep:windows-sys"]
-web = ["dep:axum", "dep:tower-http", "dep:tokio", "dep:serde", "dep:serde_json"]
+web = ["dep:axum", "dep:tower-http", "dep:tokio"]
 
 [dependencies]
 keyrx_core = { path = "../keyrx_core" }
@@ -40,8 +40,9 @@ windows-sys = { version = "0.59", features = ["Win32_UI_Input_KeyboardAndMouse",
 axum = { version = "0.7", optional = true }
 tower-http = { version = "0.6", features = ["fs", "cors"], optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
-serde = { version = "1.0", features = ["derive"], optional = true }
-serde_json = { version = "1.0", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+humantime = "2.3.0"
 
 [dev-dependencies]
 tempfile = "3.14"

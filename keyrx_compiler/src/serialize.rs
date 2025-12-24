@@ -203,7 +203,8 @@ pub fn deserialize(bytes: &[u8]) -> Result<&rkyv::Archived<ConfigRoot>, Deserial
 mod tests {
     use super::*;
     use keyrx_core::config::{
-        DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping, Metadata, Version,
+        mappings::BaseKeyMapping, Condition, ConditionItem, DeviceConfig, DeviceIdentifier,
+        KeyCode, KeyMapping, Metadata, Version,
     };
 
     fn create_test_config() -> ConfigRoot {
@@ -356,5 +357,89 @@ mod tests {
         assert_eq!(KRX_MAGIC, [0x4B, 0x52, 0x58, 0x0A]);
         assert_eq!(KRX_VERSION, 1);
         assert_eq!(HEADER_SIZE, 48);
+    }
+
+    /// Test serialization roundtrip for conditional ModifiedOutput mapping
+    /// (the reported bug scenario: MD_00 + Y -> Ctrl+Z)
+    #[test]
+    fn test_round_trip_conditional_modified_output() {
+        let config = ConfigRoot {
+            version: Version::current(),
+            devices: vec![DeviceConfig {
+                identifier: DeviceIdentifier {
+                    pattern: "Test Device".to_string(),
+                },
+                mappings: vec![
+                    KeyMapping::modifier(KeyCode::CapsLock, 0),
+                    KeyMapping::conditional(
+                        Condition::AllActive(vec![ConditionItem::ModifierActive(0)]),
+                        vec![BaseKeyMapping::ModifiedOutput {
+                            from: KeyCode::Y,
+                            to: KeyCode::Z,
+                            shift: false,
+                            ctrl: true,
+                            alt: false,
+                            win: false,
+                        }],
+                    ),
+                ],
+            }],
+            metadata: Metadata {
+                compilation_timestamp: 1234567890,
+                compiler_version: "1.0.0".to_string(),
+                source_hash: "test_hash".to_string(),
+            },
+        };
+
+        // Serialize
+        let bytes = serialize(&config).expect("Serialization failed");
+
+        // Deserialize
+        let archived = deserialize(&bytes).expect("Deserialization failed");
+
+        // Verify data matches
+        assert_eq!(archived.devices.len(), 1);
+        assert_eq!(archived.devices[0].mappings.len(), 2);
+
+        // Verify the conditional mapping with ModifiedOutput
+        match &archived.devices[0].mappings[1] {
+            rkyv::Archived::<KeyMapping>::Conditional {
+                condition,
+                mappings,
+            } => {
+                // Check condition
+                match condition {
+                    rkyv::Archived::<Condition>::AllActive(items) => {
+                        assert_eq!(items.len(), 1);
+                        match &items[0] {
+                            rkyv::Archived::<ConditionItem>::ModifierActive(id) => {
+                                assert_eq!(*id, 0);
+                            }
+                            _ => panic!("Expected ModifierActive"),
+                        }
+                    }
+                    _ => panic!("Expected AllActive condition"),
+                }
+
+                // Check mapping
+                assert_eq!(mappings.len(), 1);
+                match &mappings[0] {
+                    rkyv::Archived::<BaseKeyMapping>::ModifiedOutput {
+                        shift,
+                        ctrl,
+                        alt,
+                        win,
+                        ..
+                    } => {
+                        assert!(!shift);
+                        assert!(*ctrl, "Ctrl should be true - this is the bug!");
+                        assert!(!alt);
+                        assert!(!win);
+                    }
+                    _ => panic!("Expected ModifiedOutput mapping"),
+                }
+            }
+            _ => panic!("Expected Conditional mapping"),
+        }
     }
 }

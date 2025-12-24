@@ -67,6 +67,22 @@ enum Commands {
         #[arg(short, long, value_name = "FILE")]
         config: PathBuf,
     },
+
+    /// Record input events from a device to a file for replay testing.
+    ///
+    /// Captures raw input events, converts them to KeyEvents, and saves them
+    /// to a JSON file. This file can be used to reproduce bugs or verify behavior
+    /// in the test infrastructure.
+    Record {
+        /// Path to the output JSON file.
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Path to the input device (e.g., /dev/input/event0).
+        /// If not provided, lists devices and exits.
+        #[arg(short, long)]
+        device: Option<PathBuf>,
+    },
 }
 
 /// Exit codes following Unix conventions.
@@ -90,6 +106,7 @@ fn main() {
         Commands::Run { config, debug } => handle_run(&config, debug),
         Commands::ListDevices => handle_list_devices(),
         Commands::Validate { config } => handle_validate(&config),
+        Commands::Record { output, device } => handle_record(&output, device.as_deref()),
     };
 
     match result {
@@ -134,6 +151,228 @@ fn handle_run(_config_path: &std::path::Path, _debug: bool) -> Result<(), (i32, 
     Err((
         exit_codes::CONFIG_ERROR,
         "The 'run' command is only available on Linux. \
+         Build with --features linux to enable."
+            .to_string(),
+    ))
+}
+
+/// Handles the `record` subcommand.
+#[cfg(feature = "linux")]
+fn handle_record(
+    output_path: &std::path::Path,
+    device_path: Option<&std::path::Path>,
+) -> Result<(), (i32, String)> {
+    use keyrx_daemon::platform::linux::evdev_to_keycode;
+    use serde::{Deserialize, Serialize};
+    use std::fs::File;
+    use std::io::Write;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use std::time::SystemTime;
+
+    // If no device provided, list devices and return
+    let Some(device_path) = device_path else {
+        println!("No input device specified.");
+        println!("Please choose a device from the list below and run:");
+        println!(
+            "  sudo keyrx_daemon record --output {} --device <PATH>",
+            output_path.display()
+        );
+        println!();
+        return handle_list_devices();
+    };
+
+    println!("Preparing to record from: {}", device_path.display());
+
+    // Open the device
+    let mut device = evdev::Device::open(device_path).map_err(|e| {
+        (
+            exit_codes::PERMISSION_ERROR,
+            format!("Failed to open device {}: {}", device_path.display(), e),
+        )
+    })?;
+
+    // Grab the device to prevent interference (optional, maybe we want non-exclusive?)
+    // Spec says: "non-exclusive grab, so the daemon still works".
+    // But if the daemon is running, it will grab it exclusively!
+    // So we assume the daemon is NOT running when we record raw events?
+    // Or we record from the daemon's input?
+    // "User runs recorder: sudo keyrx_daemon record ..."
+    // If the daemon is running, we can't open it if it grabbed it.
+    // So the daemon must be stopped.
+    // Therefore, grabbing it here is fine/good to prevent other inputs.
+    // However, if we grab it, the OS won't receive keys, so the user can't do anything (like reproduce the bug in an app)!
+    // CRITICAL: We must NOT grab the device if we want the user to interact with the OS.
+    // BUT if we don't grab, and keyrx_daemon is NOT running, the OS gets raw events (QWERTY).
+    // If the user wants to reproduce a bug in their LAYOUT, they need the daemon RUNNING.
+    //
+    // Re-reading spec: "Recorder Component... non-exclusive grab".
+    // If the daemon is running, it has an EXCLUSIVE grab. We cannot open it even for reading usually?
+    // `evdev` allows multiple readers if no one has grabbed it?
+    //
+    // Scenario 1: Reproduce a bug in the *Daemon's processing*.
+    // The user runs the daemon. We want to capture what the daemon sees.
+    // If the daemon is running, we can't easily snoop on `/dev/input/eventX` if it's grabbed.
+    //
+    // Scenario 2: Record a sequence to feed into tests.
+    // The user stops the daemon. Runs `record`. Types keys. The OS sees raw keys (wrong layout).
+    // The user types the *physical* keys that trigger the bug.
+    // This is valid. The user physically presses keys. We record them.
+    // Later, the test runner feeds these physical keys to the daemon logic.
+    //
+    // Conclusion: `record` mode assumes daemon is STOPPED. It does NOT grab the device (so user can see what they type, albeit unmapped, or maybe they type blindly/use on-screen keyboard).
+    // Actually, if they type unmapped, it might trigger system shortcuts.
+    // Best practice: Do NOT grab.
+    // Warning: "Ensure keyrx_daemon is stopped before recording."
+
+    println!("Recording started. Press Ctrl+C to stop.");
+    println!("Warning: Ensure keyrx_daemon is stopped.");
+
+    // Setup signal handler
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+
+    // We can't use signal-hook simple registration because we are in a loop.
+    // We'll check the flag.
+    // Need to register signal handler.
+    // signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&running)) ...
+    // But keyrx_daemon/Cargo.toml has signal-hook as dependency.
+    // Let's use simple generic ctrl-c handler or signal-hook.
+
+    // Using a crate-agnostic way or signal-hook since it's available.
+    if let Err(e) = signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&running)) {
+        eprintln!("Failed to register signal handler: {}", e);
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct Metadata {
+        version: String,
+        timestamp: String,
+        device_name: String,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct Recording {
+        metadata: Metadata,
+        events: Vec<keyrx_core::runtime::KeyEvent>,
+    }
+
+    let mut captured_events = Vec::new();
+    let start_time = std::time::Instant::now();
+
+    // Event loop
+    while running.load(Ordering::SeqCst) {
+        // Non-blocking read or read with timeout?
+        // evdev crate `fetch_events` is blocking by default?
+        // It uses `read`. We can use `nix::poll` (as in EvdevInput) or just blocking read if we handle signals.
+        // But blocking read won't return on SIGINT immediately unless it gets EINTR.
+        // Let's rely on standard read returning.
+
+        match device.fetch_events() {
+            Ok(iterator) => {
+                for ev in iterator {
+                    // Filter for key events
+                    if ev.event_type() == evdev::EventType::KEY {
+                        let code = ev.code();
+                        let value = ev.value(); // 0=Release, 1=Press, 2=Repeat
+
+                        if value == 2 {
+                            continue;
+                        } // Ignore repeats for now
+
+                        if let Some(keycode) = evdev_to_keycode(code) {
+                            let event_type = if value == 1 {
+                                keyrx_core::runtime::KeyEventType::Press
+                            } else {
+                                keyrx_core::runtime::KeyEventType::Release
+                            };
+
+                            // Calculate relative time
+                            let timestamp_us = start_time.elapsed().as_micros() as u64;
+
+                            let key_event =
+                                keyrx_core::runtime::KeyEvent::press(keycode) // Type fixed below
+                                    .with_timestamp(timestamp_us);
+
+                            // Construct properly with correct type
+                            let final_event =
+                                if event_type == keyrx_core::runtime::KeyEventType::Press {
+                                    key_event // Default is press
+                                } else {
+                                    keyrx_core::runtime::KeyEvent::release(keycode)
+                                        .with_timestamp(timestamp_us)
+                                };
+
+                            print!("\rCaptured: {:?}     ", final_event.keycode());
+                            std::io::stdout().flush().ok();
+
+                            captured_events.push(final_event);
+                        }
+                    }
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {
+                // Signal received
+                break;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                // Should not happen in blocking mode
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            Err(e) => {
+                eprintln!("\nError reading device: {}", e);
+                break;
+            }
+        }
+    }
+
+    println!(
+        "\nRecording stopped. Saving {} events...",
+        captured_events.len()
+    );
+
+    let recording = Recording {
+        metadata: Metadata {
+            version: "1.0".to_string(),
+            timestamp: humantime::format_rfc3339(SystemTime::now()).to_string(),
+            device_name: device.name().unwrap_or("Unknown").to_string(),
+        },
+        events: captured_events,
+    };
+
+    let json = serde_json::to_string_pretty(&recording).map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to serialize recording: {}", e),
+        )
+    })?;
+
+    let mut file = File::create(output_path).map_err(|e| {
+        (
+            exit_codes::PERMISSION_ERROR,
+            format!("Failed to create output file: {}", e),
+        )
+    })?;
+
+    file.write_all(json.as_bytes()).map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to write to file: {}", e),
+        )
+    })?;
+
+    println!("Saved to {}", output_path.display());
+    Ok(())
+}
+
+#[cfg(not(feature = "linux"))]
+fn handle_record(
+    _output: &std::path::Path,
+    _device: Option<&std::path::Path>,
+) -> Result<(), (i32, String)> {
+    Err((
+        exit_codes::CONFIG_ERROR,
+        "The 'record' command is only available on Linux. \
          Build with --features linux to enable."
             .to_string(),
     ))

@@ -193,6 +193,25 @@ pub fn keycode_to_uinput_key(keycode: KeyCode) -> Keyboard {
         KeyCode::Copy => Keyboard::Misc(Misc::Copy),
         KeyCode::Paste => Keyboard::Misc(Misc::Paste),
         KeyCode::Find => Keyboard::Misc(Misc::Find),
+
+        // Japanese JIS keyboard keys (日本語キーボード)
+        // Note: uinput may not have direct support for all Japanese keys,
+        // fallback to raw key injection via evdev codes in platform layer
+        KeyCode::Zenkaku => Keyboard::Misc(Misc::ZenkakuHankaku),
+        KeyCode::Katakana => Keyboard::Misc(Misc::Katakana),
+        KeyCode::Hiragana => Keyboard::Misc(Misc::Hiragana),
+        KeyCode::Henkan => Keyboard::Misc(Misc::Henkan),
+        KeyCode::Muhenkan => Keyboard::Misc(Misc::Muhenkan),
+        KeyCode::Yen => Keyboard::Misc(Misc::Yen),
+        KeyCode::Ro => Keyboard::Misc(Misc::RO),
+        KeyCode::KatakanaHiragana => Keyboard::Misc(Misc::KatakanaHiragana),
+
+        // Korean keyboard keys (한국어 키보드)
+        KeyCode::Hangeul => Keyboard::Misc(Misc::Hangeul),
+        KeyCode::Hanja => Keyboard::Misc(Misc::Hanja),
+
+        // ISO/European keyboard keys
+        KeyCode::Iso102nd => Keyboard::Misc(Misc::ND102),
     }
 }
 
@@ -391,6 +410,23 @@ pub fn evdev_to_keycode(code: u16) -> Option<KeyCode> {
         Key::KEY_PASTE => Some(KeyCode::Paste),
         Key::KEY_FIND => Some(KeyCode::Find),
 
+        // Japanese JIS keyboard keys (日本語キーボード)
+        Key::KEY_ZENKAKUHANKAKU => Some(KeyCode::Zenkaku),
+        Key::KEY_KATAKANA => Some(KeyCode::Katakana),
+        Key::KEY_HIRAGANA => Some(KeyCode::Hiragana),
+        Key::KEY_HENKAN => Some(KeyCode::Henkan),
+        Key::KEY_MUHENKAN => Some(KeyCode::Muhenkan),
+        Key::KEY_YEN => Some(KeyCode::Yen),
+        Key::KEY_RO => Some(KeyCode::Ro),
+        Key::KEY_KATAKANAHIRAGANA => Some(KeyCode::KatakanaHiragana),
+
+        // Korean keyboard keys (한국어 키보드)
+        Key::KEY_HANGEUL => Some(KeyCode::Hangeul),
+        Key::KEY_HANJA => Some(KeyCode::Hanja),
+
+        // ISO/European keyboard keys
+        Key::KEY_102ND => Some(KeyCode::Iso102nd),
+
         // Unknown key - return None for passthrough handling
         _ => None,
     }
@@ -583,6 +619,23 @@ pub fn keycode_to_evdev(keycode: KeyCode) -> u16 {
         KeyCode::Copy => Key::KEY_COPY.code(),
         KeyCode::Paste => Key::KEY_PASTE.code(),
         KeyCode::Find => Key::KEY_FIND.code(),
+
+        // Japanese JIS keyboard keys (日本語キーボード)
+        KeyCode::Zenkaku => Key::KEY_ZENKAKUHANKAKU.code(),
+        KeyCode::Katakana => Key::KEY_KATAKANA.code(),
+        KeyCode::Hiragana => Key::KEY_HIRAGANA.code(),
+        KeyCode::Henkan => Key::KEY_HENKAN.code(),
+        KeyCode::Muhenkan => Key::KEY_MUHENKAN.code(),
+        KeyCode::Yen => Key::KEY_YEN.code(),
+        KeyCode::Ro => Key::KEY_RO.code(),
+        KeyCode::KatakanaHiragana => Key::KEY_KATAKANAHIRAGANA.code(),
+
+        // Korean keyboard keys (한국어 키보드)
+        KeyCode::Hangeul => Key::KEY_HANGEUL.code(),
+        KeyCode::Hanja => Key::KEY_HANJA.code(),
+
+        // ISO/European keyboard keys
+        KeyCode::Iso102nd => Key::KEY_102ND.code(),
     }
 }
 

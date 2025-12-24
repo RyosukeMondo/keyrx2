@@ -10,6 +10,7 @@ pub mod compile;
 pub mod hash;
 pub mod parse;
 pub mod verify;
+pub mod view;
 
 // Re-export handler functions for easy access
 #[allow(unused_imports)]

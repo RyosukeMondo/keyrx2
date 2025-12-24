@@ -63,6 +63,20 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+
+    /// Generate HTML visualization of key mappings
+    View {
+        /// Input Rhai configuration file
+        input: PathBuf,
+
+        /// Output HTML file (defaults to input file with .html extension)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Open in browser after generation
+        #[arg(long)]
+        open: bool,
+    },
 }
 
 fn main() {
@@ -96,6 +110,18 @@ fn main() {
         }
         Commands::Parse { input, json } => {
             cli::parse::handle_parse(&input, json).map_err(|e| e.to_string())
+        }
+        Commands::View {
+            input,
+            output,
+            open,
+        } => {
+            let output_path = output.unwrap_or_else(|| {
+                let mut path = input.clone();
+                path.set_extension("html");
+                path
+            });
+            cli::view::handle_view(&input, &output_path, open).map_err(|e| e.to_string())
         }
     };
 

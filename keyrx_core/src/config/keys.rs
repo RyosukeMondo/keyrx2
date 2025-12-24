@@ -192,6 +192,34 @@ pub enum KeyCode {
     Copy = 0x297,
     Paste = 0x298,
     Find = 0x299,
+
+    // Japanese JIS keyboard keys (0x300+)
+    // 全角/半角 (Zenkaku/Hankaku) - IME toggle
+    Zenkaku = 0x300,
+    // カタカナ (Katakana mode)
+    Katakana = 0x301,
+    // ひらがな (Hiragana mode)
+    Hiragana = 0x302,
+    // 変換 (Henkan) - IME conversion
+    Henkan = 0x303,
+    // 無変換 (Muhenkan) - IME non-conversion
+    Muhenkan = 0x304,
+    // ¥ (Yen key)
+    Yen = 0x305,
+    // ろ (Ro key) - JIS backslash position
+    Ro = 0x306,
+    // カタカナ/ひらがな toggle
+    KatakanaHiragana = 0x307,
+
+    // Korean keyboard keys (0x310+)
+    // 한글 (Hangeul/Hangul) - Korean input toggle
+    Hangeul = 0x310,
+    // 한자 (Hanja) - Chinese character input
+    Hanja = 0x311,
+
+    // ISO/European keyboard keys (0x320+)
+    // Extra key between left shift and Z on ISO keyboards
+    Iso102nd = 0x320,
 }
 
 #[cfg(test)]

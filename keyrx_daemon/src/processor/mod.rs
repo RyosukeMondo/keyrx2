@@ -342,4 +342,75 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(processor.output.events().len(), 0);
     }
+
+    /// Test conditional mapping with ModifiedOutput (the reported bug scenario).
+    /// When MD_00 is active: Y -> Ctrl+Z
+    #[test]
+    fn test_process_one_conditional_modified_output() {
+        let config = create_test_config(vec![
+            KeyMapping::modifier(KeyCode::CapsLock, 0),
+            KeyMapping::conditional(
+                Condition::AllActive(vec![ConditionItem::ModifierActive(0)]),
+                vec![BaseKeyMapping::ModifiedOutput {
+                    from: KeyCode::Y,
+                    to: KeyCode::Z,
+                    shift: false,
+                    ctrl: true,
+                    alt: false,
+                    win: false,
+                }],
+            ),
+        ]);
+
+        let input = MockInput::new(vec![
+            KeyEvent::Press(KeyCode::CapsLock),
+            KeyEvent::Press(KeyCode::Y),
+            KeyEvent::Release(KeyCode::Y),
+            KeyEvent::Release(KeyCode::CapsLock),
+        ]);
+        let output = MockOutput::new();
+
+        let mut processor = EventProcessor::new(&config, input, output);
+
+        // Process CapsLock press - should activate modifier
+        processor.process_one().unwrap();
+        assert_eq!(processor.output.events().len(), 0);
+        assert!(processor.state.is_modifier_active(0));
+
+        // Process Y press - should output LCtrl press + Z press
+        processor.process_one().unwrap();
+        assert_eq!(
+            processor.output.events().len(),
+            2,
+            "Expected 2 events: LCtrl press + Z press"
+        );
+        assert_eq!(
+            processor.output.events()[0],
+            KeyEvent::Press(KeyCode::LCtrl),
+            "First should be LCtrl press"
+        );
+        assert_eq!(
+            processor.output.events()[1],
+            KeyEvent::Press(KeyCode::Z),
+            "Second should be Z press"
+        );
+
+        // Process Y release - should output Z release + LCtrl release
+        processor.process_one().unwrap();
+        assert_eq!(
+            processor.output.events().len(),
+            4,
+            "Expected 4 events total after release"
+        );
+        assert_eq!(
+            processor.output.events()[2],
+            KeyEvent::Release(KeyCode::Z),
+            "Third should be Z release"
+        );
+        assert_eq!(
+            processor.output.events()[3],
+            KeyEvent::Release(KeyCode::LCtrl),
+            "Fourth should be LCtrl release"
+        );
+    }
 }

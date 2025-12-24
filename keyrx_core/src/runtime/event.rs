@@ -11,9 +11,10 @@ use alloc::vec::Vec;
 use crate::config::KeyCode;
 use crate::runtime::tap_hold::{TapHoldConfig, TapHoldOutput};
 use crate::runtime::{DeviceState, KeyLookup};
+use serde::{Deserialize, Serialize};
 
 /// Type of keyboard event (press or release)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum KeyEventType {
     /// Key press event
     Press,
@@ -43,7 +44,7 @@ pub enum KeyEventType {
 /// let press = KeyEvent::Press(KeyCode::A);
 /// let release = KeyEvent::Release(KeyCode::A);
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct KeyEvent {
     /// The type of event (press or release)
     event_type: KeyEventType,
@@ -190,6 +191,7 @@ pub fn process_event(
     // tap-hold keys, we need to trigger permissive hold BEFORE processing this key.
     // This ensures the modifier is active when this key is processed.
     let mut prefix_events = Vec::new();
+    let mut permissive_hold_triggered = false;
     if event.is_press() {
         // Check if any tap-hold keys are pending and this isn't a tap-hold key itself
         let is_tap_hold_key = matches!(mapping, Some(BaseKeyMapping::TapHold { .. }));
@@ -198,9 +200,23 @@ pub fn process_event(
             let outputs = state
                 .tap_hold_processor()
                 .process_other_key_press(event.keycode());
+
+            if !outputs.is_empty() {
+                permissive_hold_triggered = true;
+            }
             prefix_events = convert_tap_hold_outputs(outputs, state, event.timestamp_us());
         }
     }
+
+    // If permissive hold changed the state (e.g. activated a modifier), we need to
+    // look up the mapping again to ensure we use the layer that was just activated.
+    // This fixes the bug where fast typing (permissive hold) would use the base layer
+    // mapping instead of the conditional layer mapping.
+    let mapping = if permissive_hold_triggered {
+        lookup.find_mapping(event.keycode(), state)
+    } else {
+        mapping
+    };
 
     // If no mapping found, pass through the original event
     let Some(mapping) = mapping else {
@@ -772,6 +788,108 @@ mod tests {
     }
 
     #[test]
+    fn test_process_event_conditional_with_modified_output() {
+        // Test conditional ModifiedOutput: when(MD_00): Y -> Ctrl+Z
+        // This is the bug report case: modifier keys not applied in when clauses
+        let config = create_test_config(vec![
+            // CapsLock activates MD_00
+            KeyMapping::modifier(KeyCode::CapsLock, 0),
+            // when(MD_00): Y -> Ctrl+Z
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::ModifiedOutput {
+                    from: KeyCode::Y,
+                    to: KeyCode::Z,
+                    shift: false,
+                    ctrl: true,
+                    alt: false,
+                    win: false,
+                }],
+            ),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Activate modifier MD_00
+        let _ = process_event(KeyEvent::Press(KeyCode::CapsLock), &lookup, &mut state);
+        assert!(state.is_modifier_active(0));
+
+        // Press Y with modifier active - should output Ctrl+Z (LCtrl press, then Z press)
+        let output = process_event(KeyEvent::Press(KeyCode::Y), &lookup, &mut state);
+        assert_eq!(output.len(), 2, "Expected 2 events: LCtrl press + Z press");
+        assert_eq!(
+            output[0],
+            KeyEvent::Press(KeyCode::LCtrl),
+            "First should be LCtrl press"
+        );
+        assert_eq!(
+            output[1],
+            KeyEvent::Press(KeyCode::Z),
+            "Second should be Z press"
+        );
+
+        // Release Y - should output Z release, then LCtrl release
+        let output = process_event(KeyEvent::Release(KeyCode::Y), &lookup, &mut state);
+        assert_eq!(
+            output.len(),
+            2,
+            "Expected 2 events: Z release + LCtrl release"
+        );
+        assert_eq!(
+            output[0],
+            KeyEvent::Release(KeyCode::Z),
+            "First should be Z release"
+        );
+        assert_eq!(
+            output[1],
+            KeyEvent::Release(KeyCode::LCtrl),
+            "Second should be LCtrl release"
+        );
+    }
+
+    #[test]
+    fn test_process_event_conditional_with_modified_output_all_mods() {
+        // Test conditional ModifiedOutput with all modifiers: when(MD_00): A -> Ctrl+Alt+Shift+Win+B
+        let config = create_test_config(vec![
+            KeyMapping::modifier(KeyCode::CapsLock, 0),
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::ModifiedOutput {
+                    from: KeyCode::A,
+                    to: KeyCode::B,
+                    shift: true,
+                    ctrl: true,
+                    alt: true,
+                    win: true,
+                }],
+            ),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Activate modifier
+        state.set_modifier(0);
+
+        // Press A - should output all modifiers then B
+        let output = process_event(KeyEvent::Press(KeyCode::A), &lookup, &mut state);
+        assert_eq!(output.len(), 5, "Expected 5 events: 4 modifiers + key");
+        assert_eq!(output[0], KeyEvent::Press(KeyCode::LShift));
+        assert_eq!(output[1], KeyEvent::Press(KeyCode::LCtrl));
+        assert_eq!(output[2], KeyEvent::Press(KeyCode::LAlt));
+        assert_eq!(output[3], KeyEvent::Press(KeyCode::LMeta));
+        assert_eq!(output[4], KeyEvent::Press(KeyCode::B));
+
+        // Release A - should release in reverse order
+        let output = process_event(KeyEvent::Release(KeyCode::A), &lookup, &mut state);
+        assert_eq!(output.len(), 5);
+        assert_eq!(output[0], KeyEvent::Release(KeyCode::B));
+        assert_eq!(output[1], KeyEvent::Release(KeyCode::LMeta));
+        assert_eq!(output[2], KeyEvent::Release(KeyCode::LAlt));
+        assert_eq!(output[3], KeyEvent::Release(KeyCode::LCtrl));
+        assert_eq!(output[4], KeyEvent::Release(KeyCode::LShift));
+    }
+
+    #[test]
     fn test_keyevent_keycode_helper() {
         // Test KeyEvent::keycode() helper method
         let press = KeyEvent::Press(KeyCode::A);
@@ -1045,6 +1163,140 @@ mod tests {
         assert!(
             timeout_events.is_empty(),
             "Should be empty with no pending keys"
+        );
+    }
+
+    /// CRITICAL BUG TEST: Conditional mapping with base layer ModifiedOutput
+    ///
+    /// Scenario (user's actual bug):
+    /// - Base layer: Num2 -> S+7 (Shift+7)
+    /// - MD_00 layer: Num2 -> Left
+    /// - MD_00 is activated via TapHold on CapsLock
+    ///
+    /// When user holds CapsLock (tap-hold pending) and presses Num2:
+    /// - Expected: Left arrow (conditional mapping takes precedence)
+    /// - Bug: Shift+Left (base layer's Shift leaks through)
+    ///
+    /// Root cause: Mapping lookup happens BEFORE permissive hold activates the modifier
+    #[test]
+    fn test_tap_hold_permissive_hold_with_conditional_vs_base_modified_output() {
+        // Setup: TapHold for MD_00, base ModifiedOutput, conditional Simple
+        let config = create_test_config(vec![
+            // CapsLock: tap=Escape, hold=MD_00
+            KeyMapping::tap_hold(KeyCode::CapsLock, KeyCode::Escape, 0, 200),
+            // Base layer: Num2 -> Shift+7 (ModifiedOutput)
+            KeyMapping::modified_output(
+                KeyCode::Num2,
+                KeyCode::Num7,
+                true,  // shift
+                false, // ctrl
+                false, // alt
+                false, // win
+            ),
+            // MD_00 layer: Num2 -> Left (Simple, should take precedence when MD_00 active)
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::Num2,
+                    to: KeyCode::Left,
+                }],
+            ),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Step 1: Press CapsLock at t=0 (enters pending state)
+        let output = process_event(
+            KeyEvent::press(KeyCode::CapsLock).with_timestamp(0),
+            &lookup,
+            &mut state,
+        );
+        assert!(output.is_empty(), "TapHold press should produce no output");
+        assert!(
+            !state.is_modifier_active(0),
+            "MD_00 should not be active yet (pending)"
+        );
+
+        // Step 2: Press Num2 at t=50ms (triggers permissive hold)
+        // CRITICAL: This should output Left, NOT Shift+7
+        let output = process_event(
+            KeyEvent::press(KeyCode::Num2).with_timestamp(50_000),
+            &lookup,
+            &mut state,
+        );
+
+        // After permissive hold, MD_00 should be active
+        assert!(
+            state.is_modifier_active(0),
+            "MD_00 should be active after permissive hold"
+        );
+
+        // THE CRITICAL ASSERTION: Should output just Left, not Shift+7
+        // If this fails, the bug is confirmed
+        assert_eq!(
+            output.len(),
+            1,
+            "Should output 1 event (Left), got {} events: {:?}",
+            output.len(),
+            output
+        );
+        assert_eq!(
+            output[0].keycode(),
+            KeyCode::Left,
+            "Should output Left, not Shift+7. Got: {:?}",
+            output[0]
+        );
+        assert!(output[0].is_press(), "Should be Press event");
+
+        // Verify NO Shift key was emitted
+        let has_shift = output.iter().any(|e| e.keycode() == KeyCode::LShift);
+        assert!(
+            !has_shift,
+            "Shift should NOT be in output! Base layer ModifiedOutput leaked through"
+        );
+    }
+
+    /// Test that conditional mapping is selected AFTER permissive hold activates modifier
+    #[test]
+    fn test_permissive_hold_activates_before_lookup() {
+        let config = create_test_config(vec![
+            // TapHold: CapsLock -> MD_00
+            KeyMapping::tap_hold(KeyCode::CapsLock, KeyCode::Escape, 0, 200),
+            // Conditional: when(MD_00): A -> B
+            KeyMapping::conditional(
+                Condition::ModifierActive(0),
+                vec![BaseKeyMapping::Simple {
+                    from: KeyCode::A,
+                    to: KeyCode::B,
+                }],
+            ),
+        ]);
+        let lookup = KeyLookup::from_device_config(&config);
+        let mut state = DeviceState::new();
+
+        // Press CapsLock (pending)
+        let _ = process_event(
+            KeyEvent::press(KeyCode::CapsLock).with_timestamp(0),
+            &lookup,
+            &mut state,
+        );
+
+        // Press A - should trigger permissive hold AND use conditional mapping
+        let output = process_event(
+            KeyEvent::press(KeyCode::A).with_timestamp(50_000),
+            &lookup,
+            &mut state,
+        );
+
+        // Modifier should be active
+        assert!(state.is_modifier_active(0));
+
+        // Should output B (conditional mapping), not A (passthrough)
+        assert_eq!(output.len(), 1);
+        assert_eq!(
+            output[0].keycode(),
+            KeyCode::B,
+            "Should use conditional mapping after permissive hold activates MD_00"
         );
     }
 

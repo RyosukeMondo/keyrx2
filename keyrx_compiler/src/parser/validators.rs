@@ -274,6 +274,31 @@ fn get_all_key_names() -> Vec<&'static str> {
         "Copy",
         "Paste",
         "Find",
+        // Japanese JIS keyboard keys
+        "Zenkaku",
+        "全角",
+        "半角",
+        "Katakana",
+        "カタカナ",
+        "Hiragana",
+        "ひらがな",
+        "Henkan",
+        "変換",
+        "Muhenkan",
+        "無変換",
+        "Yen",
+        "円",
+        "Ro",
+        "ろ",
+        "KatakanaHiragana",
+        // Korean keyboard keys
+        "Hangeul",
+        "Hangul",
+        "한글",
+        "Hanja",
+        "한자",
+        // ISO keyboard keys
+        "Iso102nd",
     ]
 }
 
@@ -495,6 +520,31 @@ pub fn parse_key_name(name: &str) -> Result<KeyCode, ParseError> {
         "Copy" => KeyCode::Copy,
         "Paste" => KeyCode::Paste,
         "Find" => KeyCode::Find,
+        // Japanese JIS keyboard keys (日本語キーボード)
+        // 全角/半角 (Zenkaku/Hankaku) - IME toggle
+        "Zenkaku" | "全角" | "半角" | "ZenkakuHankaku" => KeyCode::Zenkaku,
+        // カタカナ (Katakana mode)
+        "Katakana" | "カタカナ" => KeyCode::Katakana,
+        // ひらがな (Hiragana mode)
+        "Hiragana" | "ひらがな" => KeyCode::Hiragana,
+        // 変換 (Henkan) - IME conversion
+        "Henkan" | "変換" | "Convert" => KeyCode::Henkan,
+        // 無変換 (Muhenkan) - IME non-conversion
+        "Muhenkan" | "無変換" | "NonConvert" => KeyCode::Muhenkan,
+        // ¥ (Yen key)
+        "Yen" | "円" | "¥" => KeyCode::Yen,
+        // ろ (Ro key) - JIS backslash position
+        "Ro" | "ろ" => KeyCode::Ro,
+        // カタカナ/ひらがな toggle
+        "KatakanaHiragana" | "カタカナひらがな" => KeyCode::KatakanaHiragana,
+        // Korean keyboard keys (한국어 키보드)
+        // 한글 (Hangeul/Hangul) - Korean input toggle
+        "Hangeul" | "Hangul" | "한글" => KeyCode::Hangeul,
+        // 한자 (Hanja) - Chinese character input
+        "Hanja" | "한자" => KeyCode::Hanja,
+        // ISO/European keyboard keys
+        // Extra key between left shift and Z on ISO keyboards
+        "Iso102nd" | "102nd" => KeyCode::Iso102nd,
         _ => {
             // Generate suggestions for unknown key name
             let suggestions = find_suggestions(name);
