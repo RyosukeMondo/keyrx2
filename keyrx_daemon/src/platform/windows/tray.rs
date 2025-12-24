@@ -1,23 +1,30 @@
+//! Windows system tray implementation using the `tray-icon` crate.
+//!
+//! This module provides a Windows-specific implementation of the [`SystemTray`] trait,
+//! allowing the KeyRx daemon to display a system tray icon with Reload and Exit menu items.
+
 use crossbeam_channel::Receiver;
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     Icon, TrayIcon, TrayIconBuilder,
 };
 
-#[allow(dead_code)]
-fn load_icon(bytes: &[u8]) -> Result<Icon, Box<dyn std::error::Error>> {
-    let image = image::load_from_memory(bytes)?.into_rgba8();
+use crate::platform::{SystemTray, TrayControlEvent, TrayError};
+
+/// Loads an icon from PNG bytes.
+fn load_icon(bytes: &[u8]) -> Result<Icon, TrayError> {
+    let image = image::load_from_memory(bytes)
+        .map_err(|e| TrayError::IconLoadFailed(e.to_string()))?
+        .into_rgba8();
     let (width, height) = image.dimensions();
     let rgba = image.into_raw();
-    Icon::from_rgba(rgba, width, height).map_err(|e| e.into())
+    Icon::from_rgba(rgba, width, height).map_err(|e| TrayError::IconLoadFailed(e.to_string()))
 }
 
-#[allow(dead_code)]
-pub enum TrayControlEvent {
-    Reload,
-    Exit,
-}
-
+/// Windows system tray controller.
+///
+/// Wraps the `tray-icon` crate to provide a native Windows tray icon with menu.
+/// Implements [`SystemTray`] for cross-platform compatibility.
 #[allow(dead_code)]
 pub struct TrayIconController {
     _tray_icon: TrayIcon,
@@ -26,14 +33,15 @@ pub struct TrayIconController {
     exit_id: String,
 }
 
-impl TrayIconController {
-    #[allow(dead_code)]
-    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+impl SystemTray for TrayIconController {
+    fn new() -> Result<Self, TrayError> {
         let tray_menu = Menu::new();
         let reload_item = MenuItem::new("Reload Config", true, None);
         let exit_item = MenuItem::new("Exit", true, None);
 
-        tray_menu.append_items(&[&reload_item, &PredefinedMenuItem::separator(), &exit_item])?;
+        tray_menu
+            .append_items(&[&reload_item, &PredefinedMenuItem::separator(), &exit_item])
+            .map_err(|e| TrayError::Other(e.to_string()))?;
 
         let reload_id = reload_item.id().0.clone();
         let exit_id = exit_item.id().0.clone();
@@ -45,7 +53,8 @@ impl TrayIconController {
             .with_menu(Box::new(tray_menu))
             .with_tooltip("KeyRx Daemon")
             .with_icon(icon)
-            .build()?;
+            .build()
+            .map_err(|e| TrayError::Other(e.to_string()))?;
 
         let menu_receiver = MenuEvent::receiver().clone();
 
@@ -57,8 +66,7 @@ impl TrayIconController {
         })
     }
 
-    #[allow(dead_code)]
-    pub fn poll_event(&self) -> Option<TrayControlEvent> {
+    fn poll_event(&self) -> Option<TrayControlEvent> {
         if let Ok(event) = self.menu_receiver.try_recv() {
             if event.id.0 == self.reload_id {
                 return Some(TrayControlEvent::Reload);
@@ -67,5 +75,11 @@ impl TrayIconController {
             }
         }
         None
+    }
+
+    fn shutdown(&mut self) -> Result<(), TrayError> {
+        // tray-icon automatically cleans up when TrayIcon is dropped.
+        // No explicit shutdown logic needed.
+        Ok(())
     }
 }
