@@ -3,8 +3,10 @@
   "title": "Tap-Hold Tasks Document",
   "filePath": ".spec-workflow/specs/tap-hold/tasks.md",
   "type": "document",
-  "status": "pending",
+  "status": "approved",
   "createdAt": "2025-12-23T04:32:35.054Z",
   "category": "spec",
-  "categoryName": "tap-hold"
+  "categoryName": "tap-hold",
+  "response": "ダッシュボードから承認",
+  "respondedAt": "2025-12-24T14:50:13.325Z"
 }

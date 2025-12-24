@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/linux-system-tray-multi-device/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-24T16:44:22.179Z",
+      "trigger": "initial",
+      "approvalId": "approval_1766594662174_560ntdusg",
+      "approvalTitle": "Linux System Tray + Multi-Device Tasks"
+    }
+  ]
+}
