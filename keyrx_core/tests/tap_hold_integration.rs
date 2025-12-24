@@ -248,8 +248,8 @@ fn test_permissive_hold_on_other_key_press() {
 #[test]
 fn test_permissive_hold_modifier_before_key() {
     // Permissive hold activates the modifier when another key is pressed.
-    // The interrupting key itself is processed with state at lookup time,
-    // but subsequent keys will see the active modifier.
+    // The interrupting key is processed with the state AFTER permissive hold
+    // activation, ensuring the correct layer mapping is used.
     let config = create_config(vec![
         KeyMapping::tap_hold(KeyCode::CapsLock, KeyCode::Escape, 0, 200),
         // Conditional: when MD_00 active, H -> Left
@@ -271,8 +271,8 @@ fn test_permissive_hold_modifier_before_key() {
         &mut state,
     );
 
-    // Press H at 50ms - triggers permissive hold, H passes through (not remapped)
-    // because mapping lookup happens before permissive hold activation
+    // Press H at 50ms - triggers permissive hold, H is remapped to Left
+    // because mapping lookup happens after permissive hold activation
     let outputs = process_event(
         KeyEvent::press(KeyCode::H).with_timestamp(50_000),
         &lookup,
@@ -284,12 +284,12 @@ fn test_permissive_hold_modifier_before_key() {
         state.is_modifier_active(0),
         "Modifier should be active after permissive hold"
     );
-    // The H itself passes through because lookup happened before modifier activation
+    // The H itself is remapped to Left because mapping is re-evaluated after modifier activation
     assert!(
         outputs
             .iter()
-            .any(|e| e.keycode() == KeyCode::H && e.is_press()),
-        "H should pass through (not remapped) because lookup was before modifier activation"
+            .any(|e| e.keycode() == KeyCode::Left && e.is_press()),
+        "H should be remapped to Left because lookup happens after modifier activation"
     );
 
     // Now, pressing H again should be remapped to Left
@@ -464,7 +464,7 @@ fn test_space_as_navigation_layer() {
         &mut state,
     );
 
-    // Press H immediately (triggers permissive hold, but H itself passes through)
+    // Press H immediately (triggers permissive hold, H is remapped to Left)
     let h_output = process_event(
         KeyEvent::press(KeyCode::H).with_timestamp(1_050_000),
         &lookup,
@@ -475,10 +475,10 @@ fn test_space_as_navigation_layer() {
         state.is_modifier_active(0),
         "Modifier should be active via permissive hold"
     );
-    // H passes through (lookup happened before modifier activation)
+    // H is remapped to Left (lookup happens after permissive hold activation)
     assert!(
-        h_output.iter().any(|e| e.keycode() == KeyCode::H),
-        "First H passes through (lookup before activation)"
+        h_output.iter().any(|e| e.keycode() == KeyCode::Left),
+        "First H should be remapped to Left (lookup after activation)"
     );
 
     // Press J - this time the modifier is already active, so J -> Down

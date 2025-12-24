@@ -129,40 +129,41 @@ when_end();
 // ============================================================
 when_start("MD_02");
     // Row 1: Symbols @#$%^&*|() on number row
-    map("VK_Num2", with_shift("VK_Num2"));        // 2 -> @
+    // Mappings adjusted for JIS output
+    map("VK_Num2", "VK_LeftBracket");             // 2 -> @ (JIS @ key)
     map("VK_Num3", with_shift("VK_Num3"));        // 3 -> #
     map("VK_Num4", with_shift("VK_Num4"));        // 4 -> $
     map("VK_Num5", with_shift("VK_Num5"));        // 5 -> %
-    map("VK_Num6", with_shift("VK_Num6"));        // 6 -> ^
-    map("VK_Num7", with_shift("VK_Num7"));        // 7 -> &
-    map("VK_Num8", with_shift("VK_Num8"));        // 8 -> *
-    map("VK_Num9", with_shift("VK_Backslash"));   // 9 -> |
-    map("VK_Num0", with_shift("VK_Num9"));        // 0 -> (
-    map("VK_Minus", with_shift("VK_Num0"));       // - -> )
+    map("VK_Num6", "VK_Equal");                   // 6 -> ^ (JIS ^ key)
+    map("VK_Num7", with_shift("VK_Num6"));        // 7 -> & (JIS Shift+6)
+    map("VK_Num8", with_shift("VK_Quote"));       // 8 -> * (JIS Shift+:)
+    map("VK_Num9", with_shift("VK_Yen"));         // 9 -> | (JIS Shift+Yen)
+    map("VK_Num0", with_shift("VK_Num8"));        // 0 -> ( (JIS Shift+8)
+    map("VK_Minus", with_shift("VK_Num9"));       // - -> ) (JIS Shift+9)
 
     // Row 2: Brackets (){}()[]<> on top letter row
-    map("VK_W", with_shift("VK_Num9"));           // W -> (
-    map("VK_E", with_shift("VK_Num0"));           // E -> )
-    map("VK_R", with_shift("VK_LeftBracket"));    // R -> {
-    map("VK_T", with_shift("VK_RightBracket"));   // T -> }
-    map("VK_Y", with_shift("VK_Num9"));           // Y -> (
-    map("VK_U", with_shift("VK_Num0"));           // U -> )
-    map("VK_I", "VK_LeftBracket");                // I -> [
-    map("VK_O", "VK_RightBracket");               // O -> ]
+    map("VK_W", with_shift("VK_Num8"));           // W -> (
+    map("VK_E", with_shift("VK_Num9"));           // E -> )
+    map("VK_R", with_shift("VK_RightBracket"));   // R -> { (JIS Shift+[)
+    map("VK_T", with_shift("VK_Backslash"));      // T -> } (JIS Shift+])
+    map("VK_Y", with_shift("VK_Num8"));           // Y -> (
+    map("VK_U", with_shift("VK_Num9"));           // U -> )
+    map("VK_I", "VK_RightBracket");               // I -> [ (JIS [)
+    map("VK_O", "VK_Backslash");                  // O -> ] (JIS ])
     map("VK_P", with_shift("VK_Comma"));          // P -> <
     map("VK_LeftBracket", with_shift("VK_Period")); // [ -> >
 
     // Row 3: Symbols ?/^!`~*+=\ on home row
     map("VK_S", with_shift("VK_Slash"));          // S -> ?
     map("VK_D", "VK_Slash");                      // D -> /
-    map("VK_F", with_shift("VK_Num6"));           // F -> ^
+    map("VK_F", "VK_Equal");                      // F -> ^
     map("VK_G", with_shift("VK_Num1"));           // G -> !
-    map("VK_H", "VK_Grave");                      // H -> `
-    map("VK_J", with_shift("VK_Grave"));          // J -> ~
-    map("VK_K", with_shift("VK_Num8"));           // K -> *
-    map("VK_L", with_shift("VK_Equal"));          // L -> +
-    map("VK_Semicolon", "VK_Equal");              // ; -> =
-    map("VK_Quote", "VK_Backslash");              // ' -> \
+    map("VK_H", with_shift("VK_LeftBracket"));    // H -> ` (JIS Shift+@)
+    map("VK_J", with_shift("VK_Equal"));          // J -> ~ (JIS Shift+^)
+    map("VK_K", with_shift("VK_Quote"));          // K -> * (JIS Shift+:)
+    map("VK_L", with_shift("VK_Semicolon"));      // L -> + (JIS Shift+;)
+    map("VK_Semicolon", with_shift("VK_Minus"));  // ; -> = (JIS Shift+-)
+    map("VK_Quote", "VK_Ro");                     // ' -> \ (JIS Ro/Backslash)
 when_end();
 
 // ============================================================
