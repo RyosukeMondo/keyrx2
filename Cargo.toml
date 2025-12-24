@@ -13,8 +13,14 @@ exclude = [
 version = "0.1.0"
 edition = "2021"
 authors = ["keyrx contributors"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/keyrx"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/RyosukeMondo/keyrx2"
+description = "Advanced keyboard remapping with layers, tap-hold, and conditional mappings"
+keywords = ["keyboard", "remapping", "input", "evdev", "uinput"]
+categories = ["hardware-support", "command-line-utilities"]
+documentation = "https://docs.rs/keyrx_core"
+homepage = "https://github.com/RyosukeMondo/keyrx2"
+readme = "README.md"
 
 [workspace.dependencies]
 # Core runtime dependencies (no_std compatible)

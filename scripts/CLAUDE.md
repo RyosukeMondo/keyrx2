@@ -299,7 +299,7 @@ You can specify a custom log file path using `--log-file PATH`.
 # This script:
 # 1. Builds the keyrx_compiler in release mode
 # 2. Compiles every .rhai file in examples/ directory
-# 3. Extracts code blocks from docs/DSL_MANUAL.md
+# 3. Extracts code blocks from docs/user-guide/dsl-manual.md
 # 4. Verifies documentation accuracy
 # Exit code 0 = all examples compile, 1 = compilation failed
 ```

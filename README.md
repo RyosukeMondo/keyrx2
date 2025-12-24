@@ -1,5 +1,10 @@
 # KeyRx2
 
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL%203.0+-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+[![Platform: Linux](https://img.shields.io/badge/Linux-Supported-green.svg)](docs/user-guide/linux-setup.md)
+[![Platform: Windows](https://img.shields.io/badge/Windows-Planned-yellow.svg)](#platform-support)
+
 **Advanced keyboard remapping with layer support, tap-hold behavior, and conditional mappings.**
 
 KeyRx2 is a cross-platform keyboard remapping system that provides powerful customization beyond basic key rebinding. It features custom modifiers (layers), tap-hold dual-function keys, conditional mappings, and device-specific configurations.
@@ -129,7 +134,7 @@ cargo build --release -p keyrx_daemon --features linux
 sudo ./target/release/keyrx_daemon run --config my-config.krx
 ```
 
-For non-root operation and systemd integration, see the [Linux Setup Guide](docs/LINUX_SETUP.md).
+For non-root operation and systemd integration, see the [Linux Setup Guide](docs/user-guide/linux-setup.md).
 
 ### 6. Test in Browser (Optional)
 
@@ -146,8 +151,8 @@ Then open http://localhost:5173 and load your `.krx` file.
 
 ## Documentation
 
-- **[DSL Manual](docs/DSL_MANUAL.md)** - Complete reference for the KeyRx DSL with syntax, functions, and examples
-- **[Linux Setup Guide](docs/LINUX_SETUP.md)** - Linux installation, permissions, and systemd integration
+- **[DSL Manual](docs/user-guide/dsl-manual.md)** - Complete reference for the KeyRx DSL with syntax, functions, and examples
+- **[Linux Setup Guide](docs/user-guide/linux-setup.md)** - Linux installation, permissions, and systemd integration
 - **[Examples](examples/)** - Six example configurations from basic to advanced
 - **[Compiler README](keyrx_compiler/README.md)** - CLI commands and usage
 - **[Core README](keyrx_core/README.md)** - Architecture and library API
@@ -251,7 +256,7 @@ device_start("*");  // Wildcard matches all devices
 device_end();
 ```
 
-See [DSL_MANUAL.md](docs/DSL_MANUAL.md) for complete documentation.
+See [DSL Manual](docs/user-guide/dsl-manual.md) for complete documentation.
 
 ## Troubleshooting
 
@@ -306,11 +311,11 @@ sudo usermod -aG input,uinput $USER
 ```
 Or run with sudo: `sudo ./target/release/keyrx_daemon run --config config.krx`
 
-See [Linux Setup Guide](docs/LINUX_SETUP.md) for complete instructions.
+See [Linux Setup Guide](docs/user-guide/linux-setup.md) for complete instructions.
 
 ### Getting Help
 
-- Check the [DSL Manual](docs/DSL_MANUAL.md) for function reference
+- Check the [DSL Manual](docs/user-guide/dsl-manual.md) for function reference
 - Look at [examples/](examples/) for working configurations
 - Run `keyrx_compiler parse your-config.rhai` to inspect the parsed configuration
 - Use `--json` flag for detailed output: `keyrx_compiler parse --json your-config.rhai`
@@ -455,9 +460,35 @@ Modified events
    - WASM-based configuration simulator
    - Real-time testing without hardware
 
+## Platform Support
+
+### Linux ✅ Fully Supported
+- **evdev** for input capture
+- **uinput** for output injection
+- Comprehensive setup guide: [docs/user-guide/linux-setup.md](docs/user-guide/linux-setup.md)
+- Tested on Ubuntu 20.04+, Arch Linux, Fedora
+
+### Windows ⚠️ Planned
+- Low-level keyboard hooks implementation in progress
+- Current implementation is a stub (not functional)
+- Contributions welcome!
+
+### macOS ❌ Not Planned
+- Not currently on the roadmap
+- Contributions welcome if there's community interest
+
 ## License
 
-(TODO: Add license information)
+Copyright © 2024 keyrx contributors
+
+This program is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License** as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.html) for more details.
+
+**Why AGPL-3.0?**
+The AGPL-3.0 license ensures that if you run a modified version of this software as a network service, you must make the source code available to users of that service. This prevents proprietary forks while encouraging contributions back to the community.
+
+See [LICENSE](LICENSE) for the full license text.
 
 ## Credits
 

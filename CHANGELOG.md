@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2024-12-24
+
+### Changed
+
+- **License**: Changed from MIT/Apache-2.0 to AGPL-3.0-or-later
+  - Ensures source code availability for network service deployments
+  - Prevents proprietary forks while encouraging community contributions
+- **Documentation reorganization**: Restructured docs/ with MECE (Mutually Exclusive, Collectively Exhaustive) categories
+  - `docs/user-guide/` - End-user documentation (setup, DSL manual, UAT guide)
+  - `docs/development/` - Developer documentation (architecture, design docs)
+  - `docs/rfcs/` - Proposals and specifications
+  - `docs/research/` - Research notes and investigations
+  - `docs/archive/` - Historical documents
+- **Cargo.toml metadata**: Updated repository URL and added crates.io metadata
+  - Repository: https://github.com/RyosukeMondo/keyrx2
+  - Added description, keywords, categories, documentation links
+
 ### Added
 
 #### Linux evdev Integration
@@ -76,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests cover basic remapping, Vim navigation layers, multi-device configs
 
 - **Documentation**
-  - [docs/LINUX_SETUP.md](docs/LINUX_SETUP.md) - Complete Linux setup guide
+  - [docs/user-guide/linux-setup.md](docs/user-guide/linux-setup.md) - Complete Linux setup guide
   - udev rules with installation instructions
   - systemd service files with usage examples
   - Troubleshooting guide for common issues
@@ -226,7 +243,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Round-trip serialization support
 
 - **Documentation**
-  - Comprehensive DSL Manual (docs/DSL_MANUAL.md)
+  - Comprehensive DSL Manual (docs/user-guide/dsl-manual.md)
     - Rhai syntax basics
     - Complete function reference with examples
     - Key naming reference (all VK_ codes, MD_00-MD_FE, LK_00-LK_FE)
