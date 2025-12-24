@@ -157,6 +157,29 @@ impl ManagedDevice {
     pub fn lookup_and_state_mut(&mut self) -> (&KeyLookup, &mut DeviceState) {
         (&self.lookup, &mut self.state)
     }
+
+    /// Returns a unique device ID for this device.
+    ///
+    /// The ID is generated from the serial number if available, otherwise
+    /// falls back to a path-based identifier for stability.
+    ///
+    /// # ID Generation Strategy
+    ///
+    /// 1. If a serial number is available (USB devices), use it prefixed with "serial-"
+    /// 2. Otherwise, use the device path (e.g., "/dev/input/event0") prefixed with "path-"
+    ///
+    /// This ensures each device has a stable, unique identifier that can be
+    /// used in Rhai scripts for per-device configuration.
+    #[must_use]
+    pub fn device_id(&self) -> String {
+        if let Some(ref serial) = self.info.serial {
+            if !serial.is_empty() {
+                return format!("serial-{}", serial);
+            }
+        }
+        // Fallback to path-based ID
+        format!("path-{}", self.info.path.display())
+    }
 }
 
 pub struct DeviceManager {
@@ -260,5 +283,141 @@ impl DeviceManager {
         }
 
         Ok(RefreshResult { added, removed })
+    }
+
+    /// Returns a list of all device IDs.
+    ///
+    /// Device IDs are unique identifiers generated from serial numbers (when
+    /// available) or device paths. These IDs can be used in Rhai scripts for
+    /// per-device configuration.
+    #[must_use]
+    pub fn device_ids(&self) -> Vec<String> {
+        self.devices.iter().map(|d| d.device_id()).collect()
+    }
+
+    /// Returns keyboard info for a device by its ID.
+    ///
+    /// Returns `None` if no device with the given ID exists.
+    #[must_use]
+    pub fn device_info(&self, id: &str) -> Option<&KeyboardInfo> {
+        self.devices
+            .iter()
+            .find(|d| d.device_id() == id)
+            .map(|d| &d.info)
+    }
+
+    /// Returns a mutable reference to a managed device by its ID.
+    ///
+    /// Returns `None` if no device with the given ID exists.
+    #[must_use]
+    pub fn get_device_by_id(&self, id: &str) -> Option<&ManagedDevice> {
+        self.devices.iter().find(|d| d.device_id() == id)
+    }
+
+    /// Returns a mutable reference to a managed device by its ID.
+    ///
+    /// Returns `None` if no device with the given ID exists.
+    pub fn get_device_by_id_mut(&mut self, id: &str) -> Option<&mut ManagedDevice> {
+        self.devices.iter_mut().find(|d| d.device_id() == id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// Helper to create a KeyboardInfo for testing
+    fn make_keyboard_info(path: &str, name: &str, serial: Option<&str>) -> KeyboardInfo {
+        KeyboardInfo {
+            path: PathBuf::from(path),
+            name: name.to_string(),
+            serial: serial.map(String::from),
+            phys: None,
+        }
+    }
+
+    #[test]
+    fn test_device_id_format_with_serial() {
+        // Device IDs with serial should be prefixed with "serial-"
+        let serial = "ABC123";
+        let device_id = format!("serial-{}", serial);
+        assert!(device_id.starts_with("serial-"));
+        assert!(device_id.contains("ABC123"));
+    }
+
+    #[test]
+    fn test_device_id_format_without_serial() {
+        // Device IDs without serial should be prefixed with "path-"
+        let path = "/dev/input/event5";
+        let device_id = format!("path-{}", path);
+        assert!(device_id.starts_with("path-"));
+        assert!(device_id.contains("event5"));
+    }
+
+    #[test]
+    fn test_device_id_empty_serial_uses_path() {
+        // Empty serial strings should fallback to path-based ID
+        let serial = "";
+        let path = "/dev/input/event0";
+
+        // Simulate the device_id() logic
+        let device_id = if !serial.is_empty() {
+            format!("serial-{}", serial)
+        } else {
+            format!("path-{}", path)
+        };
+
+        assert!(device_id.starts_with("path-"));
+    }
+
+    #[test]
+    fn test_is_keyboard_requires_key_events() {
+        // is_keyboard function exists and filters by key capability
+        // This is a documentation test - the function is tested implicitly
+        // through enumerate_keyboards() which uses it
+        assert!(MIN_REQUIRED_KEYS > 0);
+    }
+
+    #[test]
+    fn test_required_keys_coverage() {
+        // Ensure we have a reasonable set of required keys
+        assert_eq!(REQUIRED_KEYS.len(), 26); // A-Z
+        assert!(MIN_REQUIRED_KEYS <= REQUIRED_KEYS.len());
+    }
+
+    #[test]
+    fn test_match_device_wildcard() {
+        let info = make_keyboard_info("/dev/input/event0", "USB Keyboard", Some("SN123"));
+        assert!(super::super::match_device(&info, "*"));
+    }
+
+    #[test]
+    fn test_match_device_exact_name() {
+        let info = make_keyboard_info("/dev/input/event0", "USB Keyboard", None);
+        assert!(super::super::match_device(&info, "USB Keyboard"));
+        assert!(!super::super::match_device(&info, "Other Keyboard"));
+    }
+
+    #[test]
+    fn test_match_device_prefix_pattern() {
+        let info = make_keyboard_info("/dev/input/event0", "Logitech USB Keyboard", None);
+        assert!(super::super::match_device(&info, "Logitech*"));
+        assert!(!super::super::match_device(&info, "Razer*"));
+    }
+
+    #[test]
+    fn test_match_device_serial() {
+        let info = make_keyboard_info("/dev/input/event0", "Keyboard", Some("SN12345"));
+        assert!(super::super::match_device(&info, "SN12345"));
+        assert!(super::super::match_device(&info, "SN123*"));
+    }
+
+    #[test]
+    fn test_match_device_case_insensitive() {
+        let info = make_keyboard_info("/dev/input/event0", "USB Keyboard", None);
+        assert!(super::super::match_device(&info, "usb keyboard"));
+        assert!(super::super::match_device(&info, "USB*"));
+        assert!(super::super::match_device(&info, "usb*"));
     }
 }

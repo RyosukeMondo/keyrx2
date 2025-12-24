@@ -43,7 +43,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
   - _Prompt: Role: Linux Desktop Developer with expertise in system tray protocols and ksni crate | Task: Implement Linux system tray following requirements 2.1-2.6 using ksni crate, mirroring Windows tray structure with Reload/Exit menu | Restrictions: Must implement SystemTray trait exactly, handle tray unavailable gracefully (return error, don't panic), use crossbeam_channel for event passing | Success: Tray icon appears in KDE/GNOME, menu items trigger correct events, icon loads from assets/icon.png, graceful fallback if tray unavailable_
 
-- [ ] 5. Create DeviceManager for Linux
+- [x] 5. Create DeviceManager for Linux
   - File: keyrx_daemon/src/platform/linux/device_manager.rs (new file)
   - Define DeviceInfo struct with id, name, path, serial fields
   - Implement DeviceManager::enumerate() to scan /dev/input/event*
