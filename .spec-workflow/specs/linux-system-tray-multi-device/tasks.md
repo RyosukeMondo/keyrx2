@@ -96,15 +96,24 @@
   - _Requirements: 5.1, 5.2, 5.3_
   - _Prompt: Role: Frontend Developer specializing in React and real-time UI updates | Task: Create DeviceList component following requirements 5.1-5.3, fetching from /api/devices and highlighting active devices via WebSocket | Restrictions: Must use existing fetch patterns from other components, handle loading/error states, update UI smoothly without flickering, use existing theme/styling | Success: Component renders device list, data fetches on mount, devices highlighted on activity, no console errors, responsive design_
 
-- [ ] 10. Add Rhai bindings for device_id access
-  - File: keyrx_compiler/src/rhai_bindings.rs (or equivalent)
-  - Expose event.device_id() method to Rhai scripts
-  - Return Option<String> (None if device_id not set)
-  - Add example Rhai script to documentation
-  - Purpose: Enable per-device configuration in Rhai
-  - _Leverage: Existing Rhai event bindings, KeyEvent::device_id() from task 1_
+- [x] 10. Add Rhai bindings for device_id access
+  - File: keyrx_compiler/src/parser/functions/conditional.rs
+  - Added `when_device_start(pattern)` and `when_device_end()` functions
+  - Added `Condition::DeviceMatches(String)` variant to keyrx_core/src/config/conditions.rs
+  - Supports glob patterns: exact match, prefix (usb-*), suffix (*-keyboard), contains (*numpad*)
+  - Added `DeviceState::evaluate_condition_with_device()` for device-aware condition evaluation
+  - Added `KeyLookup::find_mapping_with_device()` for device-aware mapping lookup
+  - Purpose: Enable per-device configuration in Rhai scripts
+  - _Leverage: Existing Rhai conditional bindings (when_start/when_end pattern)_
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
-  - _Prompt: Role: Compiler Engineer with expertise in Rhai FFI and scripting language bindings | Task: Expose device_id() method to Rhai scripts following requirements 6.1-6.4, allowing conditional logic based on device ID | Restrictions: Must follow existing Rhai binding patterns, handle None case gracefully in Rhai (return null or empty string), ensure compile-time evaluation only (no runtime overhead), document with example | Success: Rhai scripts can call event.device_id(), conditional logic works (if device_id == "numpad"), compiles to static .krx without runtime checks, example script provided_
+  - _Example:_
+    ```rhai
+    device_start("My Keyboard");
+    when_device_start("*numpad*");
+    map("Numpad1", "VK_F13");  // Only on numpad devices
+    when_device_end();
+    device_end();
+    ```
 
 - [ ] 11. Write integration tests for multi-device support
   - File: keyrx_daemon/tests/multi_device_integration.rs (new file)
