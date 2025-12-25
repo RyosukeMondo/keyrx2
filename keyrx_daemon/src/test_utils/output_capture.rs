@@ -24,22 +24,45 @@
 //! - Linux with evdev support
 //! - Read access to `/dev/input/event*` devices (typically requires `input` group)
 
-use std::fs;
+#[cfg(target_os = "linux")]
 use std::os::fd::BorrowedFd;
+#[cfg(target_os = "linux")]
 use std::os::unix::io::AsRawFd;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{Duration, Instant};
 
+#[cfg(target_os = "linux")]
 use evdev::{Device, InputEventKind};
+#[cfg(target_os = "linux")]
 use nix::poll::{poll, PollFd, PollFlags, PollTimeout};
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::Foundation::*;
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::System::Threading::GetCurrentThreadId;
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::*;
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 use keyrx_core::runtime::event::KeyEvent;
 
 use super::VirtualDeviceError;
+#[cfg(target_os = "linux")]
 use crate::platform::linux::evdev_to_keycode;
 
 /// Polling interval when waiting for a device to appear.
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
+
+/// Marker for events injected by the daemon
+#[cfg(target_os = "windows")]
+const DAEMON_OUTPUT_MARKER: usize = 0x4441454D; // "DAEM"
+
+/// Global sender for Windows keyboard hook events.
+#[cfg(target_os = "windows")]
+static SENDER: std::sync::OnceLock<crossbeam_channel::Sender<KeyEvent>> =
+    std::sync::OnceLock::new();
 
 /// Captures output events from the daemon's virtual keyboard.
 ///
@@ -67,12 +90,25 @@ const POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// println!("Capturing from: {}", capture.name());
 /// ```
 pub struct OutputCapture {
-    /// The evdev device handle for reading events.
+    /// The evdev device handle for reading events (Linux).
+    #[cfg(target_os = "linux")]
     device: Device,
-    /// Name of the device (as reported by evdev).
+    /// Name of the device.
     name: String,
-    /// Path to the device node (e.g., /dev/input/event5).
+    /// Path to the device node (Linux).
+    #[cfg(target_os = "linux")]
     device_path: PathBuf,
+
+    /// Channel for receiving events from the hook (Windows).
+    #[cfg(target_os = "windows")]
+    receiver: crossbeam_channel::Receiver<KeyEvent>,
+    /// Thread handle for the message loop (Windows).
+    #[cfg(target_os = "windows")]
+    msg_thread: Option<std::thread::JoinHandle<()>>,
+    /// Thread ID of the message loop (Windows).
+    #[cfg(target_os = "windows")]
+    thread_id: u32,
+
     /// Buffered events from previous fetch_events call.
     /// When fetch_events returns multiple key events, we store extras here.
     event_buffer: Vec<KeyEvent>,
@@ -80,10 +116,11 @@ pub struct OutputCapture {
 
 impl std::fmt::Debug for OutputCapture {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("OutputCapture")
-            .field("name", &self.name)
-            .field("device_path", &self.device_path)
-            .finish_non_exhaustive()
+        let mut debug = f.debug_struct("OutputCapture");
+        debug.field("name", &self.name);
+        #[cfg(target_os = "linux")]
+        debug.field("device_path", &self.device_path);
+        debug.finish_non_exhaustive()
     }
 }
 
@@ -122,24 +159,105 @@ impl OutputCapture {
     ///
     /// println!("Found: {} at {}", capture.name(), capture.device_path());
     /// ```
-    pub fn find_by_name(name: &str, timeout: Duration) -> Result<Self, VirtualDeviceError> {
-        let start = Instant::now();
-        let timeout_ms = timeout.as_millis() as u64;
+    pub fn find_by_name(name: &str, _timeout: Duration) -> Result<Self, VirtualDeviceError> {
+        #[cfg(target_os = "linux")]
+        {
+            let start = Instant::now();
+            let timeout_ms = timeout.as_millis() as u64;
 
-        loop {
-            // Try to find the device
-            match Self::try_find_device(name) {
-                Ok(Some(capture)) => return Ok(capture),
-                Ok(None) => {
-                    // Device not found yet, check timeout
-                    if start.elapsed() >= timeout {
-                        return Err(VirtualDeviceError::device_not_found(name, timeout_ms));
+            loop {
+                // Try to find the device
+                match Self::try_find_device(name) {
+                    Ok(Some(capture)) => return Ok(capture),
+                    Ok(None) => {
+                        // Device not found yet, check timeout
+                        if start.elapsed() >= timeout {
+                            return Err(VirtualDeviceError::device_not_found(name, timeout_ms));
+                        }
+                        // Wait before polling again
+                        std::thread::sleep(POLL_INTERVAL);
                     }
-                    // Wait before polling again
-                    std::thread::sleep(POLL_INTERVAL);
+                    Err(e) => return Err(e),
                 }
-                Err(e) => return Err(e),
             }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use crate::platform::windows::keycode::vk_to_keycode;
+            let (sender, receiver) = crossbeam_channel::unbounded();
+            let (setup_sender, setup_receiver) = crossbeam_channel::bounded(1);
+            let name_clone = name.to_string();
+
+            // Store the sender in a global to be accessed by the hook callback.
+            let _ = SENDER.set(sender);
+
+            unsafe extern "system" fn hook_proc(
+                code: i32,
+                w_param: WPARAM,
+                l_param: LPARAM,
+            ) -> LRESULT {
+                if code == HC_ACTION as i32 {
+                    let kbd_struct = unsafe { *(l_param as *const KBDLLHOOKSTRUCT) };
+                    if kbd_struct.dwExtraInfo == DAEMON_OUTPUT_MARKER {
+                        if let Some(keycode) = vk_to_keycode(kbd_struct.vkCode as u16) {
+                            let event = match w_param as u32 {
+                                WM_KEYDOWN | WM_SYSKEYDOWN => Some(KeyEvent::Press(keycode)),
+                                WM_KEYUP | WM_SYSKEYUP => Some(KeyEvent::Release(keycode)),
+                                _ => None,
+                            };
+
+                            if let Some(event) = event {
+                                if let Some(sender) = SENDER.get() {
+                                    let _ = sender.try_send(event.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+                unsafe { CallNextHookEx(std::ptr::null_mut(), code, w_param as _, l_param as _) }
+            }
+
+            let msg_thread = std::thread::spawn(move || unsafe {
+                let h_mod = GetModuleHandleW(std::ptr::null());
+                let thread_id = GetCurrentThreadId();
+                let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(hook_proc), h_mod as _, 0);
+
+                if hook.is_null() {
+                    let _ = setup_sender.send(Err("Failed to set hook".to_string()));
+                    return;
+                }
+
+                if setup_sender.send(Ok(thread_id)).is_err() {
+                    UnhookWindowsHookEx(hook);
+                    return;
+                }
+
+                let mut msg = std::mem::zeroed();
+                while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) != 0 {
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+
+                UnhookWindowsHookEx(hook);
+            });
+
+            // Wait for hook setup success
+            let thread_id = setup_receiver
+                .recv_timeout(Duration::from_secs(2))
+                .map_err(|_| VirtualDeviceError::Timeout {
+                    operation: "hook setup".to_string(),
+                    timeout_ms: 2000,
+                })?
+                .map_err(|e| VirtualDeviceError::CreationFailed { message: e })?;
+
+            Ok(Self {
+                name: name_clone,
+                receiver,
+                msg_thread: Some(msg_thread),
+                thread_id,
+                event_buffer: Vec::new(),
+            })
         }
     }
 
@@ -154,6 +272,7 @@ impl OutputCapture {
     /// - `Ok(Some(capture))` if device found and opened
     /// - `Ok(None)` if device not found
     /// - `Err` if permission denied or other error
+    #[cfg(target_os = "linux")]
     fn try_find_device(name: &str) -> Result<Option<Self>, VirtualDeviceError> {
         let input_dir = Path::new("/dev/input");
 
@@ -228,6 +347,7 @@ impl OutputCapture {
     ///
     /// Useful for debugging and logging which device was captured.
     #[must_use]
+    #[cfg(target_os = "linux")]
     pub fn device_path(&self) -> &Path {
         &self.device_path
     }
@@ -237,6 +357,7 @@ impl OutputCapture {
     /// This provides access to the raw device for advanced use cases
     /// or direct event reading.
     #[must_use]
+    #[cfg(target_os = "linux")]
     pub fn device(&self) -> &Device {
         &self.device
     }
@@ -244,6 +365,7 @@ impl OutputCapture {
     /// Returns a mutable reference to the underlying evdev device.
     ///
     /// This provides access to the raw device for event reading.
+    #[cfg(target_os = "linux")]
     pub fn device_mut(&mut self) -> &mut Device {
         &mut self.device
     }
@@ -294,55 +416,68 @@ impl OutputCapture {
             return Ok(Some(self.event_buffer.remove(0)));
         }
 
-        let start = Instant::now();
+        #[cfg(target_os = "linux")]
+        {
+            let start = Instant::now();
 
-        loop {
-            // Calculate remaining timeout
-            let elapsed = start.elapsed();
-            if elapsed >= timeout {
-                return Ok(None);
-            }
-            let remaining = timeout - elapsed;
-            let remaining_ms = remaining.as_millis().min(u16::MAX as u128) as u16;
-
-            // Get a borrowed fd for polling
-            // SAFETY: The raw fd is valid for the lifetime of the loop iteration since
-            // we hold &mut self, ensuring the device stays alive
-            let borrowed_fd = unsafe { BorrowedFd::borrow_raw(self.device.as_raw_fd()) };
-
-            // Poll for readable events
-            let mut poll_fds = [PollFd::new(borrowed_fd, PollFlags::POLLIN)];
-            let poll_timeout = PollTimeout::from(remaining_ms);
-            match poll(&mut poll_fds, poll_timeout) {
-                Ok(0) => {
-                    // Timeout, no events
+            loop {
+                // Calculate remaining timeout
+                let elapsed = start.elapsed();
+                if elapsed >= timeout {
                     return Ok(None);
                 }
-                Ok(_) => {
-                    // Events available, try to read them
-                    if let Some(event) = self.try_read_key_event()? {
-                        return Ok(Some(event));
+                let remaining = timeout - elapsed;
+                let remaining_ms = remaining.as_millis().min(u16::MAX as u128) as u16;
+
+                // Get a borrowed fd for polling
+                // SAFETY: The raw fd is valid for the lifetime of the loop iteration since
+                // we hold &mut self, ensuring the device stays alive
+                let borrowed_fd =
+                    unsafe { std::os::fd::BorrowedFd::borrow_raw(self.device.as_raw_fd()) };
+
+                // Poll for readable events
+                let mut poll_fds = [PollFd::new(borrowed_fd, PollFlags::POLLIN)];
+                let poll_timeout = PollTimeout::from(remaining_ms);
+                match poll(&mut poll_fds, poll_timeout) {
+                    Ok(0) => {
+                        // Timeout, no events
+                        return Ok(None);
                     }
-                    // Got non-key events, continue polling
+                    Ok(_) => {
+                        // Events available, try to read them
+                        if let Some(event) = self.try_read_key_event()? {
+                            return Ok(Some(event));
+                        }
+                        // Got non-key events, continue polling
+                    }
+                    Err(nix::errno::Errno::EINTR) => {
+                        // Interrupted by signal, continue polling
+                        continue;
+                    }
+                    Err(e) => {
+                        return Err(VirtualDeviceError::Io(std::io::Error::other(format!(
+                            "poll failed: {}",
+                            e
+                        ))));
+                    }
                 }
-                Err(nix::errno::Errno::EINTR) => {
-                    // Interrupted by signal, continue polling
-                    continue;
-                }
-                Err(e) => {
-                    return Err(VirtualDeviceError::Io(std::io::Error::other(format!(
-                        "poll failed: {}",
-                        e
-                    ))));
-                }
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            match self.receiver.recv_timeout(timeout) {
+                Ok(event) => Ok(Some(event)),
+                Err(crossbeam_channel::RecvTimeoutError::Timeout) => Ok(None),
+                Err(crossbeam_channel::RecvTimeoutError::Disconnected) => Err(
+                    VirtualDeviceError::creation_failed("capture thread disconnected"),
+                ),
             }
         }
     }
 
-    /// Tries to read key events from the device and buffer them.
-    ///
-    /// Returns `Ok(Some(event))` if a key event is available (from buffer or device),
-    /// `Ok(None)` if no key events available, or `Err` on I/O error.
+    /// Tries to read key events from the device and buffer them (Linux).
+    #[cfg(target_os = "linux")]
     fn try_read_key_event(&mut self) -> Result<Option<KeyEvent>, VirtualDeviceError> {
         // First check if we have buffered events
         if !self.event_buffer.is_empty() {
@@ -476,44 +611,75 @@ impl OutputCapture {
         let mut count = self.event_buffer.len();
         self.event_buffer.clear();
 
-        loop {
-            // Get a borrowed fd for polling
-            // SAFETY: The raw fd is valid for the lifetime of the loop iteration since
-            // we hold &mut self, ensuring the device stays alive
-            let borrowed_fd = unsafe { BorrowedFd::borrow_raw(self.device.as_raw_fd()) };
+        #[cfg(target_os = "linux")]
+        {
+            loop {
+                // Get a borrowed fd for polling
+                // SAFETY: The raw fd is valid for the lifetime of the loop iteration since
+                // we hold &mut self, ensuring the device stays alive
+                let borrowed_fd =
+                    unsafe { std::os::fd::BorrowedFd::borrow_raw(self.device.as_raw_fd()) };
 
-            // Non-blocking poll with zero timeout
-            let mut poll_fds = [PollFd::new(borrowed_fd, PollFlags::POLLIN)];
-            // Use PollTimeout::ZERO for immediate return
-            match poll(&mut poll_fds, PollTimeout::ZERO) {
-                Ok(0) => {
-                    // No more events pending
-                    return Ok(count);
-                }
-                Ok(_) => {
-                    // Events available, read and discard them
-                    match self.device.fetch_events() {
-                        Ok(events) => {
-                            // Count all events (including non-key events)
-                            count += events.count();
-                        }
-                        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                            return Ok(count);
-                        }
-                        Err(e) => {
-                            return Err(VirtualDeviceError::Io(e));
+                // Non-blocking poll with zero timeout
+                let mut poll_fds = [PollFd::new(borrowed_fd, PollFlags::POLLIN)];
+                // Use PollTimeout::ZERO for immediate return
+                match poll(&mut poll_fds, PollTimeout::ZERO) {
+                    Ok(0) => {
+                        // No more events pending
+                        return Ok(count);
+                    }
+                    Ok(_) => {
+                        // Events available, read and discard them
+                        match self.device.fetch_events() {
+                            Ok(events) => {
+                                // Count all events (including non-key events)
+                                count += events.count();
+                            }
+                            Ok(None) => return Ok(count), // Should not happen after poll
+                            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                                return Ok(count);
+                            }
+                            Err(e) => {
+                                return Err(VirtualDeviceError::Io(e));
+                            }
                         }
                     }
+                    Err(nix::errno::Errno::EINTR) => {
+                        continue;
+                    }
+                    Err(e) => {
+                        return Err(VirtualDeviceError::Io(std::io::Error::other(format!(
+                            "poll failed during drain: {}",
+                            e
+                        ))));
+                    }
                 }
-                Err(nix::errno::Errno::EINTR) => {
-                    continue;
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            while let Ok(_) = self.receiver.try_recv() {
+                count += 1;
+            }
+            Ok(count)
+        }
+    }
+}
+
+impl Drop for OutputCapture {
+    fn drop(&mut self) {
+        #[cfg(target_os = "windows")]
+        {
+            // Clear the global sender
+            // Note: OnceLock can't be cleared, but we don't need to for tests
+            // as they run in sequence with --test-threads=1.
+
+            if let Some(msg_thread) = self.msg_thread.take() {
+                unsafe {
+                    let _ = PostThreadMessageW(self.thread_id, WM_QUIT, 0 as _, 0 as _);
                 }
-                Err(e) => {
-                    return Err(VirtualDeviceError::Io(std::io::Error::other(format!(
-                        "poll failed during drain: {}",
-                        e
-                    ))));
-                }
+                let _ = msg_thread.join();
             }
         }
     }
@@ -905,6 +1071,7 @@ mod tests {
 
         // Verify the device was found correctly
         assert_eq!(capture.name(), device_name);
+        #[cfg(target_os = "linux")]
         assert!(capture
             .device_path()
             .to_string_lossy()

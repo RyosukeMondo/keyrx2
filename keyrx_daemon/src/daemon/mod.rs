@@ -38,35 +38,35 @@
 //! ```
 
 use std::io;
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, BorrowedFd};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 use log::{debug, info, trace, warn};
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 use nix::poll::{poll, PollFd, PollFlags};
 
 use crate::config_loader::{load_config, ConfigError};
 use crate::device_manager::DeviceManager;
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 use crate::platform::linux::UinputOutput;
 use crate::platform::{DeviceError, InputDevice, OutputDevice};
 use keyrx_core::runtime::event::{check_tap_hold_timeouts, process_event};
 
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 mod linux;
-#[cfg(feature = "windows")]
+#[cfg(target_os = "windows")]
 mod windows;
 
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 pub use linux::{install_signal_handlers, SignalHandler};
-#[cfg(feature = "windows")]
+#[cfg(target_os = "windows")]
 pub use windows::{install_signal_handlers, SignalHandler};
 
 /// Returns the current time in microseconds since UNIX epoch.
@@ -213,6 +213,10 @@ fn convert_archived_condition(archived: &ArchivedCondition) -> Condition {
     match archived {
         ArchivedCondition::ModifierActive(id) => Condition::ModifierActive(*id),
         ArchivedCondition::LockActive(id) => Condition::LockActive(*id),
+        ArchivedCondition::DeviceMatches(id) => {
+            use rkyv::Deserialize;
+            Condition::DeviceMatches(Deserialize::deserialize(id, &mut rkyv::Infallible).unwrap())
+        }
         ArchivedCondition::AllActive(items) => {
             Condition::AllActive(items.iter().map(convert_archived_condition_item).collect())
         }
@@ -338,9 +342,9 @@ pub struct Daemon {
     device_manager: DeviceManager,
 
     /// Virtual keyboard for output injection.
-    #[cfg(feature = "linux")]
+    #[cfg(target_os = "linux")]
     output: UinputOutput,
-    #[cfg(feature = "windows")]
+    #[cfg(target_os = "windows")]
     output: crate::platform::windows::output::WindowsKeyboardOutput,
 
     /// Running flag for event loop control.
@@ -418,9 +422,9 @@ impl Daemon {
 
         // Step 3: Create virtual keyboard
         info!("Creating virtual keyboard...");
-        #[cfg(feature = "linux")]
+        #[cfg(target_os = "linux")]
         let output = UinputOutput::create("keyrx Virtual Keyboard")?;
-        #[cfg(feature = "windows")]
+        #[cfg(target_os = "windows")]
         let output = crate::platform::windows::output::WindowsKeyboardOutput::new();
         info!("Virtual keyboard created");
 
@@ -474,22 +478,22 @@ impl Daemon {
 
     /// Returns a reference to the output device.
     #[must_use]
-    #[cfg(feature = "linux")]
+    #[cfg(target_os = "linux")]
     pub fn output(&self) -> &UinputOutput {
         &self.output
     }
     #[must_use]
-    #[cfg(feature = "windows")]
+    #[cfg(target_os = "windows")]
     pub fn output(&self) -> &crate::platform::windows::output::WindowsKeyboardOutput {
         &self.output
     }
 
     /// Returns a mutable reference to the output device.
-    #[cfg(feature = "linux")]
+    #[cfg(target_os = "linux")]
     pub fn output_mut(&mut self) -> &mut UinputOutput {
         &mut self.output
     }
-    #[cfg(feature = "windows")]
+    #[cfg(target_os = "windows")]
     pub fn output_mut(&mut self) -> &mut crate::platform::windows::output::WindowsKeyboardOutput {
         &mut self.output
     }
@@ -635,7 +639,7 @@ impl Daemon {
     /// # Ok::<(), keyrx_daemon::daemon::DaemonError>(())
     /// ```
     /// Blocks until a shutdown signal is received.
-    #[cfg(feature = "linux")]
+    #[cfg(target_os = "linux")]
     pub fn run(&mut self) -> Result<(), DaemonError> {
         info!("Starting event processing loop");
 
@@ -658,30 +662,43 @@ impl Daemon {
                 }
             }
 
-            // Poll devices for available events
-            let ready_devices = match self.poll_devices() {
-                Ok(devices) => devices,
-                Err(e) => {
-                    // Check if we were interrupted by signal
-                    if !self.is_running() {
-                        break;
-                    }
-                    warn!("Poll error: {}", e);
-                    continue;
-                }
-            };
-
-            // Process events from ready devices
-            for device_idx in ready_devices {
-                match self.process_device_events(device_idx) {
-                    Ok(count) => {
-                        event_count += count as u64;
-                    }
+            #[cfg(feature = "linux")]
+            {
+                // Poll devices for available events
+                let ready_devices = match self.poll_devices() {
+                    Ok(devices) => devices,
                     Err(e) => {
-                        // Log error but continue with other devices
-                        warn!("Error processing device {}: {}", device_idx, e);
+                        // Check if we were interrupted by signal
+                        if !self.is_running() {
+                            break;
+                        }
+                        warn!("Poll error: {}", e);
+                        continue;
+                    }
+                };
+
+                // Process events from ready devices
+                for device_idx in ready_devices {
+                    match self.process_device_events(device_idx) {
+                        Ok(count) => {
+                            event_count += count as u64;
+                        }
+                        Err(e) => {
+                            // Log error but continue with other devices
+                            warn!("Error processing device {}: {}", device_idx, e);
+                        }
                     }
                 }
+            }
+
+            #[cfg(target_os = "windows")]
+            {
+                // On Windows, draining events is non-blocking and handles remapping
+                if let Err(e) = self.process_pending_events() {
+                    warn!("Error processing events: {}", e);
+                }
+                // Small sleep to prevent 100% CPU usage as process_pending_events is non-blocking
+                std::thread::sleep(Duration::from_millis(1));
             }
 
             // Check for tap-hold timeouts on all devices
@@ -711,8 +728,7 @@ impl Daemon {
     /// Grabs exclusive access to all managed input devices.
     /// This prevents other applications from receiving keyboard events
     /// from these devices, which is essential for key remapping.
-    #[cfg(feature = "linux")]
-    fn grab_all_devices(&mut self) -> Result<(), DaemonError> {
+    pub fn grab_all_devices(&mut self) -> Result<(), DaemonError> {
         info!(
             "Grabbing {} input device(s)...",
             self.device_manager.device_count()
@@ -787,7 +803,7 @@ impl Daemon {
     /// Processes all pending events from all devices.
     ///
     /// On Windows, this is called from the main message loop.
-    #[cfg(feature = "windows")]
+    #[cfg(target_os = "windows")]
     pub fn process_pending_events(&mut self) -> Result<(), DaemonError> {
         // Check for tap-hold timeouts
         if let Err(e) = self.check_tap_hold_timeouts() {

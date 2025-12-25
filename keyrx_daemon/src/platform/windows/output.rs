@@ -18,12 +18,17 @@ impl WindowsKeyboardOutput {
         // Nothing special to destroy for Windows SendInput implementation
         Ok(())
     }
+
+    #[must_use]
+    pub fn is_destroyed(&self) -> bool {
+        false
+    }
 }
 
 impl OutputDevice for WindowsKeyboardOutput {
     fn inject_event(&mut self, event: KeyEvent) -> Result<(), DeviceError> {
         self.injector
-            .inject(event)
+            .inject(&event)
             .map_err(|e| DeviceError::InjectionFailed(e))
     }
 }

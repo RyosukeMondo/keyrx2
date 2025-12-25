@@ -21,7 +21,7 @@
 //! let harness = E2EHarness::setup(config)?;
 //! ```
 
-#![cfg(all(target_os = "linux", feature = "linux"))]
+// #![cfg(all(target_os = "linux", feature = "linux"))]
 
 use std::fmt;
 use std::fs::{self, File};
@@ -743,7 +743,10 @@ impl fmt::Display for TeardownResult {
 // ============================================================================
 
 /// Default name for the daemon's virtual output device.
+#[cfg(target_os = "linux")]
 const DAEMON_OUTPUT_NAME: &str = "keyrx Virtual Keyboard";
+#[cfg(target_os = "windows")]
+const DAEMON_OUTPUT_NAME: &str = "Windows Global Keyboard Hook";
 
 /// Default timeout for waiting for daemon to be ready.
 const DAEMON_STARTUP_TIMEOUT: Duration = Duration::from_secs(5);
@@ -851,8 +854,13 @@ impl E2EHarness {
 
         // Step 2: Generate .krx config file targeting the virtual keyboard
         // Modify the config to match our virtual keyboard's name
+        #[cfg(target_os = "linux")]
+        let device_pattern = virtual_input.name().to_string();
+        #[cfg(target_os = "windows")]
+        let device_pattern = "*".to_string();
+
         let test_config = E2EConfig {
-            device_pattern: virtual_input.name().to_string(),
+            device_pattern,
             mappings: config.mappings,
         };
 
@@ -887,8 +895,8 @@ impl E2EHarness {
         // We do this by waiting for the output device to appear
         let start = Instant::now();
 
-        // Give daemon a moment to initialize
-        std::thread::sleep(Duration::from_millis(200));
+        // Give daemon a moment to initialize and install its hook
+        std::thread::sleep(Duration::from_millis(500));
 
         // Check if daemon is still running
         if let Some(status) = daemon_process.try_wait().map_err(E2EError::Io)? {
@@ -1476,7 +1484,7 @@ impl E2EHarness {
 
         // Step 1: Terminate daemon process
         if let Some(mut process) = self.daemon_process.take() {
-            let pid = process.id();
+            let _pid = process.id();
 
             // Send SIGTERM for graceful shutdown
             #[cfg(unix)]
@@ -1484,7 +1492,7 @@ impl E2EHarness {
                 use nix::sys::signal::{kill, Signal};
                 use nix::unistd::Pid;
 
-                let nix_pid = Pid::from_raw(pid as i32);
+                let nix_pid = Pid::from_raw(_pid as i32);
                 if let Err(e) = kill(nix_pid, Signal::SIGTERM) {
                     // Process may have already exited, which is fine
                     if e != nix::errno::Errno::ESRCH {
@@ -1533,7 +1541,13 @@ impl E2EHarness {
                                 }
                             }
 
-                            #[cfg(not(unix))]
+                            #[cfg(windows)]
+                            {
+                                let _ = process.kill();
+                                result.sigkill_sent = true;
+                            }
+
+                            #[cfg(all(not(unix), not(windows)))]
                             {
                                 let _ = process.kill();
                                 result.sigkill_sent = true;
@@ -1586,13 +1600,13 @@ impl E2EHarness {
         Ok(result)
     }
 
-    /// Finds the daemon binary path.
-    ///
-    /// Looks in the following order:
-    /// 1. `target/debug/keyrx_daemon` (debug build)
-    /// 2. `target/release/keyrx_daemon` (release build)
-    /// 3. Path from `KEYRX_DAEMON_PATH` environment variable
     fn find_daemon_binary() -> Result<PathBuf, E2EError> {
+        let binary_name = if cfg!(windows) {
+            "keyrx_daemon.exe"
+        } else {
+            "keyrx_daemon"
+        };
+
         // Check environment variable first
         if let Ok(path) = std::env::var("KEYRX_DAEMON_PATH") {
             let path = PathBuf::from(path);
@@ -1610,23 +1624,24 @@ impl E2EHarness {
             .unwrap_or_else(|| PathBuf::from("."));
 
         // Try debug build first
-        let debug_path = workspace_root.join("target/debug/keyrx_daemon");
+        let debug_path = workspace_root.join(format!("target/debug/{}", binary_name));
         if debug_path.exists() {
             return Ok(debug_path);
         }
 
         // Try release build
-        let release_path = workspace_root.join("target/release/keyrx_daemon");
+        let release_path = workspace_root.join(format!("target/release/{}", binary_name));
         if release_path.exists() {
             return Ok(release_path);
         }
 
         Err(E2EError::ConfigError {
             message: format!(
-                "Could not find keyrx_daemon binary. Tried:\n\
+                "Could not find {} binary. Tried:\n\
                  - {}\n\
                  - {}\n\
                  Set KEYRX_DAEMON_PATH environment variable to specify the path.",
+                binary_name,
                 debug_path.display(),
                 release_path.display()
             ),
@@ -1660,7 +1675,7 @@ impl Drop for E2EHarness {
     fn drop(&mut self) {
         // Terminate daemon process
         if let Some(mut process) = self.daemon_process.take() {
-            let pid = process.id();
+            let _pid = process.id();
 
             // Try graceful shutdown first with SIGTERM
             #[cfg(unix)]
@@ -2504,7 +2519,12 @@ mod tests {
     #[test]
     fn test_daemon_output_name_constant() {
         // Verify the constant matches what the daemon creates
+        assert_eq!(DAEMON_OUTPUT_NAME, DAEMON_OUTPUT_NAME);
+
+        #[cfg(target_os = "linux")]
         assert_eq!(DAEMON_OUTPUT_NAME, "keyrx Virtual Keyboard");
+        #[cfg(target_os = "windows")]
+        assert_eq!(DAEMON_OUTPUT_NAME, "Windows Global Keyboard Hook");
     }
 
     #[test]
