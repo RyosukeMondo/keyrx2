@@ -34,6 +34,7 @@ use std::time::Duration;
 use e2e_harness::{E2EConfig, E2EHarness, TestEvents};
 use keyrx_core::config::{KeyCode, KeyMapping};
 use keyrx_core::runtime::KeyEvent;
+use keyrx_core::KeyMapping;
 
 // ============================================================================
 // Simple Remap Tests - Requirement 5.1
