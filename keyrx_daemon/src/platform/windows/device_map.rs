@@ -238,9 +238,38 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_serial_malformed() {
+        let device_map = DeviceMap::new();
+        let path = "not-a-hid-path";
+        let serial = device_map.extract_serial(path);
+        assert_eq!(serial, None);
+    }
+
+    #[test]
     fn test_device_map_basic_operations() {
         let map = DeviceMap::new();
         let all = map.all();
         assert!(all.is_empty());
+    }
+
+    #[test]
+    fn test_synthetic_device() {
+        let map = DeviceMap::new();
+        map.add_synthetic_device(
+            0x1234,
+            "test-path".to_string(),
+            Some("test-serial".to_string()),
+        );
+
+        let info = map.get(0x1234 as HANDLE).expect("Device should exist");
+        assert_eq!(info.handle, 0x1234);
+        assert_eq!(info.path, "test-path");
+        assert_eq!(info.serial, Some("test-serial".to_string()));
+
+        let all = map.all();
+        assert_eq!(all.len(), 1);
+
+        map.remove_device(0x1234 as HANDLE);
+        assert!(map.get(0x1234 as HANDLE).is_none());
     }
 }

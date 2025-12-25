@@ -360,8 +360,42 @@ mod tests {
                     manager.unsubscribe(12345);
                 }
                 Err(e) => {
+                    // This can happen in CI environments without a GUI session
                     eprintln!("RawInputManager creation failed: {}", e);
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn test_raw_input_simulation() {
+        let device_map = DeviceMap::new();
+        let (tx, rx_global) = unbounded();
+
+        // Register a synthetic device
+        device_map.add_synthetic_device(0x1234, "test-path".to_string(), Some("SN123".to_string()));
+
+        match RawInputManager::new(device_map, tx) {
+            Ok(manager) => {
+                let rx_device = manager.subscribe(0x1234);
+
+                // Simulate a key press (A key, MakeCode 0x1E)
+                manager.simulate_raw_input(0x1234, 0x1E, 0);
+
+                // Global channel should receive it
+                let event_global = rx_global
+                    .recv_timeout(std::time::Duration::from_millis(100))
+                    .expect("Should receive global event");
+                assert_eq!(event_global.device_id(), Some("SN123"));
+
+                // Subscribed channel should receive it
+                let event_device = rx_device
+                    .recv_timeout(std::time::Duration::from_millis(100))
+                    .expect("Should receive device event");
+                assert_eq!(event_device.device_id(), Some("SN123"));
+            }
+            Err(e) => {
+                eprintln!("Skipping simulation test (no GUI): {}", e);
             }
         }
     }

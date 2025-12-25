@@ -47,7 +47,7 @@ keyrx is a hybrid system combining:
 
 **Windows**:
 - **windows-sys** (0.48+): Raw Windows API bindings
-  - `SetWindowsHookEx` (WH_KEYBOARD_LL)
+  - `WM_INPUT` (Raw Input API for device discrimination)
   - `GetRawInputDeviceInfo` (device identification)
   - `SendInput` (event injection)
 

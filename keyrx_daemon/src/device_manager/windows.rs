@@ -20,20 +20,37 @@ pub fn enumerate_keyboards() -> Result<Vec<KeyboardInfo>, DiscoveryError> {
             // Use serial if available, otherwise path as fallback
             let serial = d.serial.clone();
 
-            // On Windows, we don't easily get a friendly name from RawInput alone without more complex SetupAPI calls.
-            // For now, use a generic name with handle to distinguish them.
-            // TODO: Improve name resolution using SetupAPI
+            // Improve name resolution:
+            // 1. If serial exists, use it as a primary identifier in the name.
+            // 2. Attempt to parse VID/PID from path for a more technical name if no friendly name is available.
             let name = if let Some(ref s) = serial {
-                format!("Keyboard ({})", s)
+                if s.contains('&') && s.len() > 10 {
+                    // This looks like a generated instance ID, not a real serial.
+                    // Try to extract a shorter version or just use "Keyboard" with partial ID.
+                    format!("Keyboard ({})", &s[..std::cmp::min(s.len(), 8)])
+                } else {
+                    format!("Keyboard ({})", s)
+                }
             } else {
-                format!("Keyboard {:x}", d.handle)
+                // Try to extract VID/PID from path: \\?\HID#VID_046D&PID_C52B...
+                if let Some(vid_idx) = d.path.find("VID_") {
+                    if let Some(pid_idx) = d.path.find("PID_") {
+                        let vid = &d.path[vid_idx..vid_idx + 8];
+                        let pid = &d.path[pid_idx..pid_idx + 8];
+                        format!("Keyboard {} {}", vid, pid)
+                    } else {
+                        format!("Keyboard {:x}", d.handle)
+                    }
+                } else {
+                    format!("Keyboard {:x}", d.handle)
+                }
             };
 
             KeyboardInfo {
                 path: PathBuf::from(d.path),
                 name,
                 serial,
-                phys: None, // Physical location topology not implemented yet
+                phys: None,
             }
         })
         .collect();

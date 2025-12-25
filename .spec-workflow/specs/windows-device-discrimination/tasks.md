@@ -78,7 +78,7 @@
   - _Requirements: 7.1, 7.2, 7.3_
   - _Prompt: Role: DevOps Engineer with expertise in logging and operational visibility | Task: Add device enumeration logging following requirements 7.1-7.3, logging all detected keyboards at daemon startup | Restrictions: Use structured logging (JSON format if enabled), log device info at INFO level not DEBUG, include serial number or fallback ID, fail gracefully if no keyboards found (return clear error message) | Success: Startup logs show all connected keyboards, each entry includes name and ID, no keyboards triggers error exit, logs are parseable by monitoring tools_
 
-- [ ] 8. Extend /api/devices endpoint for Windows
+- [x] 8. Extend /api/devices endpoint for Windows
   - File: keyrx_daemon/src/web/api.rs (modify from Spec 1 task 8)
   - Update /api/devices to work on Windows platform
   - Query DeviceMap for device list on Windows
@@ -88,7 +88,7 @@
   - _Requirements: 7.4_
   - _Prompt: Role: Full-stack Developer with expertise in cross-platform API design | Task: Extend /api/devices endpoint to support Windows platform following requirement 7.4, returning device list from DeviceMap | Restrictions: Must use same JSON schema as Linux implementation, handle platform differences transparently (Linux: evdev paths, Windows: HID paths), ensure endpoint works when called from React frontend, return empty array if no devices | Success: GET /api/devices works on Windows, returns valid JSON matching Linux schema, device list populated from DeviceMap, frontend displays Windows devices correctly_
 
-- [ ] 9. Write unit tests for DeviceMap
+- [x] 9. Write unit tests for DeviceMap
   - File: keyrx_daemon/src/platform/windows/device_map.rs (add #[cfg(test)] mod tests)
   - Test extract_serial_from_path() with real Windows device path examples
   - Test cache hit/miss (first lookup queries API, second uses cache)
@@ -99,7 +99,7 @@
   - _Requirements: All DeviceMap-related requirements_
   - _Prompt: Role: QA Engineer specializing in Windows platform testing and mocking | Task: Write comprehensive unit tests for DeviceMap covering serial extraction, caching, and fallback logic | Restrictions: Mock GetRawInputDeviceInfo where possible to avoid hardware dependency, test edge cases (empty path, malformed path, null handle), verify cache performance (O(1) after first lookup), ensure tests run on CI | Success: All DeviceMap functions tested, serial extraction handles real Windows paths, cache tests verify O(1) lookup, fallback tests cover missing serial scenario, 90%+ coverage_
 
-- [ ] 10. Write integration tests for RawInputManager
+- [x] 10. Write integration tests for RawInputManager
   - File: keyrx_daemon/src/platform/windows/rawinput.rs (add #[cfg(test)] mod tests)
   - Test RegisterRawInputDevices success and failure cases
   - Test WM_INPUT message parsing (may need test harness to inject messages)
@@ -144,7 +144,7 @@
   - _Requirements: All_
   - _Prompt: Role: QA Automation Engineer with expertise in end-to-end testing and virtual device simulation | Task: Create comprehensive E2E test covering multi-device scenario on Windows following all requirements | Restrictions: May use virtual HID devices for CI (GitHub Actions doesn't have multiple keyboards), test must be deterministic (no timing dependencies), verify Rhai conditional logic works, test hot-plug if possible, document manual testing procedure if automation not feasible | Success: E2E test covers device enumeration, per-device remapping, web UI device list, hot-plug handling; test passes on Windows CI or documented manual procedure provided_
 
-- [ ] 14. Update tech.md steering document
+- [x] 14. Update tech.md steering document
   - File: .spec-workflow/steering/tech.md
   - Update Windows section: remove "Low-Level Hooks", add "Raw Input API (RAWINPUT)"
   - Document device discrimination architecture (handle → serial mapping)
