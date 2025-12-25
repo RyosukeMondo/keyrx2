@@ -804,10 +804,7 @@ impl Daemon {
                         || revents.contains(PollFlags::POLLHUP)
                         || revents.contains(PollFlags::POLLNVAL)
                     {
-                        warn!(
-                            "Device {} has error condition (flags: {:?})",
-                            idx, revents
-                        );
+                        warn!("Device {} has error condition (flags: {:?})", idx, revents);
                         return Some(idx); // Return to trigger error handling
                     }
                 }
@@ -838,7 +835,10 @@ impl Daemon {
                 let device = match self.device_manager.get_device_mut(device_idx) {
                     Some(d) => d,
                     None => {
-                        warn!("Device {} no longer available during event collection", device_idx);
+                        warn!(
+                            "Device {} no longer available during event collection",
+                            device_idx
+                        );
                         continue; // Skip this device
                     }
                 };
