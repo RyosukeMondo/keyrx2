@@ -46,7 +46,7 @@ impl EventInjector {
 }
 
 #[allow(dead_code)]
-pub(crate) fn is_extended_key(vk: u16) -> bool {
+pub fn is_extended_key(vk: u16) -> bool {
     matches!(
         vk,
         VK_RMENU

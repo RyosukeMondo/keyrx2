@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Windows Quality Improvements
+- **Rigorous Quality Audit**: Completed comprehensive audit of Windows platform for memory safety, synchronization, and resource management.
+- **Raw Input API Hardening**:
+  - Fixed CRITICAL use-after-free and double-free vulnerabilities in `RawInputManager` (WIN-BUG #1).
+  - Implemented boundary checks for raw input data buffer to prevent OOM (WIN-BUG #3).
+  - Added explicit unregistration of Raw Input devices on shutdown (WIN-BUG #8).
+- **Synchronization Resilience**:
+  - Eliminated process-wide panics due to `RwLock` poisoning by replacing unwrap() with graceful error handling (WIN-BUG #2).
+  - Improved thread-safe communication between `wnd_proc` and device subscribers.
+- **Fault Tolerance**:
+  - Integrated `catch_unwind` into the Win32 message pump to prevent callback panics from crashing the daemon (WIN-BUG #4).
+  - Enhanced error recovery for Win32 API failures during window creation and event injection.
+- **Regression Testing**:
+  - Established a baseline of 10 new regression tests in `keyrx_daemon/tests/windows_bugs` covering all identified vulnerabilities.
+  - Implemented `VirtualWindowsKeyboard` for automated stimulus injection.
+
+
 ## [0.1.0] - 2024-12-25
 
 ### Added

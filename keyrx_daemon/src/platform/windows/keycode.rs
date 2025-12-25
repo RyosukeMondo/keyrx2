@@ -159,19 +159,84 @@ pub fn vk_to_keycode(vk: u16) -> Option<KeyCode> {
 }
 
 pub fn scancode_to_keycode(scancode: u32) -> Option<KeyCode> {
-    // For now, map scancode to VK then to KeyCode as a simplified implementation.
-    // In reality, MapVirtualKeyW(scancode, MAPVK_VSC_TO_VK_EX) should be used,
-    // but strict scancode mapping table is better for raw input consistency.
-    // This is a placeholder to get it compiling; a full table is needed.
+    // WIN-BUG #7: Layout-dependent mapping.
+    // Use a fixed table for common scancodes to ensure consistency across layouts.
+    // Only fall back to MapVirtualKeyW for less common keys.
+    match scancode {
+        0x1E => Some(KeyCode::A),
+        0x30 => Some(KeyCode::B),
+        0x2E => Some(KeyCode::C),
+        0x20 => Some(KeyCode::D),
+        0x12 => Some(KeyCode::E),
+        0x21 => Some(KeyCode::F),
+        0x22 => Some(KeyCode::G),
+        0x23 => Some(KeyCode::H),
+        0x17 => Some(KeyCode::I),
+        0x24 => Some(KeyCode::J),
+        0x25 => Some(KeyCode::K),
+        0x26 => Some(KeyCode::L),
+        0x32 => Some(KeyCode::M),
+        0x31 => Some(KeyCode::N),
+        0x18 => Some(KeyCode::O),
+        0x19 => Some(KeyCode::P),
+        0x10 => Some(KeyCode::Q),
+        0x13 => Some(KeyCode::R),
+        0x1F => Some(KeyCode::S),
+        0x14 => Some(KeyCode::T),
+        0x16 => Some(KeyCode::U),
+        0x2F => Some(KeyCode::V),
+        0x11 => Some(KeyCode::W),
+        0x2D => Some(KeyCode::X),
+        0x15 => Some(KeyCode::Y),
+        0x2C => Some(KeyCode::Z),
+        // Numbers
+        0x0B => Some(KeyCode::Num0),
+        0x02 => Some(KeyCode::Num1),
+        0x03 => Some(KeyCode::Num2),
+        0x04 => Some(KeyCode::Num3),
+        0x05 => Some(KeyCode::Num4),
+        0x06 => Some(KeyCode::Num5),
+        0x07 => Some(KeyCode::Num6),
+        0x08 => Some(KeyCode::Num7),
+        0x09 => Some(KeyCode::Num8),
+        0x0A => Some(KeyCode::Num9),
+        // Control keys
+        0x01 => Some(KeyCode::Escape),
+        0x1C => Some(KeyCode::Enter),
+        0x39 => Some(KeyCode::Space),
+        0x0E => Some(KeyCode::Backspace),
+        0x0F => Some(KeyCode::Tab),
+        0x2A => Some(KeyCode::LShift),
+        0x36 => Some(KeyCode::RShift),
+        0x1D => Some(KeyCode::LCtrl),
+        0x38 => Some(KeyCode::LAlt),
+        // Navigation (E0 prefix handling in rawinput.rs makes these scan codes)
+        0xE01D => Some(KeyCode::RCtrl),
+        0xE038 => Some(KeyCode::RAlt),
+        0xE047 => Some(KeyCode::Home),
+        0xE048 => Some(KeyCode::Up),
+        0xE049 => Some(KeyCode::PageUp),
+        0xE04B => Some(KeyCode::Left),
+        0xE04D => Some(KeyCode::Right),
+        0xE04F => Some(KeyCode::End),
+        0xE050 => Some(KeyCode::Down),
+        0xE051 => Some(KeyCode::PageDown),
+        0xE052 => Some(KeyCode::Insert),
+        0xE053 => Some(KeyCode::Delete),
 
-    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{MapVirtualKeyW, MAPVK_VSC_TO_VK_EX};
-
-    unsafe {
-        let vk = MapVirtualKeyW(scancode, MAPVK_VSC_TO_VK_EX);
-        if vk == 0 {
-            return None;
+        _ => {
+            // Fallback to MapVirtualKeyW for other keys
+            use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+                MapVirtualKeyW, MAPVK_VSC_TO_VK_EX,
+            };
+            unsafe {
+                let vk = MapVirtualKeyW(scancode, MAPVK_VSC_TO_VK_EX);
+                if vk == 0 {
+                    return None;
+                }
+                vk_to_keycode(vk as u16)
+            }
         }
-        vk_to_keycode(vk as u16)
     }
 }
 

@@ -56,7 +56,6 @@ use crate::platform::{DeviceError, InputDevice, OutputDevice};
 use keyrx_core::runtime::event::check_tap_hold_timeouts;
 
 // Linux-specific imports for polling and process_event
-#[cfg(feature = "linux")]
 use keyrx_core::runtime::process_event;
 #[cfg(feature = "linux")]
 use nix::poll::{poll, PollFd, PollFlags};
@@ -848,7 +847,7 @@ impl Daemon {
             }
 
             // Process collected events
-            for event in device_events {
+            for event in &device_events {
                 let device = match self.device_manager.get_device_mut(device_idx) {
                     Some(d) => d,
                     None => {
@@ -862,7 +861,7 @@ impl Daemon {
                 };
                 let (lookup, state) = device.lookup_and_state_mut();
 
-                let output_events = process_event(event, lookup, state);
+                let output_events = process_event(event.clone(), lookup, state);
 
                 for out_event in output_events {
                     self.output.inject_event(out_event).map_err(|e| {

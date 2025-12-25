@@ -29,7 +29,7 @@ const CLASS_NAME: &[u16] = &[
 
 /// Manages Raw Input registration and routes events to device-specific channels.
 pub struct RawInputManager {
-    hwnd: HWND,
+    pub hwnd: HWND,
     _device_map: DeviceMap,
     subscribers: Arc<RwLock<HashMap<usize, Sender<KeyEvent>>>>,
     _global_sender: Sender<KeyEvent>,
@@ -69,16 +69,27 @@ impl RawInputManager {
     /// Returns a Receiver that will receive KeyEvents for that device.
     pub fn subscribe(&self, device_handle: usize) -> Receiver<KeyEvent> {
         let (sender, receiver) = unbounded();
-        self.subscribers
-            .write()
-            .unwrap()
-            .insert(device_handle, sender);
+        match self.subscribers.write() {
+            Ok(mut subscribers) => {
+                subscribers.insert(device_handle, sender);
+            }
+            Err(_) => {
+                log::error!("Subscribers lock poisoned in subscribe");
+            }
+        }
         receiver
     }
 
     /// Unsubscribes a device (e.g., on removal).
     pub fn unsubscribe(&self, device_handle: usize) {
-        self.subscribers.write().unwrap().remove(&device_handle);
+        match self.subscribers.write() {
+            Ok(mut subscribers) => {
+                subscribers.remove(&device_handle);
+            }
+            Err(_) => {
+                log::error!("Subscribers lock poisoned in unsubscribe");
+            }
+        }
     }
 
     /// Simulates a raw input event for testing purposes.
@@ -177,12 +188,24 @@ impl RawInputManager {
 impl Drop for RawInputManager {
     fn drop(&mut self) {
         unsafe {
-            let ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut RawInputContext;
+            // WIN-BUG #1: Clear GWLP_USERDATA before destroying the window
+            // to prevent wnd_proc from accessing the context during destruction.
+            let ptr = SetWindowLongPtrW(self.hwnd, GWLP_USERDATA, 0) as *mut RawInputContext;
+
+            // WIN-BUG #8: Unregister Raw Input
+            let rid = RAWINPUTDEVICE {
+                usUsagePage: 1,
+                usUsage: 6,
+                dwFlags: windows_sys::Win32::UI::Input::RIDEV_REMOVE,
+                hwndTarget: 0 as _,
+            };
+            let _ = RegisterRawInputDevices(&rid, 1, size_of::<RAWINPUTDEVICE>() as u32);
+
+            DestroyWindow(self.hwnd);
+
             if !ptr.is_null() {
                 let _ = Box::from_raw(ptr);
-                SetWindowLongPtrW(self.hwnd, GWLP_USERDATA, 0);
             }
-            DestroyWindow(self.hwnd);
         }
     }
 }
@@ -219,6 +242,14 @@ unsafe extern "system" fn wnd_proc(
                 size_of::<RAWINPUTHEADER>() as u32,
             ) == 0
             {
+                // WIN-BUG #3: Unbounded memory allocation.
+                // Limit buffer size to prevent OOM from malicious/buggy drivers.
+                const MAX_RAW_INPUT_SIZE: u32 = 4096;
+                if close_size > MAX_RAW_INPUT_SIZE {
+                    log::warn!("Raw input size too large: {} bytes", close_size);
+                    return DefWindowProcW(hwnd, msg, wparam, lparam);
+                }
+
                 let mut buffer = vec![0u8; close_size as usize];
 
                 if GetRawInputData(
@@ -248,7 +279,9 @@ unsafe extern "system" fn wnd_proc(
                     // GIDC_ARRIVAL
                     log::info!("Device arrived: {:x}", lparam);
                     // lparam is HANDLE of device
-                    let _ = context.device_map.add_device(lparam as HANDLE);
+                    if let Err(e) = context.device_map.add_device(lparam as HANDLE) {
+                        log::error!("Failed to add new device: {}", e);
+                    }
                 }
                 2 => {
                     // GIDC_REMOVAL
@@ -295,8 +328,15 @@ fn process_raw_keyboard(raw: &RAWKEYBOARD, device_handle: usize, context: &RawIn
         let _ = context.global_sender.try_send(event.clone());
 
         // Send to specific subscriber (legacy support)
-        if let Some(sender) = context.subscribers.read().unwrap().get(&device_handle) {
-            let _ = sender.try_send(event);
+        match context.subscribers.read() {
+            Ok(subscribers) => {
+                if let Some(sender) = subscribers.get(&device_handle) {
+                    let _ = sender.try_send(event);
+                }
+            }
+            Err(_) => {
+                log::error!("Subscribers lock poisoned");
+            }
         }
     }
 }

@@ -192,12 +192,22 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                 }
 
                 TranslateMessage(&msg);
-                DispatchMessageW(&msg);
+                // WIN-BUG #4: Wrap message dispatch in catch_unwind to prevent
+                // a panic in wnd_proc from terminating the entire process.
+                let _ = std::panic::catch_unwind(|| {
+                    DispatchMessageW(&msg);
+                });
             }
 
-            // Process daemon events (active remapping)
-            if let Err(e) = daemon.process_pending_events() {
+            // WIN-BUG #4: Wrap event processing in catch_unwind.
+            let process_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                daemon.process_pending_events()
+            }));
+
+            if let Ok(Err(e)) = process_result {
                 log::error!("Error processing events: {}", e);
+            } else if process_result.is_err() {
+                log::error!("Panic occurred during event processing");
             }
 
             // Poll tray events
@@ -221,6 +231,7 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
 }
 
 #[cfg(target_os = "windows")]
+#[allow(dead_code)]
 fn is_admin() -> bool {
     use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
     use windows_sys::Win32::Security::{
@@ -593,7 +604,14 @@ fn handle_validate(config_path: &std::path::Path) -> Result<(), (i32, String)> {
     if keyboards.is_empty() {
         println!("   No keyboard devices found.");
         println!();
-        println!("RESULT: Configuration is valid, but no devices to match.");
+        println!("This could mean:");
+        println!("  - No keyboards are connected");
+        println!("  - Permission denied to read /dev/input/event* devices");
+        println!();
+        println!("To fix permission issues, either:");
+        println!("  - Run as root (for testing only)");
+        println!("  - Add your user to the 'input' group: sudo usermod -aG input $USER");
+        println!("  - Install the udev rules: see docs/LINUX_SETUP.md");
         return Ok(());
     }
 

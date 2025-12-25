@@ -20,7 +20,7 @@ pub struct DeviceInfo {
 /// Manages mapping between Raw Input handles and device information.
 #[derive(Clone)]
 pub struct DeviceMap {
-    devices: Arc<RwLock<HashMap<usize, DeviceInfo>>>,
+    pub devices: Arc<RwLock<HashMap<usize, DeviceInfo>>>,
 }
 
 impl DeviceMap {
@@ -89,10 +89,15 @@ impl DeviceMap {
         };
 
         // Store using handle as key (cast to usize for hashing)
-        self.devices
-            .write()
-            .unwrap()
-            .insert(handle as usize, info.clone());
+        match self.devices.write() {
+            Ok(mut devices) => {
+                devices.insert(handle as usize, info.clone());
+            }
+            Err(_) => {
+                log::error!("Device map lock poisoned in add_device");
+                return Err("Device map lock poisoned".to_string());
+            }
+        }
 
         Ok(info)
     }
@@ -107,26 +112,48 @@ impl DeviceMap {
             path,
             serial,
         };
-        self.devices.write().unwrap().insert(handle, info);
+        match self.devices.write() {
+            Ok(mut devices) => {
+                devices.insert(handle, info);
+            }
+            Err(_) => {
+                log::error!("Device map lock poisoned in add_synthetic_device");
+            }
+        }
     }
 
     /// Removes a device from the map.
     pub fn remove_device(&self, handle: HANDLE) {
-        self.devices.write().unwrap().remove(&(handle as usize));
+        match self.devices.write() {
+            Ok(mut devices) => {
+                devices.remove(&(handle as usize));
+            }
+            Err(_) => {
+                log::error!("Device map lock poisoned in remove_device");
+            }
+        }
     }
 
     /// Looks up device info by handle.
     pub fn get(&self, handle: HANDLE) -> Option<DeviceInfo> {
-        self.devices
-            .read()
-            .unwrap()
-            .get(&(handle as usize))
-            .cloned()
+        match self.devices.read() {
+            Ok(devices) => devices.get(&(handle as usize)).cloned(),
+            Err(_) => {
+                log::error!("Device map lock poisoned in get");
+                None
+            }
+        }
     }
 
     /// Gets the list of all tracked devices.
     pub fn all(&self) -> Vec<DeviceInfo> {
-        self.devices.read().unwrap().values().cloned().collect()
+        match self.devices.read() {
+            Ok(devices) => devices.values().cloned().collect(),
+            Err(_) => {
+                log::error!("Device map lock poisoned in all");
+                Vec::new()
+            }
+        }
     }
 
     fn get_device_path(&self, handle: HANDLE) -> Result<String, String> {
