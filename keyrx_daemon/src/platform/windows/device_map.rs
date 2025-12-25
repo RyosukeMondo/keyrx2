@@ -167,3 +167,40 @@ impl DeviceMap {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_serial_normal() {
+        let device_map = DeviceMap::new();
+        // Example format: \\?\HID#VID_046D&PID_C52B&MI_00#7&2a00c76d&0&0000#{884b96c3-56ef-11d1-bc8c-00a0c91405dd}
+        let path = r"\\?\HID#VID_046D&PID_C52B&MI_00#7&2a00c76d&0&0000#{884b96c3-56ef-11d1-bc8c-00a0c91405dd}";
+        let serial = device_map.extract_serial(path);
+        assert_eq!(serial, Some("7&2a00c76d&0&0000".to_string()));
+    }
+
+    #[test]
+    fn test_extract_serial_short_path() {
+        let device_map = DeviceMap::new();
+        let path = r"\\?\HID#VID_1234&PID_5678";
+        let serial = device_map.extract_serial(path);
+        assert_eq!(serial, None);
+    }
+
+    #[test]
+    fn test_extract_serial_empty() {
+        let device_map = DeviceMap::new();
+        let path = "";
+        let serial = device_map.extract_serial(path);
+        assert_eq!(serial, None);
+    }
+
+    #[test]
+    fn test_device_map_basic_operations() {
+        let map = DeviceMap::new();
+        let all = map.all();
+        assert!(all.is_empty());
+    }
+}

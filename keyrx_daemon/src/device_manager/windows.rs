@@ -7,6 +7,40 @@ use keyrx_core::runtime::{DeviceState, KeyLookup};
 use log::info;
 use std::path::PathBuf;
 
+pub fn enumerate_keyboards() -> Result<Vec<KeyboardInfo>, DiscoveryError> {
+    let device_map = DeviceMap::new();
+    device_map
+        .enumerate()
+        .map_err(|e| DiscoveryError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+    let devices = device_map
+        .all()
+        .into_iter()
+        .map(|d| {
+            // Use serial if available, otherwise path as fallback
+            let serial = d.serial.clone();
+
+            // On Windows, we don't easily get a friendly name from RawInput alone without more complex SetupAPI calls.
+            // For now, use a generic name with handle to distinguish them.
+            // TODO: Improve name resolution using SetupAPI
+            let name = if let Some(ref s) = serial {
+                format!("Keyboard ({})", s)
+            } else {
+                format!("Keyboard {:x}", d.handle)
+            };
+
+            KeyboardInfo {
+                path: PathBuf::from(d.path),
+                name,
+                serial,
+                phys: None, // Physical location topology not implemented yet
+            }
+        })
+        .collect();
+
+    Ok(devices)
+}
+
 pub struct ManagedDevice {
     info: KeyboardInfo,
     input: WindowsKeyboardInput,

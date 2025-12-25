@@ -76,7 +76,28 @@ async fn get_config() -> Json<Value> {
 ///   ]
 /// }
 /// ```
-#[cfg(all(feature = "web", feature = "linux"))]
+/// GET /api/devices - Returns list of connected keyboard devices.
+///
+/// This endpoint enumerates all keyboard input devices available on the system.
+/// Each device includes its unique ID, name, path, serial number (if available),
+/// and active status.
+///
+/// # Response Format
+///
+/// ```json
+/// {
+///   "devices": [
+///     {
+///       "id": "serial-ABC123",
+///       "name": "USB Keyboard",
+///       "path": "/dev/input/event0",
+///       "serial": "ABC123",
+///       "active": true
+///     }
+///   ]
+/// }
+/// ```
+#[cfg(all(feature = "web", any(target_os = "linux", target_os = "windows")))]
 #[allow(dead_code)]
 async fn get_devices() -> Json<DevicesListResponse> {
     use crate::device_manager::enumerate_keyboards;
@@ -114,11 +135,11 @@ async fn get_devices() -> Json<DevicesListResponse> {
     Json(DevicesListResponse { devices })
 }
 
-/// Fallback for non-Linux platforms.
-#[cfg(all(feature = "web", not(feature = "linux")))]
+/// Fallback for unsupported platforms.
+#[cfg(all(feature = "web", not(any(target_os = "linux", target_os = "windows"))))]
 #[allow(dead_code)]
 async fn get_devices() -> Json<DevicesListResponse> {
-    // On non-Linux platforms, return empty device list
+    // On unsupported platforms, return empty device list
     Json(DevicesListResponse {
         devices: Vec::new(),
     })
