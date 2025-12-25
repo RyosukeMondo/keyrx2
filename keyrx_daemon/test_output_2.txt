@@ -1,0 +1,87 @@
+warning: unused import: `std::fs`
+   --> keyrx_daemon\src\test_utils\output_capture.rs:27:5
+    |
+ 27 | use std::fs;
+    |     ^^^^^^^
+    |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+   --> keyrx_daemon\src\test_utils\mod.rs:127:1
+    |
+127 | pub mod output_capture;
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `PathBuf` and `Path`
+   --> keyrx_daemon\src\test_utils\output_capture.rs:30:17
+    |
+ 30 | use std::path::{Path, PathBuf};
+    |                 ^^^^  ^^^^^^^
+    |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+   --> keyrx_daemon\src\test_utils\mod.rs:127:1
+    |
+127 | pub mod output_capture;
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Instant`
+   --> keyrx_daemon\src\test_utils\output_capture.rs:31:27
+    |
+ 31 | use std::time::{Duration, Instant};
+    |                           ^^^^^^^
+    |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+   --> keyrx_daemon\src\test_utils\mod.rs:127:1
+    |
+127 | pub mod output_capture;
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `timeout`
+   --> keyrx_daemon\src\test_utils\output_capture.rs:161:37
+    |
+161 |     pub fn find_by_name(name: &str, timeout: Duration) -> Result<Self, VirtualDeviceError> {
+    |                                     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_timeout`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `POLL_INTERVAL` is never used
+  --> keyrx_daemon\src\test_utils\output_capture.rs:55:7
+   |
+55 | const POLL_INTERVAL: Duration = Duration::from_millis(50);
+   |       ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `keyrx_daemon` (lib) generated 5 warnings (run `cargo fix --lib -p keyrx_daemon` to apply 4 suggestions)
+   Compiling keyrx_daemon v0.1.0 (C:\Users\ryosu\repos\keyrx\keyrx_daemon)
+error[E0425]: cannot find value `SCAN_B` in this scope
+  --> keyrx_daemon\tests\e2e_windows_multidevice.rs:67:37
+   |
+27 | const SCAN_A: u16 = 0x1E;
+   | ------------------------- similarly named constant `SCAN_A` defined here
+...
+67 |     manager.simulate_raw_input(100, SCAN_B, 1); // Break
+   |                                     ^^^^^^ help: a constant with a similar name exists: `SCAN_A`
+
+warning: unused import: `std::sync::mpsc`
+  --> keyrx_daemon\tests\e2e_windows_multidevice.rs:14:5
+   |
+14 | use std::sync::mpsc;
+   |     ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `BaseKeyMapping`, `ConditionItem`, `Condition`, `DeviceConfig`, `DeviceIdentifier`, and `KeyMapping`
+  --> keyrx_daemon\tests\e2e_windows_multidevice.rs:18:5
+   |
+18 |     BaseKeyMapping, Condition, ConditionItem, DeviceConfig, DeviceIdentifier, KeyCode, KeyMapping,
+   |     ^^^^^^^^^^^^^^  ^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^           ^^^^^^^^^^
+
+warning: unused import: `keyrx_core::runtime::KeyEvent`
+  --> keyrx_daemon\tests\e2e_windows_multidevice.rs:20:5
+   |
+20 | use keyrx_core::runtime::KeyEvent;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0425`.
+warning: `keyrx_daemon` (test "e2e_windows_multidevice") generated 3 warnings
+error: could not compile `keyrx_daemon` (test "e2e_windows_multidevice") due to 1 previous error; 3 warnings emitted

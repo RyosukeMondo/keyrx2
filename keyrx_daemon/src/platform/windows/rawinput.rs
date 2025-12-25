@@ -81,6 +81,28 @@ impl RawInputManager {
         self.subscribers.write().unwrap().remove(&device_handle);
     }
 
+    /// Simulates a raw input event for testing purposes.
+    /// This bypasses the Win32 message loop and directly processes the event.
+    /// Simulates a raw input event for testing purposes.
+    /// This bypasses the Win32 message loop and directly processes the event.
+    pub fn simulate_raw_input(&self, device_handle: usize, make_code: u16, flags: u16) {
+        unsafe {
+            let context_ptr = GetWindowLongPtrW(self.hwnd, GWLP_USERDATA) as *mut RawInputContext;
+            if !context_ptr.is_null() {
+                let context = &*context_ptr;
+                let raw_keyboard = RAWKEYBOARD {
+                    MakeCode: make_code,
+                    Flags: flags,
+                    Reserved: 0,
+                    VKey: 0,
+                    Message: 0,
+                    ExtraInformation: 0,
+                };
+                process_raw_keyboard(&raw_keyboard, device_handle, context);
+            }
+        }
+    }
+
     unsafe fn create_message_window() -> Result<HWND, String> {
         let h_instance = GetModuleHandleW(ptr::null());
 

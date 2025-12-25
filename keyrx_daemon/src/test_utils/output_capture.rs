@@ -24,11 +24,13 @@
 //! - Linux with evdev support
 //! - Read access to `/dev/input/event*` devices (typically requires `input` group)
 
-use std::fs;
 #[cfg(target_os = "linux")]
 use std::os::unix::io::AsRawFd;
+#[cfg(target_os = "linux")]
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(target_os = "linux")]
+use std::time::Instant;
 
 #[cfg(target_os = "linux")]
 use evdev::{Device, InputEventKind};
@@ -52,6 +54,7 @@ use super::VirtualDeviceError;
 use crate::platform::linux::evdev_to_keycode;
 
 /// Polling interval when waiting for a device to appear.
+#[cfg(any(target_os = "linux", test))]
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 /// Marker for events injected by the daemon
@@ -158,7 +161,7 @@ impl OutputCapture {
     ///
     /// println!("Found: {} at {}", capture.name(), capture.device_path());
     /// ```
-    pub fn find_by_name(name: &str, timeout: Duration) -> Result<Self, VirtualDeviceError> {
+    pub fn find_by_name(name: &str, _timeout: Duration) -> Result<Self, VirtualDeviceError> {
         #[cfg(target_os = "linux")]
         {
             let start = Instant::now();
@@ -978,6 +981,7 @@ pub fn assert_events_msg(captured: &[KeyEvent], expected: &[KeyEvent], msg: &str
 mod tests {
     use super::*;
     use keyrx_core::config::KeyCode;
+    use std::time::{Duration, Instant};
 
     #[test]
     fn test_poll_interval_is_reasonable() {

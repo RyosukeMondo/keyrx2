@@ -32,7 +32,7 @@ mod e2e_harness;
 use std::time::Duration;
 
 use e2e_harness::{E2EConfig, E2EHarness, TestEvents};
-use keyrx_core::config::KeyCode;
+use keyrx_core::config::{KeyCode, KeyMapping};
 use keyrx_core::runtime::KeyEvent;
 
 // ============================================================================
@@ -1702,10 +1702,7 @@ fn test_device_specific_remap() {
 
     // Create config with device-specific mapping
     // Pattern "*test*" will match devices with "test" in their ID
-    let config = E2EConfig::new(
-        "*test*",
-        vec![KeyMapping::simple(KeyCode::A, KeyCode::B)],
-    );
+    let config = E2EConfig::new("*test*", vec![KeyMapping::simple(KeyCode::A, KeyCode::B)]);
 
     let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
 
@@ -1730,10 +1727,7 @@ fn test_device_wildcard_pattern() {
     keyrx_daemon::skip_if_no_uinput!();
 
     // Wildcard pattern should match all devices
-    let config = E2EConfig::new(
-        "*",
-        vec![KeyMapping::simple(KeyCode::A, KeyCode::B)],
-    );
+    let config = E2EConfig::new("*", vec![KeyMapping::simple(KeyCode::A, KeyCode::B)]);
 
     let mut harness = E2EHarness::setup(config).expect("Failed to setup E2E harness");
 

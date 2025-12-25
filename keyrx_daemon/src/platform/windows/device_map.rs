@@ -97,6 +97,19 @@ impl DeviceMap {
         Ok(info)
     }
 
+    /// Adds a synthetic device for testing purposes.
+    /// This bypasses Win32 API calls and directly registers the device info.
+    /// Adds a synthetic device for testing purposes.
+    /// This bypasses Win32 API calls and directly registers the device info.
+    pub fn add_synthetic_device(&self, handle: usize, path: String, serial: Option<String>) {
+        let info = DeviceInfo {
+            handle,
+            path,
+            serial,
+        };
+        self.devices.write().unwrap().insert(handle, info);
+    }
+
     /// Removes a device from the map.
     pub fn remove_device(&self, handle: HANDLE) {
         self.devices.write().unwrap().remove(&(handle as usize));

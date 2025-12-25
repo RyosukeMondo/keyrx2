@@ -133,7 +133,7 @@
   - _Requirements: All_
   - _Prompt: Role: Technical Writer specializing in Windows system administration | Task: Create comprehensive Windows platform documentation covering Raw Input, permissions, and multi-device configuration | Restrictions: Explain why administrator is required (RIDEV_INPUTSINK for background capture), provide UAC elevation instructions, document serial number extraction for user reference, include troubleshooting section for common errors, use clear screenshots where helpful | Success: Documentation covers Raw Input architecture, admin requirement explained, device identification documented, troubleshooting section comprehensive, example configs provided_
 
-- [ ] 13. End-to-end test: USB numpad as macro pad on Windows
+- [x] 13. End-to-end test: USB numpad as macro pad on Windows
   - File: keyrx_daemon/tests/e2e_windows_multidevice.rs (new file)
   - Connect 2 USB keyboards (or use virtual HID for CI)
   - Configure per-device Rhai rules (numpad → F13, main → passthrough)
