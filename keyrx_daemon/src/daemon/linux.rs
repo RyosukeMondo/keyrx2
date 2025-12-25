@@ -44,6 +44,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM};
+use signal_hook::flag::register_conditional_default;
 
 use super::ReloadState;
 
@@ -128,20 +129,18 @@ impl SignalHandler {
 /// - Signal handler registration fails (rare, typically due to system limits)
 /// - Invalid signal number (should not happen with constants)
 pub fn install_signal_handlers(running: Arc<AtomicBool>) -> io::Result<SignalHandler> {
-    // Register SIGTERM handler - sets running to false
-    signal_hook::flag::register(SIGTERM, Arc::clone(&running))?;
+    // Register SIGTERM handler - sets running to FALSE on signal
+    // Uses register_conditional_default which sets flag to false (the "default" value)
+    register_conditional_default(SIGTERM, Arc::clone(&running))?;
 
-    // Register SIGINT handler - sets running to false (Ctrl+C)
-    signal_hook::flag::register(SIGINT, Arc::clone(&running))?;
+    // Register SIGINT handler - sets running to FALSE on signal (Ctrl+C)
+    register_conditional_default(SIGINT, Arc::clone(&running))?;
 
     // Create reload state for SIGHUP
     let reload_state = ReloadState::new();
 
-    // Register SIGHUP handler - sets reload flag
-    // Note: signal_hook::flag::register sets flag to TRUE on signal,
-    // but we want running to go to FALSE. For running, we use register
-    // which sets it to false by default.
-    // For reload, we want to set it to TRUE.
+    // Register SIGHUP handler - sets reload flag to TRUE on signal
+    // Note: signal_hook::flag::register sets flag to TRUE, which is what we want for reload
     signal_hook::flag::register(SIGHUP, reload_state.flag())?;
 
     log::info!("Signal handlers installed (SIGTERM, SIGINT for shutdown; SIGHUP for reload)");

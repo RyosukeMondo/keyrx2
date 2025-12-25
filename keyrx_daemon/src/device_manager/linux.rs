@@ -8,6 +8,7 @@ use std::fs;
 use std::path::Path;
 
 use evdev::{Device, EventType, Key};
+use log::warn;
 
 use keyrx_core::config::DeviceConfig;
 use keyrx_core::runtime::{DeviceState, KeyLookup};
@@ -250,6 +251,12 @@ impl DeviceManager {
         for device in &mut self.devices {
             if let Some(config) = configs.get(device.config_index) {
                 device.rebuild_lookup(config);
+            } else {
+                warn!(
+                    "Config reload: No config at index {} for device '{}', keeping old config",
+                    device.config_index,
+                    device.info().name
+                );
             }
         }
     }

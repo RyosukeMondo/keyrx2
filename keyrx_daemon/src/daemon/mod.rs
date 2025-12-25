@@ -678,6 +678,8 @@ impl Daemon {
                             break;
                         }
                         warn!("Poll error: {}", e);
+                        // Sleep to prevent busy loop on persistent errors
+                        std::thread::sleep(Duration::from_millis(100));
                         continue;
                     }
                 };
@@ -787,14 +789,26 @@ impl Daemon {
             return Ok(Vec::new());
         }
 
-        // Collect indices of devices with available events
+        // Collect indices of devices with available events or errors
         let ready_indices: Vec<usize> = poll_fds
             .iter()
             .enumerate()
             .filter_map(|(idx, pfd)| {
                 if let Some(revents) = pfd.revents() {
+                    // Check for available data
                     if revents.contains(PollFlags::POLLIN) {
                         return Some(idx);
+                    }
+                    // Check for error conditions (device disconnect, errors)
+                    if revents.contains(PollFlags::POLLERR)
+                        || revents.contains(PollFlags::POLLHUP)
+                        || revents.contains(PollFlags::POLLNVAL)
+                    {
+                        warn!(
+                            "Device {} has error condition (flags: {:?})",
+                            idx, revents
+                        );
+                        return Some(idx); // Return to trigger error handling
                     }
                 }
                 None
@@ -821,7 +835,13 @@ impl Daemon {
 
             // Collect all currently available events (non-blocking)
             {
-                let device = self.device_manager.get_device_mut(device_idx).unwrap();
+                let device = match self.device_manager.get_device_mut(device_idx) {
+                    Some(d) => d,
+                    None => {
+                        warn!("Device {} no longer available during event collection", device_idx);
+                        continue; // Skip this device
+                    }
+                };
                 while let Ok(event) = device.input_mut().next_event() {
                     device_events.push(event);
                 }
@@ -829,7 +849,17 @@ impl Daemon {
 
             // Process collected events
             for event in device_events {
-                let device = self.device_manager.get_device_mut(device_idx).unwrap();
+                let device = match self.device_manager.get_device_mut(device_idx) {
+                    Some(d) => d,
+                    None => {
+                        warn!(
+                            "Device {} removed during event processing, discarding {} events",
+                            device_idx,
+                            device_events.len()
+                        );
+                        break; // Stop processing events from removed device
+                    }
+                };
                 let (lookup, state) = device.lookup_and_state_mut();
 
                 let output_events = process_event(event, lookup, state);

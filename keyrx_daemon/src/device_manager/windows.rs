@@ -4,7 +4,7 @@ use crate::platform::windows::{
 };
 use keyrx_core::config::DeviceConfig;
 use keyrx_core::runtime::{DeviceState, KeyLookup};
-use log::info;
+use log::{info, warn};
 use std::path::PathBuf;
 
 pub fn enumerate_keyboards() -> Result<Vec<KeyboardInfo>, DiscoveryError> {
@@ -167,6 +167,12 @@ impl DeviceManager {
         for device in &mut self.devices {
             if let Some(config) = configs.get(device.config_index) {
                 device.rebuild_lookup(config);
+            } else {
+                warn!(
+                    "Config reload: No config at index {} for device '{}', keeping old config",
+                    device.config_index,
+                    device.info().name
+                );
             }
         }
     }
