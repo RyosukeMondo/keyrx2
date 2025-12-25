@@ -54,7 +54,6 @@ use crate::device_manager::DeviceManager;
 use crate::platform::linux::UinputOutput;
 use crate::platform::{DeviceError, InputDevice, OutputDevice};
 use keyrx_core::runtime::event::check_tap_hold_timeouts;
-use keyrx_core::runtime::event::process_event;
 
 #[cfg(target_os = "linux")]
 mod linux;

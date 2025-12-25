@@ -161,7 +161,7 @@ impl OutputCapture {
     ///
     /// println!("Found: {} at {}", capture.name(), capture.device_path());
     /// ```
-    pub fn find_by_name(name: &str, _timeout: Duration) -> Result<Self, VirtualDeviceError> {
+    pub fn find_by_name(name: &str, timeout: Duration) -> Result<Self, VirtualDeviceError> {
         #[cfg(target_os = "linux")]
         {
             let start = Instant::now();
