@@ -25,7 +25,7 @@
 //!
 //! Tests automatically skip with a message if uinput/input access is not available.
 
-#![cfg(all(target_os = "linux", feature = "linux"))]
+#![cfg(any(target_os = "linux", target_os = "windows"))]
 
 mod e2e_harness;
 
