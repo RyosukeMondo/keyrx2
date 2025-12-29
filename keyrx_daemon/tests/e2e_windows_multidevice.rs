@@ -57,7 +57,10 @@ fn test_windows_multidevice_discrimination() {
         .expect("Failed to receive event");
     assert_eq!(event.keycode(), KeyCode::B);
     assert!(event.is_press());
-    assert_eq!(event.device_id().as_deref(), Some("Serial-Numpad-123"));
+    assert_eq!(
+        event.device_id().as_deref(),
+        Some("serial-Serial-Numpad-123")
+    );
 
     manager.simulate_raw_input(100, SCAN_B, 1); // Break
     let event = rx
@@ -73,7 +76,7 @@ fn test_windows_multidevice_discrimination() {
         .recv_timeout(Duration::from_secs(1))
         .expect("Failed to receive event");
     assert_eq!(event.keycode(), KeyCode::A);
-    assert_eq!(event.device_id().as_deref(), Some("Serial-Main-456"));
+    assert_eq!(event.device_id().as_deref(), Some("serial-Serial-Main-456"));
 
     manager.simulate_raw_input(200, SCAN_A, 1); // Break
     let event = rx

@@ -223,6 +223,21 @@ pub fn scancode_to_keycode(scancode: u32) -> Option<KeyCode> {
         0xE051 => Some(KeyCode::PageDown),
         0xE052 => Some(KeyCode::Insert),
         0xE053 => Some(KeyCode::Delete),
+        0xE01C => Some(KeyCode::Enter),
+        0xE035 => Some(KeyCode::NumpadDivide),
+        // Function keys
+        0x3B => Some(KeyCode::F1),
+        0x3C => Some(KeyCode::F2),
+        0x3D => Some(KeyCode::F3),
+        0x3E => Some(KeyCode::F4),
+        0x3F => Some(KeyCode::F5),
+        0x40 => Some(KeyCode::F6),
+        0x41 => Some(KeyCode::F7),
+        0x42 => Some(KeyCode::F8),
+        0x43 => Some(KeyCode::F9),
+        0x44 => Some(KeyCode::F10),
+        0x57 => Some(KeyCode::F11),
+        0x58 => Some(KeyCode::F12),
 
         _ => {
             // Fallback to MapVirtualKeyW for other keys

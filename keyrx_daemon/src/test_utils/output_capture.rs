@@ -24,9 +24,11 @@
 //! - Linux with evdev support
 //! - Read access to `/dev/input/event*` devices (typically requires `input` group)
 
+#[cfg(target_os = "linux")]
 use std::fs;
 #[cfg(target_os = "linux")]
 use std::os::unix::io::AsRawFd;
+#[cfg(target_os = "linux")]
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 #[cfg(target_os = "linux")]
@@ -63,8 +65,8 @@ const DAEMON_OUTPUT_MARKER: usize = 0x4441454D; // "DAEM"
 
 /// Global sender for Windows keyboard hook events.
 #[cfg(target_os = "windows")]
-static SENDER: std::sync::OnceLock<crossbeam_channel::Sender<KeyEvent>> =
-    std::sync::OnceLock::new();
+static SENDER: std::sync::RwLock<Option<crossbeam_channel::Sender<KeyEvent>>> =
+    std::sync::RwLock::new(None);
 
 /// Captures output events from the daemon's virtual keyboard.
 ///
@@ -161,7 +163,7 @@ impl OutputCapture {
     ///
     /// println!("Found: {} at {}", capture.name(), capture.device_path());
     /// ```
-    pub fn find_by_name(name: &str, timeout: Duration) -> Result<Self, VirtualDeviceError> {
+    pub fn find_by_name(name: &str, _timeout: Duration) -> Result<Self, VirtualDeviceError> {
         #[cfg(target_os = "linux")]
         {
             let start = Instant::now();
@@ -192,7 +194,9 @@ impl OutputCapture {
             let name_clone = name.to_string();
 
             // Store the sender in a global to be accessed by the hook callback.
-            let _ = SENDER.set(sender);
+            if let Ok(mut sender_opt) = SENDER.write() {
+                *sender_opt = Some(sender);
+            }
 
             unsafe extern "system" fn hook_proc(
                 code: i32,
@@ -208,10 +212,11 @@ impl OutputCapture {
                                 WM_KEYUP | WM_SYSKEYUP => Some(KeyEvent::Release(keycode)),
                                 _ => None,
                             };
-
                             if let Some(event) = event {
-                                if let Some(sender) = SENDER.get() {
-                                    let _ = sender.try_send(event.clone());
+                                if let Ok(sender_opt) = SENDER.read() {
+                                    if let Some(sender) = sender_opt.as_ref() {
+                                        let _ = sender.try_send(event);
+                                    }
                                 }
                             }
                         }
@@ -246,10 +251,10 @@ impl OutputCapture {
 
             // Wait for hook setup success
             let thread_id = setup_receiver
-                .recv_timeout(Duration::from_secs(2))
+                .recv_timeout(Duration::from_secs(5))
                 .map_err(|_| VirtualDeviceError::Timeout {
                     operation: "hook setup".to_string(),
-                    timeout_ms: 2000,
+                    timeout_ms: 5000,
                 })?
                 .map_err(|e| VirtualDeviceError::CreationFailed { message: e })?;
 
@@ -673,8 +678,9 @@ impl Drop for OutputCapture {
         #[cfg(target_os = "windows")]
         {
             // Clear the global sender
-            // Note: OnceLock can't be cleared, but we don't need to for tests
-            // as they run in sequence with --test-threads=1.
+            if let Ok(mut sender_opt) = SENDER.write() {
+                *sender_opt = None;
+            }
 
             if let Some(msg_thread) = self.msg_thread.take() {
                 unsafe {

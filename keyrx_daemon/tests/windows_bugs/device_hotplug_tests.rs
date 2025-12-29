@@ -1,7 +1,6 @@
 use crossbeam_channel::unbounded;
 use keyrx_daemon::platform::windows::device_map::DeviceMap;
 use keyrx_daemon::platform::windows::rawinput::RawInputManager;
-use std::thread;
 use windows_sys::Win32::Foundation::HANDLE;
 
 #[test]

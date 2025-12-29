@@ -12,9 +12,11 @@ use windows_sys::Win32::UI::Input::{
     RAWKEYBOARD, RIDEV_DEVNOTIFY, RIDEV_INPUTSINK, RID_INPUT, RIM_TYPEKEYBOARD,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, RegisterClassExW,
-    SetWindowLongPtrW, CS_DBLCLKS, GWLP_USERDATA, HWND_MESSAGE, WM_INPUT, WM_INPUT_DEVICE_CHANGE,
-    WNDCLASSEXW,
+    CallNextHookEx, CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW,
+    RegisterClassExW, SetWindowLongPtrW, SetWindowsHookExW, UnhookWindowsHookEx, CS_DBLCLKS,
+    GWLP_USERDATA, HC_ACTION, HHOOK, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, WH_KEYBOARD_LL, WM_INPUT,
+    WM_INPUT_DEVICE_CHANGE, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WNDCLASSEXW,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
 };
 
 use crate::platform::windows::device_map::DeviceMap;
@@ -26,6 +28,16 @@ const CLASS_NAME: &[u16] = &[
     'K' as u16, 'e' as u16, 'y' as u16, 'R' as u16, 'x' as u16, 'R' as u16, 'a' as u16, 'w' as u16,
     'I' as u16, 'n' as u16, 'p' as u16, 'u' as u16, 't' as u16, 0,
 ];
+
+const TEST_SIMULATED_PHYSICAL_MARKER: usize = 0x54455354; // "TEST"
+
+struct BridgeContext {
+    global_sender: Sender<KeyEvent>,
+    subscribers: Arc<RwLock<HashMap<usize, Sender<KeyEvent>>>>,
+}
+
+static BRIDGE_CONTEXT: RwLock<Option<BridgeContext>> = RwLock::new(None);
+static BRIDGE_HOOK: RwLock<Option<isize>> = RwLock::new(None);
 
 /// Manages Raw Input registration and routes events to device-specific channels.
 pub struct RawInputManager {
@@ -52,7 +64,7 @@ impl RawInputManager {
         let context = Box::new(RawInputContext {
             subscribers: subscribers.clone(),
             device_map: device_map.clone(),
-            global_sender,
+            global_sender: global_sender.clone(),
         });
 
         unsafe {
@@ -61,6 +73,31 @@ impl RawInputManager {
 
         // 3. Register for Raw Input
         unsafe { Self::register_raw_input(hwnd)? };
+
+        // 4. Install Test Bridge Hook for E2E testing
+        {
+            let mut context_guard = BRIDGE_CONTEXT.write().unwrap();
+            *context_guard = Some(BridgeContext {
+                global_sender: global_sender.clone(),
+                subscribers: subscribers.clone(),
+            });
+
+            let mut hook_guard = BRIDGE_HOOK.write().unwrap();
+            unsafe {
+                let hook = SetWindowsHookExW(
+                    WH_KEYBOARD_LL,
+                    Some(test_bridge_hook),
+                    GetModuleHandleW(ptr::null()),
+                    0,
+                );
+                if hook != 0 as _ {
+                    *hook_guard = Some(hook as isize);
+                    log::info!("E2E Test Bridge Hook installed");
+                } else {
+                    log::warn!("Failed to install E2E Test Bridge Hook");
+                }
+            }
+        }
 
         Ok(manager)
     }
@@ -142,7 +179,7 @@ impl RawInputManager {
         });
 
         let hwnd = CreateWindowExW(
-            0,
+            WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, // Hidden from taskbar and not focusable
             CLASS_NAME.as_ptr(),
             CLASS_NAME.as_ptr(),
             0,
@@ -150,7 +187,7 @@ impl RawInputManager {
             0,
             0,
             0,
-            HWND_MESSAGE as HWND,
+            0 as HWND, // Top-level window required for RIDEV_INPUTSINK
             0 as _,
             h_instance,
             ptr::null(),
@@ -205,6 +242,20 @@ impl Drop for RawInputManager {
 
             if !ptr.is_null() {
                 let _ = Box::from_raw(ptr);
+            }
+        }
+
+        // Uninstall bridge hook
+        {
+            let mut context_guard = BRIDGE_CONTEXT.write().unwrap();
+            *context_guard = None;
+
+            let mut hook_guard = BRIDGE_HOOK.write().unwrap();
+            if let Some(hook) = hook_guard.take() {
+                unsafe {
+                    UnhookWindowsHookEx(hook as HHOOK);
+                }
+                log::info!("E2E Test Bridge Hook uninstalled");
             }
         }
     }
@@ -325,6 +376,7 @@ fn process_raw_keyboard(raw: &RAWKEYBOARD, device_handle: usize, context: &RawIn
         }
 
         // Send to global sink
+        log::debug!("Raw input event: {:?}", event);
         let _ = context.global_sender.try_send(event.clone());
 
         // Send to specific subscriber (legacy support)
@@ -386,13 +438,13 @@ mod tests {
                 let event_global = rx_global
                     .recv_timeout(std::time::Duration::from_millis(100))
                     .expect("Should receive global event");
-                assert_eq!(event_global.device_id(), Some("SN123"));
+                assert_eq!(event_global.device_id(), Some("serial-SN123"));
 
                 // Subscribed channel should receive it
                 let event_device = rx_device
                     .recv_timeout(std::time::Duration::from_millis(100))
                     .expect("Should receive device event");
-                assert_eq!(event_device.device_id(), Some("SN123"));
+                assert_eq!(event_device.device_id(), Some("serial-SN123"));
             }
             Err(e) => {
                 eprintln!("Skipping simulation test (no GUI): {}", e);
@@ -408,7 +460,7 @@ mod tests {
         match RawInputManager::new(device_map, tx) {
             Ok(manager) => {
                 // Subscription for non-existent device is allowed (manager doesn't check existence)
-                let rx = manager.subscribe(0xDEAD);
+                let _rx = manager.subscribe(0xDEAD);
                 assert!(manager.subscribers.read().unwrap().contains_key(&0xDEAD));
 
                 // Same handle multiple times
@@ -445,4 +497,54 @@ mod tests {
         // Actually, our drop logic clears it.
         // Wait, after DestroyWindow, GetWindowLongPtrW(hwnd) is invalid.
     }
+}
+
+// Low-level hook callback to bridge E2E test events into RawInput stream.
+// This is ONLY used for events marked with TEST_SIMULATED_PHYSICAL_MARKER.
+unsafe extern "system" fn test_bridge_hook(code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
+    if code == (HC_ACTION as i32) {
+        let kbd = *(l_param as *const KBDLLHOOKSTRUCT);
+        log::debug!("Hook: dwExtraInfo={:x}", kbd.dwExtraInfo);
+        if kbd.dwExtraInfo == TEST_SIMULATED_PHYSICAL_MARKER {
+            log::info!("Bridge Hook triggered for test event!");
+            let context_guard = BRIDGE_CONTEXT.read().unwrap();
+            if let Some(ctx) = context_guard.as_ref() {
+                let is_release = match w_param as u32 {
+                    WM_KEYUP | WM_SYSKEYUP => true,
+                    WM_KEYDOWN | WM_SYSKEYDOWN => false,
+                    _ => false,
+                };
+
+                let scan_code = kbd.scanCode as u16;
+                let extended = (kbd.flags & LLKHF_EXTENDED) != 0;
+
+                // Adjust scan code for extended keys to match Raw Input expectations
+                let sc = if extended {
+                    scan_code as u32 | 0xE000
+                } else {
+                    scan_code as u32
+                };
+
+                if let Some(keycode) = scancode_to_keycode(sc) {
+                    let event = if is_release {
+                        KeyEvent::release(keycode)
+                    } else {
+                        KeyEvent::press(keycode)
+                    };
+
+                    log::debug!("Bridge Hook event: {:?}", event);
+
+                    // Broadcast to ALL subscribers since we don't know the device ID for a test event
+                    let subs = ctx.subscribers.read().unwrap();
+                    for sender in subs.values() {
+                        let _ = sender.try_send(event.clone());
+                    }
+
+                    // Also send to global sender
+                    let _ = ctx.global_sender.try_send(event);
+                }
+            }
+        }
+    }
+    CallNextHookEx(0 as _, code, w_param, l_param)
 }

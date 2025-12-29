@@ -89,16 +89,14 @@ mod exit_codes {
     /// Configuration error (file not found, parse error).
     pub const CONFIG_ERROR: i32 = 1;
     /// Permission error (cannot access devices, cannot create uinput).
-    #[cfg(any(
-        all(target_os = "linux", feature = "linux"),
-        all(target_os = "windows", feature = "windows")
-    ))]
+    #[cfg(target_os = "linux")]
+    pub const PERMISSION_ERROR: i32 = 2;
+    #[cfg(target_os = "windows")]
     pub const PERMISSION_ERROR: i32 = 2;
     /// Runtime error (device disconnected with no fallback).
-    #[cfg(any(
-        all(target_os = "linux", feature = "linux"),
-        all(target_os = "windows", feature = "windows")
-    ))]
+    #[cfg(target_os = "linux")]
+    pub const RUNTIME_ERROR: i32 = 3;
+    #[cfg(target_os = "windows")]
     pub const RUNTIME_ERROR: i32 = 3;
 }
 
@@ -122,7 +120,7 @@ fn main() {
 }
 
 /// Handles the `run` subcommand - starts the daemon.
-#[cfg(all(target_os = "linux", feature = "linux"))]
+#[cfg(target_os = "linux")]
 fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, String)> {
     use keyrx_daemon::daemon::Daemon;
 
@@ -149,7 +147,7 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
     Ok(())
 }
 
-#[cfg(all(target_os = "windows", feature = "windows"))]
+#[cfg(target_os = "windows")]
 fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, String)> {
     use keyrx_daemon::daemon::Daemon;
     use keyrx_daemon::platform::windows::tray::TrayIconController;
@@ -261,10 +259,7 @@ fn is_admin() -> bool {
     }
 }
 
-#[cfg(not(any(
-    all(target_os = "linux", feature = "linux"),
-    all(target_os = "windows", feature = "windows")
-)))]
+#[cfg(not(any(target_os = "linux", target_os = "windows")))]
 fn handle_run(_config_path: &std::path::Path, _debug: bool) -> Result<(), (i32, String)> {
     Err((
         exit_codes::CONFIG_ERROR,
@@ -275,7 +270,7 @@ fn handle_run(_config_path: &std::path::Path, _debug: bool) -> Result<(), (i32, 
 }
 
 /// Handles the `record` subcommand.
-#[cfg(all(target_os = "linux", feature = "linux"))]
+#[cfg(target_os = "linux")]
 fn handle_record(
     output_path: &std::path::Path,
     device_path: Option<&std::path::Path>,
@@ -482,7 +477,7 @@ fn handle_record(
     Ok(())
 }
 
-#[cfg(not(all(target_os = "linux", feature = "linux")))]
+#[cfg(not(target_os = "linux"))]
 fn handle_record(
     _output: &std::path::Path,
     _device: Option<&std::path::Path>,
@@ -496,7 +491,7 @@ fn handle_record(
 }
 
 /// Handles the `list-devices` subcommand - lists input devices.
-#[cfg(all(target_os = "linux", feature = "linux"))]
+#[cfg(target_os = "linux")]
 fn handle_list_devices() -> Result<(), (i32, String)> {
     use keyrx_daemon::device_manager::enumerate_keyboards;
 
@@ -548,7 +543,7 @@ fn handle_list_devices() -> Result<(), (i32, String)> {
     Ok(())
 }
 
-#[cfg(not(all(target_os = "linux", feature = "linux")))]
+#[cfg(not(target_os = "linux"))]
 fn handle_list_devices() -> Result<(), (i32, String)> {
     Err((
         exit_codes::CONFIG_ERROR,
@@ -559,7 +554,7 @@ fn handle_list_devices() -> Result<(), (i32, String)> {
 }
 
 /// Handles the `validate` subcommand - validates config without grabbing.
-#[cfg(all(target_os = "linux", feature = "linux"))]
+#[cfg(target_os = "linux")]
 fn handle_validate(config_path: &std::path::Path) -> Result<(), (i32, String)> {
     use keyrx_daemon::config_loader::load_config;
     use keyrx_daemon::device_manager::{enumerate_keyboards, match_device};
@@ -689,7 +684,7 @@ fn handle_validate(config_path: &std::path::Path) -> Result<(), (i32, String)> {
     Ok(())
 }
 
-#[cfg(not(all(target_os = "linux", feature = "linux")))]
+#[cfg(not(target_os = "linux"))]
 fn handle_validate(_config_path: &std::path::Path) -> Result<(), (i32, String)> {
     Err((
         exit_codes::CONFIG_ERROR,
@@ -700,10 +695,7 @@ fn handle_validate(_config_path: &std::path::Path) -> Result<(), (i32, String)> 
 }
 
 /// Initializes the logging system.
-#[cfg(any(
-    all(target_os = "linux", feature = "linux"),
-    all(target_os = "windows", feature = "windows")
-))]
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 fn init_logging(debug: bool) {
     use env_logger::Builder;
     use log::LevelFilter;
@@ -721,10 +713,7 @@ fn init_logging(debug: bool) {
 }
 
 /// Converts a DaemonError to an exit code and message.
-#[cfg(any(
-    all(target_os = "linux", feature = "linux"),
-    all(target_os = "windows", feature = "windows")
-))]
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 fn daemon_error_to_exit(error: keyrx_daemon::daemon::DaemonError) -> (i32, String) {
     use keyrx_daemon::daemon::DaemonError;
 
@@ -747,7 +736,7 @@ fn daemon_error_to_exit(error: keyrx_daemon::daemon::DaemonError) -> (i32, Strin
 }
 
 /// Truncates a string to the specified length, adding "..." if truncated.
-#[cfg(all(target_os = "linux", feature = "linux"))]
+#[cfg(target_os = "linux")]
 fn truncate_string(s: &str, max_len: usize) -> String {
     if s.len() <= max_len {
         s.to_string()

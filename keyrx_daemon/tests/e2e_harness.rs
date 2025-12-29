@@ -21,7 +21,7 @@
 //! let harness = E2EHarness::setup(config)?;
 //! ```
 
-#![cfg(all(target_os = "linux", feature = "linux"))]
+#![cfg(any(target_os = "linux", target_os = "windows"))]
 
 use std::fmt;
 use std::fs::{self, File};
@@ -854,10 +854,11 @@ impl E2EHarness {
 
         // Step 2: Generate .krx config file targeting the virtual keyboard
         // Modify the config to match our virtual keyboard's name
-        #[cfg(target_os = "linux")]
-        let device_pattern = virtual_input.name().to_string();
-        #[cfg(target_os = "windows")]
-        let device_pattern = "*".to_string();
+        let device_pattern = if cfg!(target_os = "linux") {
+            virtual_input.name().to_string()
+        } else {
+            "*".to_string()
+        };
 
         let test_config = E2EConfig {
             device_pattern,
@@ -884,7 +885,7 @@ impl E2EHarness {
             .arg(&config_path)
             .arg("--debug")
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .stderr(Stdio::inherit())
             .spawn()
             .map_err(|e| E2EError::DaemonStartError {
                 message: format!("failed to spawn daemon: {}", e),
@@ -1373,6 +1374,7 @@ impl E2EHarness {
     /// # Returns
     ///
     /// A vector of captured output events.
+    #[allow(dead_code)]
     pub fn replay_recording(&mut self, path: &std::path::Path) -> Result<Vec<KeyEvent>, E2EError> {
         use serde::Deserialize;
         use std::io::BufReader;
@@ -1484,15 +1486,14 @@ impl E2EHarness {
 
         // Step 1: Terminate daemon process
         if let Some(mut process) = self.daemon_process.take() {
-            let pid = process.id();
+            let _pid = process.id();
 
-            // Send SIGTERM for graceful shutdown
-            #[cfg(unix)]
+            #[cfg(target_os = "linux")]
             {
                 use nix::sys::signal::{kill, Signal};
                 use nix::unistd::Pid;
 
-                let nix_pid = Pid::from_raw(pid as i32);
+                let nix_pid = Pid::from_raw(_pid as i32);
                 if let Err(e) = kill(nix_pid, Signal::SIGTERM) {
                     // Process may have already exited, which is fine
                     if e != nix::errno::Errno::ESRCH {
@@ -1504,6 +1505,12 @@ impl E2EHarness {
                 } else {
                     result.sigterm_sent = true;
                 }
+            }
+            #[cfg(target_os = "windows")]
+            {
+                // No real SIGTERM on Windows, we just kill for now
+                let _ = process.kill();
+                result.sigterm_sent = true;
             }
 
             // Wait for graceful shutdown with timeout
@@ -1524,12 +1531,12 @@ impl E2EHarness {
                             // Timeout - force kill
                             result.graceful_shutdown = false;
 
-                            #[cfg(unix)]
+                            #[cfg(target_os = "linux")]
                             {
                                 use nix::sys::signal::{kill, Signal};
                                 use nix::unistd::Pid;
 
-                                let nix_pid = Pid::from_raw(pid as i32);
+                                let nix_pid = Pid::from_raw(_pid as i32);
                                 if let Err(e) = kill(nix_pid, Signal::SIGKILL) {
                                     if e != nix::errno::Errno::ESRCH {
                                         result
@@ -1541,7 +1548,7 @@ impl E2EHarness {
                                 }
                             }
 
-                            #[cfg(windows)]
+                            #[cfg(target_os = "windows")]
                             {
                                 let _ = process.kill();
                                 result.sigkill_sent = true;
@@ -1576,9 +1583,6 @@ impl E2EHarness {
                     }
                 }
             }
-
-            // Try to read any remaining stderr for diagnostics
-            self.daemon_stderr = Self::read_child_stderr(&mut process);
         }
 
         // Step 2: Virtual keyboard is automatically destroyed when self is dropped
@@ -1597,6 +1601,15 @@ impl E2EHarness {
             result.config_cleaned = true; // Already cleaned or never created
         }
 
+        // Print Captured Logs BEFORE returning result, if any
+        if let Some(logs) = self.daemon_stderr.as_ref() {
+            if !logs.is_empty() {
+                println!("--- Daemon Stderr ---");
+                println!("{}", logs);
+                println!("---------------------");
+            }
+        }
+
         Ok(result)
     }
 
@@ -1612,6 +1625,13 @@ impl E2EHarness {
             let path = PathBuf::from(path);
             if path.exists() {
                 return Ok(path);
+            } else {
+                return Err(E2EError::ConfigError {
+                    message: format!(
+                        "KEYRX_DAEMON_PATH is set to '{}' but file does not exist.",
+                        path.display()
+                    ),
+                });
             }
         }
 
@@ -1661,6 +1681,17 @@ impl E2EHarness {
             }
         })
     }
+
+    #[allow(dead_code)]
+    fn read_daemon_logs(&mut self) -> String {
+        if let Some(stderr) = self.daemon_stderr.as_ref() {
+            stderr.clone()
+        } else if let Some(child) = self.daemon_process.as_mut() {
+            Self::read_child_stderr(child).unwrap_or_default()
+        } else {
+            String::new()
+        }
+    }
 }
 
 impl Drop for E2EHarness {
@@ -1675,15 +1706,15 @@ impl Drop for E2EHarness {
     fn drop(&mut self) {
         // Terminate daemon process
         if let Some(mut process) = self.daemon_process.take() {
-            let pid = process.id();
+            let _pid = process.id();
 
             // Try graceful shutdown first with SIGTERM
-            #[cfg(unix)]
+            #[cfg(target_os = "linux")]
             {
                 use nix::sys::signal::{kill, Signal};
                 use nix::unistd::Pid;
 
-                let nix_pid = Pid::from_raw(pid as i32);
+                let nix_pid = Pid::from_raw(_pid as i32);
                 // Ignore errors - process may have already exited
                 let _ = kill(nix_pid, Signal::SIGTERM);
             }
@@ -1699,7 +1730,7 @@ impl Drop for E2EHarness {
                     Ok(None) => {
                         if start.elapsed() >= drop_timeout {
                             // Timeout - force kill
-                            #[cfg(unix)]
+                            #[cfg(target_os = "linux")]
                             {
                                 use nix::sys::signal::{kill, Signal};
                                 use nix::unistd::Pid;
@@ -1708,7 +1739,7 @@ impl Drop for E2EHarness {
                                 let _ = kill(nix_pid, Signal::SIGKILL);
                             }
 
-                            #[cfg(not(unix))]
+                            #[cfg(target_os = "windows")]
                             {
                                 let _ = process.kill();
                             }
@@ -3315,11 +3346,21 @@ mod tests {
     fn test_with_timeout_handles_setup_failure() {
         let config = E2EConfig::simple_remap(KeyCode::A, KeyCode::B);
 
-        // This will fail during setup because we don't have uinput access
+        // Force setup failure by providing invalid binary path
+        let original_path = std::env::var("KEYRX_DAEMON_PATH").ok();
+        std::env::set_var("KEYRX_DAEMON_PATH", "/definitely/nonexistent/keyrx_daemon");
+
+        // This will fail during setup
         let result = with_timeout(Duration::from_secs(5), config, |_harness, _set_phase| {
             // This should never be called because setup fails
             Ok(())
         });
+
+        // Restore environment
+        match original_path {
+            Some(path) => std::env::set_var("KEYRX_DAEMON_PATH", path),
+            None => std::env::remove_var("KEYRX_DAEMON_PATH"),
+        }
 
         // Should fail with VirtualDevice or ConfigError (not TestTimeout)
         assert!(result.is_err());

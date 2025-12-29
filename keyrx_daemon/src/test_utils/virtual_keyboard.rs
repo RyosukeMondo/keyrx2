@@ -287,8 +287,8 @@ impl VirtualKeyboard {
 
                 input.Anonymous.ki = KEYBDINPUT {
                     wVk: vk,
-                    wScan: 0,
-                    dwFlags: if is_release { KEYEVENTF_KEYUP } else { 0 },
+                    wScan: MapVirtualKeyW(vk as u32, MAPVK_VK_TO_VSC) as u16,
+                    dwFlags: (if is_release { KEYEVENTF_KEYUP } else { 0 }) | KEYEVENTF_SCANCODE,
                     time: 0,
                     dwExtraInfo: TEST_SIMULATED_PHYSICAL_MARKER,
                 };
@@ -328,6 +328,10 @@ pub fn is_extended_key(vk: u16) -> bool {
             | VK_DOWN
             | VK_NUMLOCK
             | VK_SNAPSHOT
+            | VK_DIVIDE
+            | VK_LWIN
+            | VK_RWIN
+            | VK_APPS
     )
 }
 

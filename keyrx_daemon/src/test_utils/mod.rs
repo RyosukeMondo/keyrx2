@@ -120,6 +120,7 @@
 //! assert_events_msg(&captured, &expected, "Testing A→B remapping");
 //! ```
 
+#[cfg(target_os = "linux")]
 use std::fs::OpenOptions;
 use std::io;
 use thiserror::Error;

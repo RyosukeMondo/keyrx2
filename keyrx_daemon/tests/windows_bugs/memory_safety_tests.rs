@@ -18,7 +18,7 @@ fn test_rawinput_manager_drop_safety() {
         manager.simulate_raw_input(1, 0x1E, 0); // 'A' press
 
         // Spawn a thread that might keep some references or triggers callbacks
-        let manager_hwnd = manager.hwnd;
+        let _manager_hwnd = manager.hwnd;
         thread::spawn(move || {
             // In a real scenario, wnd_proc might be called by the OS
             // For now we simulate the risk by knowing that the pointer in GWLP_USERDATA

@@ -666,7 +666,7 @@ impl Daemon {
                 }
             }
 
-            #[cfg(feature = "linux")]
+            #[cfg(target_os = "linux")]
             {
                 // Poll devices for available events
                 let ready_devices = match self.poll_devices() {
@@ -757,7 +757,7 @@ impl Daemon {
     /// Returns a vector of device indices that have events ready to read.
     /// Uses a 100ms timeout to allow periodic signal checking.
     /// Uses a 100ms timeout to allow periodic signal checking.
-    #[cfg(feature = "linux")]
+    #[cfg(target_os = "linux")]
     fn poll_devices(&self) -> Result<Vec<usize>, DaemonError> {
         // Collect raw file descriptors from all devices
         let raw_fds: Vec<i32> = self
@@ -956,7 +956,7 @@ impl Daemon {
     /// Processes all available events from a single device.
     ///
     /// Returns the number of events processed.
-    #[cfg(feature = "linux")]
+    #[cfg(target_os = "linux")]
     fn process_device_events(&mut self, device_idx: usize) -> Result<usize, DaemonError> {
         let mut processed_count = 0;
 

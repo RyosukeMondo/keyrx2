@@ -1,8 +1,6 @@
 use crossbeam_channel::unbounded;
 use keyrx_daemon::platform::windows::device_map::DeviceMap;
 use keyrx_daemon::platform::windows::rawinput::RawInputManager;
-use std::ptr;
-use windows_sys::Win32::UI::WindowsAndMessaging::{PostMessageW, WM_INPUT};
 
 #[test]
 fn test_message_queue_flood() {
@@ -24,7 +22,7 @@ fn test_message_queue_flood() {
     // The "regression" part for OOM is hard to automate without mocking the API call,
     // so we'll treat this as a stress test for now.
 
-    for i in 0..100 {
+    for _i in 0..100 {
         manager.simulate_raw_input(1, 0x1E, 0); // Simulate typing
     }
 }
