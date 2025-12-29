@@ -679,7 +679,7 @@
   - _Requirements: Req 5 (device management), Req 6 (profile management)_
   - _Success: ✅ Layout matches design.md, ✅ Cards render with correct data, ✅ Responsive (stacks on mobile)
 
-- [ ] 13. Create DevicesPage
+- [x] 13. Create DevicesPage
   - File: `src/pages/DevicesPage.tsx`
   - Features: device list, inline rename, scope toggle, layout selector
   - Components: DeviceDetailPanel (repeating)
