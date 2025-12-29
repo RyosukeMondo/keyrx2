@@ -355,7 +355,7 @@
   - _Requirements: 1.1 (WASM module <10MB), 1.2 (Initialization <500ms)_
   - _Prompt: Role: Rust Performance Engineer with expertise in WASM optimization and binary size reduction | Task: Optimize WASM module size in keyrx_core/Cargo.toml and build scripts following requirements 1.1-1.2, achieving <10MB optimized build with <500ms initialization | Restrictions: Must maintain functionality while reducing size, use opt-level="z" and LTO for release builds, run wasm-opt with -Oz flag post-build, measure and document size reduction | Success: Optimized WASM build <10MB (ideally <6MB), gzipped size <2MB, initialization completes in <500ms, functionality unchanged_
 
-- [ ] 27. Add WASM build to CI/CD in .github/workflows/wasm.yml
+- [x] 27. Add WASM build to CI/CD in .github/workflows/wasm.yml
   - File: .github/workflows/wasm.yml (new file)
   - Set up GitHub Actions workflow for WASM builds
   - Install wasm-pack and Rust wasm32 target
