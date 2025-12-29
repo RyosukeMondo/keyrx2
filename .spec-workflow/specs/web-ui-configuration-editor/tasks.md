@@ -2,7 +2,7 @@
 
 ## Phase 0: Environment Setup
 
-- [ ] 0. Initialize React + TypeScript + Vite project
+- [x] 0. Initialize React + TypeScript + Vite project
   - Files: `keyrx_ui_v2/` (new directory), `package.json`, `tsconfig.json`, `vite.config.ts`, `tailwind.config.js`, `.eslintrc.js`, `.prettierrc`
   - Purpose: Prepare complete development environment with build tooling, testing infrastructure, and code quality tools. This foundation supports all future development with fast iteration, type safety, and automated quality gates.
   - Requirements: Design.md Dependencies section, Req 4 (Performance Budget)
