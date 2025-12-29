@@ -7,6 +7,7 @@
 #[macro_use]
 pub mod test_utils;
 
+pub mod cli;
 pub mod config;
 pub mod config_loader;
 #[cfg(any(target_os = "linux", target_os = "windows"))]

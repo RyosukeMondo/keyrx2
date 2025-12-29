@@ -48,6 +48,11 @@ enum Commands {
         debug: bool,
     },
 
+    /// Manage device metadata (rename, set scope, set layout).
+    ///
+    /// Device management commands for persistent metadata storage.
+    Devices(keyrx_daemon::cli::devices::DevicesArgs),
+
     /// List available input devices on the system.
     ///
     /// Displays all input devices with their names, paths, and serial numbers.
@@ -105,6 +110,12 @@ fn main() {
 
     let result = match cli.command {
         Commands::Run { config, debug } => handle_run(&config, debug),
+        Commands::Devices(args) => {
+            match keyrx_daemon::cli::devices::execute(args, None) {
+                Ok(()) => Ok(()),
+                Err(code) => Err((code, String::new())), // Error already printed by execute
+            }
+        }
         Commands::ListDevices => handle_list_devices(),
         Commands::Validate { config } => handle_validate(&config),
         Commands::Record { output, device } => handle_record(&output, device.as_deref()),
@@ -113,7 +124,9 @@ fn main() {
     match result {
         Ok(()) => process::exit(exit_codes::SUCCESS),
         Err((code, message)) => {
-            eprintln!("Error: {}", message);
+            if !message.is_empty() {
+                eprintln!("Error: {}", message);
+            }
             process::exit(code);
         }
     }

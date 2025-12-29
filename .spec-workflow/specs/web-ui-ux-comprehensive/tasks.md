@@ -336,7 +336,7 @@
 
 ## Phase 2: CLI Commands (Devices & Profiles)
 
-- [ ] 6. Implement `keyrx devices` command
+- [-] 6. Implement `keyrx devices` command
   - File: `keyrx_daemon/src/cli/devices.rs` (new file)
   - Implement subcommands: list, rename, set-scope, forget, set-layout
   - JSON output with `--json` flag
