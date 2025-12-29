@@ -46,7 +46,7 @@
 
 ## Phase 5: Testing & Documentation
 
-- [ ] 9. Write unit tests for macro recorder (Rust)
+- [x] 9. Write unit tests for macro recorder (Rust)
   - Test event capture, timestamp accuracy
   - _Prompt: Role: Rust Test Engineer | Task: Test macro recorder | Success: ✅ Tests pass_
 
