@@ -1706,7 +1706,7 @@ impl Drop for E2EHarness {
     fn drop(&mut self) {
         // Terminate daemon process
         if let Some(mut process) = self.daemon_process.take() {
-            let _pid = process.id();
+            let pid = process.id();
 
             // Try graceful shutdown first with SIGTERM
             #[cfg(target_os = "linux")]
@@ -1714,7 +1714,7 @@ impl Drop for E2EHarness {
                 use nix::sys::signal::{kill, Signal};
                 use nix::unistd::Pid;
 
-                let nix_pid = Pid::from_raw(_pid as i32);
+                let nix_pid = Pid::from_raw(pid as i32);
                 // Ignore errors - process may have already exited
                 let _ = kill(nix_pid, Signal::SIGTERM);
             }

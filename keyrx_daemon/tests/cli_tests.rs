@@ -379,7 +379,7 @@ fn test_validate_nonexistent_config_exit_code_one() {
 // ============================================================================
 
 #[test]
-#[cfg(not(feature = "linux"))]
+#[cfg(not(target_os = "linux"))]
 fn test_run_not_available_without_linux_feature() {
     let temp_file = create_invalid_krx_file();
 
@@ -393,7 +393,7 @@ fn test_run_not_available_without_linux_feature() {
 }
 
 #[test]
-#[cfg(not(feature = "linux"))]
+#[cfg(not(target_os = "linux"))]
 fn test_list_devices_not_available_without_linux_feature() {
     cmd()
         .arg("list-devices")
@@ -403,7 +403,7 @@ fn test_list_devices_not_available_without_linux_feature() {
 }
 
 #[test]
-#[cfg(not(feature = "linux"))]
+#[cfg(not(target_os = "linux"))]
 fn test_validate_not_available_without_linux_feature() {
     let temp_file = create_invalid_krx_file();
 

@@ -56,12 +56,12 @@ use crate::platform::{DeviceError, InputDevice, OutputDevice};
 use keyrx_core::runtime::event::check_tap_hold_timeouts;
 
 // Platform-specific imports
-#[cfg(any(target_os = "windows", feature = "linux"))]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 use keyrx_core::runtime::process_event;
 
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 use nix::poll::{poll, PollFd, PollFlags};
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, BorrowedFd};
 
 #[cfg(target_os = "linux")]
