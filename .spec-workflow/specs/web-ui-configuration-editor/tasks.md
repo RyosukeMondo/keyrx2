@@ -636,7 +636,7 @@
   - _Requirements: Req 2 (Responsive Design)_
   - _Success: ✅ Sidebar visible on desktop, ✅ Bottom nav on mobile, ✅ Layout adapts smoothly on resize
 
-- [ ] 9. Create TopBar component
+- [x] 9. Create TopBar component
   - File: `src/components/TopBar.tsx`
   - Elements: logo, title, settings button, help button
   - Responsive: title hides on <768px
