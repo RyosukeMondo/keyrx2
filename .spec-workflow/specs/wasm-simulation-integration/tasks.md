@@ -304,7 +304,7 @@
   - _Requirements: All WASM module requirements (1.1, 2.1-2.5, 3.1-3.5, etc.)_
   - _Prompt: Role: Rust Test Engineer with expertise in WASM testing and wasm-bindgen-test | Task: Write comprehensive unit tests for WASM module in keyrx_core/tests/wasm_tests.rs covering all WASM functions (load_config, load_krx, simulate, get_state) with valid and invalid inputs | Restrictions: Must use wasm-bindgen-test framework, run tests in browser via wasm-pack test, test both success and error paths, ensure tests are deterministic | Success: All WASM functions tested, parse errors validated, simulation results verified, tests pass in headless browser (wasm-pack test --headless)_
 
-- [ ] 23. Write unit tests for TypeScript API wrapper in keyrx_ui/src/wasm/core.test.ts
+- [x] 23. Write unit tests for TypeScript API wrapper in keyrx_ui/src/wasm/core.test.ts
   - File: keyrx_ui/src/wasm/core.test.ts
   - Use Vitest or Jest for TypeScript testing
   - Mock WASM module responses
