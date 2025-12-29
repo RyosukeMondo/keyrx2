@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { SkipToContent } from './SkipToContent';
+import { useKeyboardShortcuts, CommonShortcuts } from '../hooks/useKeyboardShortcuts';
 
 interface AppShellProps {
   children?: React.ReactNode;
@@ -12,8 +14,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
+  // Register global keyboard shortcuts
+  useKeyboardShortcuts([
+    CommonShortcuts.toggleSidebar(toggleSidebar),
+  ]);
+
   return (
     <div className="app-shell min-h-screen bg-slate-900 text-slate-100">
+      <SkipToContent />
       {/* Mobile/Tablet Header - hidden on desktop */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-800 border-b border-slate-700 z-fixed flex items-center px-4">
         <button
@@ -108,13 +116,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {/* Main Content Area */}
       <main
+        id="main-content"
+        tabIndex={-1}
         className={`
           min-h-screen
           pt-16 lg:pt-0
           pb-16 md:pb-0
           transition-all duration-300
           ${sidebarCollapsed ? 'lg:pl-0' : 'lg:pl-64'}
+          focus:outline-none
         `}
+        aria-label="Main content"
       >
         <div className="h-full">
           {children || <Outlet />}

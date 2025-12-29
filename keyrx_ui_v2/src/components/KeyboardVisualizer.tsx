@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { KeyButton, KeyMapping } from './KeyButton';
 import { parseKLEJson } from '../utils/kle-parser';
 import { cn } from '../utils/cn';
+import { useArrowNavigation } from '../utils/keyboard';
 
 // Import layout data
 import ANSI_104 from '../data/layouts/ANSI_104.json';
@@ -32,6 +33,8 @@ export const KeyboardVisualizer: React.FC<KeyboardVisualizerProps> = ({
   pressedKeys = new Set(),
   className = '',
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const keyButtons = useMemo(() => {
     const kleData = layoutData[layout];
     return parseKLEJson(kleData);
@@ -48,11 +51,18 @@ export const KeyboardVisualizer: React.FC<KeyboardVisualizerProps> = ({
     [keyButtons]
   );
 
+  // Enable arrow key navigation for keyboard keys
+  useArrowNavigation(containerRef, {
+    orientation: 'horizontal',
+    loop: true,
+  });
+
   return (
     <div
+      ref={containerRef}
       className={cn('keyboard-grid', className)}
       role="group"
-      aria-label={`${layout} keyboard layout${simulatorMode ? ' (simulator mode)' : ''}`}
+      aria-label={`${layout} keyboard layout${simulatorMode ? ' (simulator mode)' : ''}. Use arrow keys to navigate between keys, Enter to select.`}
       style={{
         display: 'grid',
         gridTemplateRows: `repeat(${maxRow}, 48px)`,

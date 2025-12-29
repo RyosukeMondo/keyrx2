@@ -171,12 +171,12 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           </div>
 
           {/* Layer Buttons - responsive grid on mobile */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2" role="group" aria-label="Layer selection">
             {layerOptions.map((layer) => (
               <button
                 key={layer.value}
                 onClick={() => handleLayerChange(layer.value)}
-                className={`px-4 py-3 sm:py-2 rounded-md font-medium transition-all min-h-[44px] sm:min-h-0 ${
+                className={`px-4 py-3 sm:py-2 rounded-md font-medium transition-all min-h-[44px] sm:min-h-0 focus:outline focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 ${
                   selectedLayer === layer.value
                     ? 'bg-primary-500 text-white'
                     : 'bg-slate-700 text-slate-300 hover:bg-slate-600'

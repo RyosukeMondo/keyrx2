@@ -296,12 +296,14 @@ export const DevicesPage: React.FC<DevicesPageProps> = ({ className = '' }) => {
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                           <button
                             onClick={() => handleScopeChange(device.id, 'global')}
-                            className={`flex items-center gap-2 rounded-md border px-4 py-3 sm:py-2 text-sm transition-colors min-h-[44px] sm:min-h-0 ${
+                            className={`flex items-center gap-2 rounded-md border px-4 py-3 sm:py-2 text-sm transition-colors min-h-[44px] sm:min-h-0 focus:outline focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 ${
                               device.scope === 'global'
                                 ? 'border-primary-500 bg-primary-500/10 text-primary-500'
                                 : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-slate-300'
                             }`}
                             aria-label="Set scope to global"
+                            role="radio"
+                            aria-checked={device.scope === 'global'}
                           >
                             <span
                               className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
@@ -319,12 +321,14 @@ export const DevicesPage: React.FC<DevicesPageProps> = ({ className = '' }) => {
                           </button>
                           <button
                             onClick={() => handleScopeChange(device.id, 'device-specific')}
-                            className={`flex items-center gap-2 rounded-md border px-4 py-3 sm:py-2 text-sm transition-colors min-h-[44px] sm:min-h-0 ${
+                            className={`flex items-center gap-2 rounded-md border px-4 py-3 sm:py-2 text-sm transition-colors min-h-[44px] sm:min-h-0 focus:outline focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 ${
                               device.scope === 'device-specific'
                                 ? 'border-primary-500 bg-primary-500/10 text-primary-500'
                                 : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-slate-300'
                             }`}
                             aria-label="Set scope to device-specific"
+                            role="radio"
+                            aria-checked={device.scope === 'device-specific'}
                           >
                             <span
                               className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
