@@ -138,7 +138,7 @@
 
 ## Phase 6: Integration & Testing
 
-- [-] 13. Integrate validation into existing config editor (if exists)
+- [x] 13. Integrate validation into existing config editor (if exists)
   - File: keyrx_ui/src/pages/ConfigurationPage.tsx (or wherever config editing happens)
   - Replace textarea/simple editor with ConfigEditor component
   - Pass onSave handler to ConfigEditor
