@@ -115,7 +115,7 @@
   - _Requirements: 1.3 (WASM JavaScript API), 2.1-2.5 (Config loading), 3.1-3.5 (Simulation), Error handling scenarios_
   - _Prompt: Role: TypeScript API Developer with expertise in WASM integration and async programming | Task: Create comprehensive TypeScript API wrapper in keyrx_ui/src/wasm/core.ts following requirements 1.3, 2.1-2.5, and 3.1-3.5, wrapping generated WASM module with Promise-based API, full type definitions, input validation, and error conversion | Restrictions: File ≤300 lines, TypeScript strict mode MUST be enabled (tsconfig.json: "strict": true, no `any` types allowed except in catch blocks where Error type is unknown), strictNullChecks enabled, must validate all inputs before calling WASM (non-empty strings, positive timestamps, valid key codes), convert WASM panics to TypeScript errors with stack traces, ensure async/await compatibility, all WASM return values must have explicit types, use `unknown` instead of `any` for error catches then narrow type with instanceof checks | Success: All WASM functions wrapped with Promise APIs, TypeScript types match Rust exactly, input validation prevents invalid WASM calls, errors are user-friendly and debuggable, TypeScript compiles with strict mode and 0 errors, no `any` types in source code_
 
-- [ ] 11. Create built-in scenario generators in keyrx_ui/src/utils/scenarios.ts
+- [x] 11. Create built-in scenario generators in keyrx_ui/src/utils/scenarios.ts
   - File: keyrx_ui/src/utils/scenarios.ts
   - Implement generateTapHoldUnder(): EventSequence (tap within 200ms threshold)
   - Implement generateTapHoldOver(): EventSequence (hold beyond 200ms threshold)
