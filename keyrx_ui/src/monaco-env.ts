@@ -8,6 +8,7 @@
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import { initializeRhaiSupport } from './utils/monacoConfig';
 
 // Configure Monaco environment for web workers
 self.MonacoEnvironment = {
@@ -18,5 +19,8 @@ self.MonacoEnvironment = {
     return new editorWorker();
   }
 };
+
+// Initialize Rhai language support
+initializeRhaiSupport();
 
 export { monaco };
