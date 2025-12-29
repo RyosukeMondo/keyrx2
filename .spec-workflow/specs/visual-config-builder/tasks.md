@@ -32,7 +32,7 @@
   - Drag key to assign
   - _Prompt: Role: React UI Developer | Task: Create modifier management panel | Restrictions: File ≤200 lines | Success: ✅ Modifiers work_
 
-- [ ] 7. Create CodePreview component in keyrx_ui/src/components/CodePreview.tsx
+- [x] 7. Create CodePreview component in keyrx_ui/src/components/CodePreview.tsx
   - Monaco editor (read-only) showing generated Rhai
   - Copy button
   - _Prompt: Role: React Developer | Task: Create code preview with Monaco | Restrictions: File ≤200 lines, syntax highlight Rhai | Success: ✅ Code displays_
