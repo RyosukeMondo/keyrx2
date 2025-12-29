@@ -44,7 +44,7 @@ setup: ## Install development tools and git hooks (comprehensive setup)
 setup-quick: ## Quick setup (no sudo, Cargo tools only)
 	@echo "Quick setup: Installing Cargo development tools..."
 	@command -v cargo-watch >/dev/null 2>&1 || cargo install cargo-watch
-	@command -v cargo-tarpaulin >/dev/null 2>&1 || cargo install cargo-tarpaulin
+	@command -v cargo-llvm-cov >/dev/null 2>&1 || cargo install cargo-llvm-cov
 	@command -v cargo-fuzz >/dev/null 2>&1 || cargo install cargo-fuzz
 	@command -v wasm-pack >/dev/null 2>&1 || cargo install wasm-pack
 	@echo "Installing git hooks..."

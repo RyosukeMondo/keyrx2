@@ -35,7 +35,7 @@ jobs:
 
       - name: Install Tools
         run: |
-          cargo install cargo-tarpaulin
+          cargo install cargo-llvm-cov
           cargo install cargo-watch
 
       - name: Run Verification
