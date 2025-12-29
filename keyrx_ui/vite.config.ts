@@ -43,8 +43,21 @@ export default defineConfig({
     topLevelAwait(),
     wasmRebuildPlugin()
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    }
+  },
+  worker: {
+    format: 'es'
+  },
   optimizeDeps: {
     exclude: ['@keyrx/core'],
+    include: [
+      'monaco-editor',
+      '@monaco-editor/react',
+      'lodash.debounce'
+    ],
   },
   build: {
     rollupOptions: {
