@@ -656,7 +656,7 @@
   - _Requirements: Req 3 (keyboard navigation)_
   - _Success: ✅ Active page highlighted, ✅ Keyboard navigable (Tab, Enter), ✅ Collapses on tablet
 
-- [ ] 11. Create BottomNav (mobile)
+- [x] 11. Create BottomNav (mobile)
   - File: `src/components/BottomNav.tsx`
   - Items: Home, Devices, Profiles, Config, Metrics (5 icons)
   - Fixed position at bottom
