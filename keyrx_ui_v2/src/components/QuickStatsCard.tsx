@@ -42,7 +42,7 @@ export const QuickStatsCard: React.FC<QuickStatsCardProps> = ({
 
   if (loading) {
     return (
-      <Card className={className}>
+      <Card className={className} aria-label="Quick statistics loading" aria-busy="true">
         <div className="flex flex-col gap-md">
           <LoadingSkeleton variant="text" width="150px" height="24px" />
           <div className="flex flex-wrap gap-md">
@@ -57,10 +57,10 @@ export const QuickStatsCard: React.FC<QuickStatsCardProps> = ({
 
   if (!stats) {
     return (
-      <Card className={className}>
+      <Card className={className} aria-labelledby="quick-stats-title">
         <div className="flex flex-col gap-md">
-          <h2 className="text-lg font-semibold text-slate-100">Quick Stats</h2>
-          <p className="text-sm text-slate-400">
+          <h2 id="quick-stats-title" className="text-lg font-semibold text-slate-100">Quick Stats</h2>
+          <p className="text-sm text-slate-400" role="status">
             Statistics unavailable. Ensure the daemon is running.
           </p>
         </div>
@@ -69,24 +69,24 @@ export const QuickStatsCard: React.FC<QuickStatsCardProps> = ({
   }
 
   return (
-    <Card className={className}>
+    <Card className={className} aria-labelledby="quick-stats-title">
       <div className="flex flex-col gap-md">
-        <h2 className="text-lg font-semibold text-slate-100">Quick Stats</h2>
+        <h2 id="quick-stats-title" className="text-lg font-semibold text-slate-100">Quick Stats</h2>
 
-        <div className="flex flex-wrap items-center gap-md text-sm text-slate-400">
-          <div className="flex items-center gap-xs">
+        <div className="flex flex-wrap items-center gap-md text-sm text-slate-400" role="list">
+          <div className="flex items-center gap-xs" role="listitem">
             <span className="font-medium text-slate-100">Latency:</span>
-            <span>{stats.latencyAvg.toFixed(1)}ms avg</span>
+            <span aria-label={`Average latency ${stats.latencyAvg.toFixed(1)} milliseconds`}>{stats.latencyAvg.toFixed(1)}ms avg</span>
           </div>
-          <span>•</span>
-          <div className="flex items-center gap-xs">
+          <span aria-hidden="true">•</span>
+          <div className="flex items-center gap-xs" role="listitem">
             <span className="font-medium text-slate-100">Events:</span>
-            <span>{formatNumber(stats.eventsToday)} today</span>
+            <span aria-label={`${formatNumber(stats.eventsToday)} events processed today`}>{formatNumber(stats.eventsToday)} today</span>
           </div>
-          <span>•</span>
-          <div className="flex items-center gap-xs">
+          <span aria-hidden="true">•</span>
+          <div className="flex items-center gap-xs" role="listitem">
             <span className="font-medium text-slate-100">Uptime:</span>
-            <span>{formatUptime(stats.uptimeSeconds)}</span>
+            <span aria-label={`Daemon uptime ${formatUptime(stats.uptimeSeconds)}`}>{formatUptime(stats.uptimeSeconds)}</span>
           </div>
         </div>
       </div>

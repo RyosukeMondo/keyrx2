@@ -51,6 +51,8 @@ export const KeyboardVisualizer: React.FC<KeyboardVisualizerProps> = ({
   return (
     <div
       className={cn('keyboard-grid', className)}
+      role="group"
+      aria-label={`${layout} keyboard layout${simulatorMode ? ' (simulator mode)' : ''}`}
       style={{
         display: 'grid',
         gridTemplateRows: `repeat(${maxRow}, 48px)`,

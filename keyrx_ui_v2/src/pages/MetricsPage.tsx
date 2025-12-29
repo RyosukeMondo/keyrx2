@@ -239,41 +239,41 @@ export const MetricsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+    <main className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6" role="main" aria-label="Performance Metrics">
       {/* Page Header */}
-      <div>
+      <header>
         <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-100">
           Performance Metrics
         </h1>
         <p className="text-sm md:text-base text-slate-400 mt-2">
           Real-time monitoring and debugging tools
         </p>
-      </div>
+      </header>
 
       {/* Latency Statistics Cards - responsive grid */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <Card padding="md">
+      <section className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4" aria-label="Latency statistics">
+        <Card padding="md" aria-label="Current latency">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
-            <div className="p-2 sm:p-3 bg-blue-500/10 rounded-lg">
+            <div className="p-2 sm:p-3 bg-blue-500/10 rounded-lg" aria-hidden="true">
               <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
             </div>
             <div>
               <p className="text-xs sm:text-sm text-slate-400">Current</p>
-              <p className="text-lg sm:text-2xl font-bold text-slate-100">
+              <p className="text-lg sm:text-2xl font-bold text-slate-100" aria-label={`Current latency: ${formatLatency(stats.current)}`}>
                 {formatLatency(stats.current)}
               </p>
             </div>
           </div>
         </Card>
 
-        <Card padding="md">
+        <Card padding="md" aria-label="Average latency">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
-            <div className="p-2 sm:p-3 bg-green-500/10 rounded-lg">
+            <div className="p-2 sm:p-3 bg-green-500/10 rounded-lg" aria-hidden="true">
               <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
             </div>
             <div>
               <p className="text-xs sm:text-sm text-slate-400">Average</p>
-              <p className="text-lg sm:text-2xl font-bold text-slate-100">
+              <p className="text-lg sm:text-2xl font-bold text-slate-100" aria-label={`Average latency: ${formatLatency(stats.avg)}`}>
                 {formatLatency(stats.avg)}
               </p>
             </div>
@@ -458,6 +458,6 @@ export const MetricsPage: React.FC = () => {
           </div>
         </div>
       </Card>
-    </div>
+    </main>
   );
 };

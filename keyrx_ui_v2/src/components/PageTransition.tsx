@@ -20,7 +20,7 @@ export const PageTransition: React.FC<PageTransitionProps> = ({
   const animationProps = createAnimationProps(pageVariants, transitions.normal);
 
   return (
-    <motion.div {...animationProps} className={className}>
+    <motion.div {...animationProps} className={className} aria-live="polite">
       {children}
     </motion.div>
   );
