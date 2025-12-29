@@ -1,5 +1,7 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
+import { hoverScale, tapScale, prefersReducedMotion } from '@/utils/animations';
 
 export interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -70,15 +72,15 @@ export const Button = React.memo<ButtonProps>(
     };
 
     const baseClasses =
-      'relative overflow-hidden rounded-md font-medium transition-all duration-150 focus:outline focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 flex items-center justify-center';
+      'relative overflow-hidden rounded-md font-medium transition-colors duration-150 focus:outline focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 flex items-center justify-center';
 
     const variantClasses = {
       primary:
-        'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 hover:scale-[1.02] active:scale-[0.98]',
+        'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700',
       secondary:
         'bg-transparent border-2 border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white',
       danger:
-        'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 hover:scale-[1.02] active:scale-[0.98]',
+        'bg-red-500 text-white hover:bg-red-600 active:bg-red-700',
       ghost:
         'bg-transparent text-primary-500 hover:bg-primary-500/10',
     };
@@ -93,14 +95,19 @@ export const Button = React.memo<ButtonProps>(
       ? 'opacity-50 cursor-not-allowed'
       : '';
 
+    // Disable animations if user prefers reduced motion
+    const shouldAnimate = !prefersReducedMotion() && !disabled && !loading;
+
     return (
-      <button
+      <motion.button
         type={type}
         disabled={disabled || loading}
         onClick={handleClick}
         aria-label={ariaLabel}
         aria-disabled={disabled}
         aria-busy={loading}
+        whileHover={shouldAnimate ? hoverScale : undefined}
+        whileTap={shouldAnimate ? tapScale : undefined}
         className={cn(
           baseClasses,
           variantClasses[variant],
@@ -111,7 +118,7 @@ export const Button = React.memo<ButtonProps>(
       >
         {loading && <LoadingSpinner />}
         {children}
-      </button>
+      </motion.button>
     );
   }
 );

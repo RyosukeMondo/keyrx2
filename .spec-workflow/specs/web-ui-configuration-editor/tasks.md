@@ -978,15 +978,16 @@
   - _Requirements: Req 2 (Responsive Design)_
   - _Success: ✅ All pages work on mobile, ✅ Touch targets ≥44px, ✅ No horizontal scroll (except keyboard)
 
-- [ ] 25. Implement animations and transitions
-  - Files: Update Button, Modal, Card components
+- [x] 25. Implement animations and transitions
+  - Files: `src/utils/animations.ts`, `src/components/PageTransition.tsx`, Updated `Modal.tsx`, `Dropdown.tsx`, `Button.tsx`, `src/styles/tokens.css`
   - Animations:
-    - Modal: fade in/out + scale
-    - Button: ripple effect on click
-    - Page transitions: fade between routes
-  - Reduced motion: disable animations if `prefers-reduced-motion`
+    - Modal: fade in/out + scale (using Framer Motion AnimatePresence)
+    - Button: ripple effect on click + hover/tap scale animations
+    - Dropdown: slide down with fade transition (using Headless UI Transition)
+    - Page transitions: fade between routes (PageTransition component)
+  - Reduced motion: disabled via CSS media query `@media (prefers-reduced-motion: reduce)` and JavaScript check in animations utility
   - Purpose: Polished, smooth user experience
-  - _Leverage: Tailwind transitions, Framer Motion (optional)_
+  - _Leverage: Tailwind transitions, Framer Motion_
   - _Requirements: Req 4 (animations use transform/opacity), Req 4.6 (reduced motion)_
   - _Success: ✅ Animations smooth (60fps), ✅ Reduced motion disables animations, ✅ No layout shifts
 

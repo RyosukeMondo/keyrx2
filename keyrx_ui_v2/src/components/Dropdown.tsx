@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Listbox } from '@headlessui/react';
+import { Listbox, Transition } from '@headlessui/react';
 
 interface DropdownOption {
   value: string;
@@ -113,74 +113,84 @@ export const Dropdown = React.memo<DropdownProps>(({
               </span>
             </Listbox.Button>
 
-            <Listbox.Options
-              className={`
-                absolute z-dropdown mt-2 max-h-60 w-full overflow-auto
-                rounded-md border border-slate-600 bg-slate-800
-                py-1 shadow-lg focus:outline-none
-              `}
+            <Transition
+              show={open}
+              enter="transition duration-150 ease-out"
+              enterFrom="opacity-0 translate-y-[-10px]"
+              enterTo="opacity-100 translate-y-0"
+              leave="transition duration-100 ease-in"
+              leaveFrom="opacity-100 translate-y-0"
+              leaveTo="opacity-0 translate-y-[-10px]"
             >
-              {searchable && (
-                <div className="sticky top-0 z-10 border-b border-slate-600 bg-slate-800 p-2">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search..."
-                    className={`
-                      w-full rounded border border-slate-600 bg-slate-700
-                      px-3 py-2 text-sm text-slate-100
-                      placeholder-slate-400
-                      focus:border-primary-500 focus:outline-none
-                    `}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              )}
+              <Listbox.Options
+                className={`
+                  absolute z-dropdown mt-2 max-h-60 w-full overflow-auto
+                  rounded-md border border-slate-600 bg-slate-800
+                  py-1 shadow-lg focus:outline-none
+                `}
+              >
+                {searchable && (
+                  <div className="sticky top-0 z-10 border-b border-slate-600 bg-slate-800 p-2">
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search..."
+                      className={`
+                        w-full rounded border border-slate-600 bg-slate-700
+                        px-3 py-2 text-sm text-slate-100
+                        placeholder-slate-400
+                        focus:border-primary-500 focus:outline-none
+                      `}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
 
-              {filteredOptions.length === 0 ? (
-                <div className="py-2 px-3 text-sm text-slate-400">
-                  No options found
-                </div>
-              ) : (
-                filteredOptions.map((option) => (
-                  <Listbox.Option
-                    key={option.value}
-                    value={option.value}
-                    className={({ active, selected }) =>
-                      `
-                        relative cursor-pointer select-none py-2 px-3
-                        text-base
-                        ${active ? 'bg-primary-500 text-white' : 'text-slate-100'}
-                        ${selected ? 'font-semibold' : 'font-normal'}
-                      `
-                    }
-                  >
-                    {({ selected }) => (
-                      <>
-                        <span className="block truncate">{option.label}</span>
-                        {selected && (
-                          <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-primary-500">
-                            <svg
-                              className="h-5 w-5"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </Listbox.Option>
-                ))
-              )}
-            </Listbox.Options>
+                {filteredOptions.length === 0 ? (
+                  <div className="py-2 px-3 text-sm text-slate-400">
+                    No options found
+                  </div>
+                ) : (
+                  filteredOptions.map((option) => (
+                    <Listbox.Option
+                      key={option.value}
+                      value={option.value}
+                      className={({ active, selected }) =>
+                        `
+                          relative cursor-pointer select-none py-2 px-3
+                          text-base transition-colors duration-100
+                          ${active ? 'bg-primary-500 text-white' : 'text-slate-100'}
+                          ${selected ? 'font-semibold' : 'font-normal'}
+                        `
+                      }
+                    >
+                      {({ selected }) => (
+                        <>
+                          <span className="block truncate">{option.label}</span>
+                          {selected && (
+                            <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-primary-500">
+                              <svg
+                                className="h-5 w-5"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </Listbox.Option>
+                  ))
+                )}
+              </Listbox.Options>
+            </Transition>
           </>
         );
       }}

@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  scaleVariants,
+  backdropVariants,
+  transitions,
+  createAnimationProps,
+} from '@/utils/animations';
 
 export interface ModalProps {
   open: boolean;
@@ -110,55 +117,62 @@ export const Modal = React.memo<ModalProps>(({ open, onClose, title, children, c
     }
   };
 
-  if (!open) return null;
+  const backdropProps = createAnimationProps(backdropVariants, transitions.quick);
+  const modalProps = createAnimationProps(scaleVariants, transitions.normal);
 
   const modalContent = (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-      onClick={handleBackdropClick}
-      role="presentation"
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
+    <AnimatePresence mode="wait">
+      {open && (
+        <motion.div
+          {...backdropProps}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={handleBackdropClick}
+          role="presentation"
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
 
-      {/* Modal */}
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-        className={`relative bg-slate-800 rounded-lg shadow-2xl border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-hidden animate-scale-in ${className}`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-          <h2 id="modal-title" className="text-lg font-semibold text-slate-100">
-            {title}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-100 transition-colors p-1 rounded hover:bg-slate-700"
-            aria-label="Close modal"
+          {/* Modal */}
+          <motion.div
+            {...modalProps}
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+            className={`relative bg-slate-800 rounded-lg shadow-2xl border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-hidden ${className}`}
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+              <h2 id="modal-title" className="text-lg font-semibold text-slate-100">
+                {title}
+              </h2>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-100 transition-colors p-1 rounded hover:bg-slate-700"
+                aria-label="Close modal"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-        {/* Content */}
-        <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-8rem)]" data-modal-content>
-          {children}
-        </div>
-      </div>
-    </div>
+            {/* Content */}
+            <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-8rem)]" data-modal-content>
+              {children}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 
   return createPortal(modalContent, document.body);
