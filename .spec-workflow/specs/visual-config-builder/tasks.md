@@ -17,7 +17,7 @@
 
 ## Phase 2: Visual Components
 
-- [ ] 4. Create VirtualKeyboard component in keyrx_ui/src/components/VirtualKeyboard.tsx
+- [x] 4. Create VirtualKeyboard component in keyrx_ui/src/components/VirtualKeyboard.tsx
   - Render keyboard layout with draggable keys
   - Highlight mapped keys
   - _Prompt: Role: React UI Developer | Task: Create virtual keyboard with drag-and-drop | Restrictions: File ≤400 lines, use @dnd-kit, QWERTY layout, highlight mappings | Success: ✅ Keyboard renders, ✅ Drag works_
