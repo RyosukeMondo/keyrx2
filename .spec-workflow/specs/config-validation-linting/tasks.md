@@ -117,7 +117,7 @@
 
 ## Phase 5: Linting Rules
 
-- [ ] 11. Implement unused layer detection in keyrx_ui/src/utils/lintingRules.ts
+- [x] 11. Implement unused layer detection in keyrx_ui/src/utils/lintingRules.ts
   - File: keyrx_ui/src/utils/lintingRules.ts
   - Create lintUnusedLayers() function
   - Parse config AST to find defined vs activated layers
@@ -127,7 +127,7 @@
   - _Requirements: 6.1 (unused layer warning)_
   - _Prompt: Role: Code Quality Engineer | Task: Implement lintUnusedLayers() function in keyrx_ui/src/utils/lintingRules.ts following requirement 6.1, detecting layers defined but never activated | **Function signature**: `lintUnusedLayers(configSource: string): ValidationWarning[]` | **Implementation**: Regex parse `layer "(\w+)"` to find definitions, regex parse layer activation keywords (e.g., `activate_layer "(\w+)"`), compare defined vs activated sets, return warnings for unused | **Warning format**: `{ line: layerDefLine, column: 1, message: "Layer '{name}' is defined but never activated", code: "UNUSED_LAYER" }` | Restrictions: File ≤300 lines (shared with other linting rules), TypeScript strict mode, handle regex errors gracefully, only detect layers (not modifiers/locks) | Success: ✅ Detects unused layers correctly, ✅ Warning includes layer name, ✅ No false positives for used layers_
 
-- [ ] 12. Implement naming convention linting in keyrx_ui/src/utils/lintingRules.ts (continue)
+- [x] 12. Implement naming convention linting in keyrx_ui/src/utils/lintingRules.ts (continue)
   - File: keyrx_ui/src/utils/lintingRules.ts (continue from task 11)
   - Create lintNamingConsistency() function
   - Detect mix of camelCase and snake_case in layer/modifier names

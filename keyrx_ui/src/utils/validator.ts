@@ -15,6 +15,7 @@ import type {
   ConfigStats,
 } from '@/types/validation';
 import { DEFAULT_VALIDATION_OPTIONS } from '@/types/validation';
+import { lintUnusedLayers, lintNamingConsistency } from './lintingRules';
 
 /**
  * Regular expression to parse WASM error messages.
@@ -216,119 +217,14 @@ export class ConfigValidator {
     }
 
     // Check for unused layers
-    const unusedLayerWarnings = this.lintUnusedLayers(rhaiSource);
+    const unusedLayerWarnings = lintUnusedLayers(rhaiSource);
     warnings.push(...unusedLayerWarnings);
 
     // Check for naming consistency
-    const namingHints = this.lintNamingConsistency(rhaiSource);
+    const namingHints = lintNamingConsistency(rhaiSource);
     hints.push(...namingHints);
 
     return { warnings, hints };
-  }
-
-  /**
-   * Detect layers that are defined but never activated.
-   *
-   * @param rhaiSource - The Rhai configuration source code
-   * @returns Array of ValidationWarning for unused layers
-   */
-  private lintUnusedLayers(rhaiSource: string): ValidationWarning[] {
-    const warnings: ValidationWarning[] = [];
-
-    // Extract layer definitions (simplified regex - may need refinement)
-    // Matches: layer "layer_name" {
-    const layerDefRegex = /layer\s+"([^"]+)"\s*\{/g;
-    const definedLayers = new Map<string, number>(); // name -> line number
-
-    const lines = rhaiSource.split('\n');
-    lines.forEach((line, index) => {
-      const match = layerDefRegex.exec(line);
-      if (match) {
-        definedLayers.set(match[1], index + 1);
-      }
-    });
-
-    // Extract layer activations
-    // Matches: activate_layer("layer_name") or similar patterns
-    const layerActivationRegex = /activate_layer\s*\(\s*"([^"]+)"\s*\)/g;
-    const activatedLayers = new Set<string>();
-
-    let match;
-    while ((match = layerActivationRegex.exec(rhaiSource)) !== null) {
-      activatedLayers.add(match[1]);
-    }
-
-    // Find unused layers
-    for (const [layerName, lineNumber] of definedLayers) {
-      if (!activatedLayers.has(layerName)) {
-        warnings.push({
-          line: lineNumber,
-          column: 1,
-          message: `Layer '${layerName}' is defined but never activated`,
-          code: 'UNUSED_LAYER',
-        });
-      }
-    }
-
-    return warnings;
-  }
-
-  /**
-   * Check for inconsistent naming conventions.
-   *
-   * @param rhaiSource - The Rhai configuration source code
-   * @returns Array of ValidationHint for naming issues
-   */
-  private lintNamingConsistency(rhaiSource: string): ValidationHint[] {
-    const hints: ValidationHint[] = [];
-
-    // Extract all layer and modifier names
-    const layerNames: string[] = [];
-    const modifierNames: string[] = [];
-
-    // Extract layer names
-    const layerRegex = /layer\s+"([^"]+)"/g;
-    let match;
-    while ((match = layerRegex.exec(rhaiSource)) !== null) {
-      layerNames.push(match[1]);
-    }
-
-    // Extract modifier names
-    const modifierRegex = /modifier\s+"([^"]+)"/g;
-    while ((match = modifierRegex.exec(rhaiSource)) !== null) {
-      modifierNames.push(match[1]);
-    }
-
-    const allNames = [...layerNames, ...modifierNames];
-
-    if (allNames.length === 0) {
-      return hints;
-    }
-
-    // Classify naming styles
-    let camelCaseCount = 0;
-    let snakeCaseCount = 0;
-
-    for (const name of allNames) {
-      if (name.includes('_')) {
-        snakeCaseCount++;
-      } else if (/[a-z][A-Z]/.test(name)) {
-        // Has lowercase followed by uppercase = camelCase
-        camelCaseCount++;
-      }
-    }
-
-    // If both styles are present, suggest consistency
-    if (camelCaseCount > 0 && snakeCaseCount > 0) {
-      hints.push({
-        line: 1,
-        column: 1,
-        message: `Consider using consistent naming style. Found: camelCase (${camelCaseCount}) and snake_case (${snakeCaseCount})`,
-        code: 'NAMING_INCONSISTENCY',
-      });
-    }
-
-    return hints;
   }
 
   /**
