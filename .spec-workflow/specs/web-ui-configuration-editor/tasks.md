@@ -670,7 +670,7 @@
 
 ## Phase 3: Feature Pages
 
-- [ ] 12. Create HomePage / Dashboard
+- [x] 12. Create HomePage / Dashboard
   - File: `src/pages/HomePage.tsx`
   - Components: ActiveProfileCard, DeviceListCard, QuickStatsCard
   - Layout: from design.md Layout 1
