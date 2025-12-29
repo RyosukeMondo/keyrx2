@@ -25,8 +25,7 @@ cat > "$PRE_COMMIT_HOOK" << 'EOF'
 # Pre-commit hook: Run verification before allowing commit
 # This ensures all code meets quality standards before being committed
 #
-# NOTE: Coverage check is skipped in pre-commit (too slow, ~5+ minutes)
-# Coverage is still enforced in CI/CD pipeline
+# NOTE: Coverage check uses cargo-llvm-cov (~12s, fast enough for pre-commit)
 
 set -euo pipefail
 
@@ -34,8 +33,8 @@ echo "Running pre-commit verification..."
 echo "This may take a moment. Please wait..."
 echo ""
 
-# Run verification script (skip coverage for speed)
-if ! scripts/verify.sh --quiet --skip-coverage; then
+# Run verification script (includes coverage with llvm-cov)
+if ! scripts/verify.sh --quiet; then
     echo ""
     echo "==================================================================="
     echo "PRE-COMMIT VERIFICATION FAILED"
@@ -69,9 +68,10 @@ echo "  - Build verification (cargo build)"
 echo "  - Linting (cargo clippy)"
 echo "  - Formatting (cargo fmt --check)"
 echo "  - Tests (cargo test)"
+echo "  - Coverage check (cargo llvm-cov, ~12s)"
 echo ""
-echo "NOTE: Coverage check is SKIPPED in pre-commit (too slow for local workflow)."
-echo "      Coverage is still enforced in CI/CD pipeline."
+echo "NOTE: Coverage uses cargo-llvm-cov (25-50x faster than tarpaulin)."
+echo "      Fast enough for local workflow (~12s total)."
 echo ""
 echo "To bypass the hook (not recommended), use: git commit --no-verify"
 echo ""
