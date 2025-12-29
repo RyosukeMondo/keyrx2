@@ -912,7 +912,7 @@
   - _Requirements: Design.md Layout 5_
   - _Success: ✅ Chart renders with real data, ✅ Event log scrolls smoothly, ✅ State inspector shows current state
 
-- [ ] 19. Create SimulatorPage
+- [x] 19. Create SimulatorPage
   - File: `src/pages/SimulatorPage.tsx`
   - Features: interactive keyboard, click/type to simulate, output preview
   - State display: active layer, modifiers, locks
