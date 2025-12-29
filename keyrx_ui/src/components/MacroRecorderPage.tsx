@@ -18,6 +18,11 @@ import {
   generateMacroJSON,
   getMacroStats,
 } from '../utils/macroGenerator';
+import {
+  textToMacroEvents,
+  getTextSnippetStats,
+  TEXT_SNIPPET_TEMPLATES,
+} from '../utils/textSnippetTemplate';
 import type { EventSequence, SimKeyEvent } from '../wasm/core';
 import './MacroRecorderPage.css';
 
@@ -68,6 +73,8 @@ export function MacroRecorderPage() {
   const [editedEvents, setEditedEvents] = useState<MacroEvent[]>([]);
   const [triggerKey, setTriggerKey] = useState<string>('VK_F13');
   const [showTestPanel, setShowTestPanel] = useState<boolean>(false);
+  const [textSnippet, setTextSnippet] = useState<string>('');
+  const [showTextSnippet, setShowTextSnippet] = useState<boolean>(false);
 
   // Sync edited events with recorded events
   useEffect(() => {
@@ -139,6 +146,24 @@ export function MacroRecorderPage() {
     setShowTestPanel(true);
   };
 
+  const handleLoadTextSnippet = () => {
+    if (!textSnippet.trim()) return;
+
+    // Convert text to macro events
+    const events = textToMacroEvents(textSnippet, {
+      keyDelay: 10,
+      optimize: true,
+    });
+
+    // Update the edited events
+    setEditedEvents(events);
+  };
+
+  const handleLoadTemplate = (templateKey: keyof typeof TEXT_SNIPPET_TEMPLATES) => {
+    const template = TEXT_SNIPPET_TEMPLATES[templateKey];
+    setTextSnippet(template.template);
+  };
+
   return (
     <div className="macro-recorder-page">
       <div className="recorder-header">
@@ -194,6 +219,82 @@ export function MacroRecorderPage() {
           )}
           {state.recordingState === 'idle' && <span className="status-idle">Ready</span>}
         </div>
+      </div>
+
+      {/* Text Snippet Panel */}
+      <div className="text-snippet-section">
+        <div className="section-header">
+          <h3>
+            Text Snippet Template
+            <button
+              onClick={() => setShowTextSnippet(!showTextSnippet)}
+              className="btn-toggle"
+            >
+              {showTextSnippet ? '▼' : '▶'}
+            </button>
+          </h3>
+          <p className="section-hint">Convert text into keyboard macro events</p>
+        </div>
+
+        {showTextSnippet && (
+          <div className="text-snippet-panel">
+            <div className="snippet-controls">
+              <div className="template-buttons">
+                <span className="template-label">Templates:</span>
+                {(Object.keys(TEXT_SNIPPET_TEMPLATES) as Array<keyof typeof TEXT_SNIPPET_TEMPLATES>).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => handleLoadTemplate(key)}
+                    className="btn-template"
+                  >
+                    {TEXT_SNIPPET_TEMPLATES[key].name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="snippet-input">
+              <textarea
+                value={textSnippet}
+                onChange={(e) => setTextSnippet(e.target.value)}
+                placeholder="Enter text to convert to macro (e.g., 'Hello, World!')"
+                rows={4}
+                className="snippet-textarea"
+              />
+            </div>
+
+            <div className="snippet-actions">
+              {textSnippet && (
+                <div className="snippet-stats">
+                  {(() => {
+                    const stats = getTextSnippetStats(textSnippet);
+                    return (
+                      <>
+                        <span>{stats.characters} chars</span>
+                        <span>{stats.supportedCharacters} supported</span>
+                        {stats.unsupportedCharacters > 0 && (
+                          <span className="warning">
+                            {stats.unsupportedCharacters} unsupported
+                          </span>
+                        )}
+                        <span>{stats.steps} steps</span>
+                        <span>~{stats.estimatedDurationMs}ms</span>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              <button
+                onClick={handleLoadTextSnippet}
+                disabled={!textSnippet.trim()}
+                className="btn btn-primary"
+              >
+                Load as Macro
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Event Timeline Editor */}

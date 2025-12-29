@@ -448,6 +448,137 @@
   margin-bottom: 0;
 }
 
+/* Text Snippet Section */
+.text-snippet-section {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.section-header {
+  background: #f8f9fa;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.section-header h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-hint {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.btn-toggle {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-toggle:hover {
+  color: #495057;
+}
+
+.text-snippet-panel {
+  padding: 1.5rem;
+}
+
+.snippet-controls {
+  margin-bottom: 1rem;
+}
+
+.template-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.template-label {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.btn-template {
+  background: #e9ecef;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-template:hover {
+  background: #dee2e6;
+  border-color: #ced4da;
+}
+
+.snippet-input {
+  margin-bottom: 1rem;
+}
+
+.snippet-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.snippet-textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.snippet-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.snippet-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+  flex-wrap: wrap;
+}
+
+.snippet-stats span {
+  background: #f8f9fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+}
+
+.snippet-stats .warning {
+  background: #fff3cd;
+  color: #856404;
+  font-weight: 500;
+}
+
 /* Responsive layout */
 @media (max-width: 1200px) {
   .recorder-content {
