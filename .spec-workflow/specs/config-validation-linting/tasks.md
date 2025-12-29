@@ -148,7 +148,7 @@
   - _Requirements: 7.1-7.5 (Editor integration)_
   - _Prompt: Role: React Integration Developer | Task: Integrate ConfigEditor component into existing configuration editing page following requirements 7.1-7.5, replacing simple textarea with Monaco editor | **Component replacement**: Remove old textarea, add `<ConfigEditor initialValue={currentConfig} onSave={handleSaveConfig} onValidationChange={setValidationResult} />` | **Save handler**: `handleSaveConfig = async (content: string) => { await apiClient.post('/api/config', { content }); showNotification('Configuration saved'); }` | **Test button**: Pass validationResult to simulator (no re-validation needed) | Restrictions: File ≤300 lines (modify existing page), preserve existing save functionality, maintain URL routing, handle loading states | Success: ✅ Monaco editor renders in config page, ✅ Save works correctly, ✅ Validation status visible, ✅ Test button uses validated config_
 
-- [ ] 14. Write unit tests for validator service in keyrx_ui/src/utils/validator.test.ts
+- [x] 14. Write unit tests for validator service in keyrx_ui/src/utils/validator.test.ts
   - File: keyrx_ui/src/utils/validator.test.ts
   - Test validate() with valid Rhai configs (0 errors)
   - Test validate() with invalid syntax (parse errors with line numbers)
