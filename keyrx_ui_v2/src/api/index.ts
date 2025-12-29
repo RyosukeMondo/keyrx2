@@ -40,3 +40,13 @@ export {
   clearEventLog,
   fetchHealthStatus,
 } from './metrics';
+
+// WebSocket connection management
+export {
+  WebSocketManager,
+  getWebSocketInstance,
+  closeWebSocketInstance,
+  type ConnectionState,
+  type WebSocketConfig,
+  type WebSocketCallbacks,
+} from './websocket';

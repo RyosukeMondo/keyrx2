@@ -944,7 +944,7 @@
   - _Requirements: Design.md API Integration Patterns_
   - _Success: ✅ All endpoints implemented, ✅ Errors thrown with messages, ✅ TypeScript types for requests/responses
 
-- [ ] 22. Implement WebSocket for real-time metrics
+- [x] 22. Implement WebSocket for real-time metrics
   - File: `src/api/websocket.ts`
   - Connect to daemon WebSocket (ws://localhost:9867/ws)
   - Subscribe to: event stream, state changes, latency updates
