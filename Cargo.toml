@@ -86,3 +86,12 @@ opt-level = 1
 
 [profile.bench]
 inherits = "release"
+
+# WASM-specific release profile optimized for size
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"       # Optimize for size
+lto = true            # Enable Link Time Optimization
+codegen-units = 1     # Single codegen unit for better optimization
+strip = true          # Strip debug symbols
+panic = "abort"       # Reduce binary size by aborting on panic

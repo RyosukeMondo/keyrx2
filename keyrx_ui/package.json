@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:wasm": "cd ../keyrx_core && RUSTFLAGS='--cfg wasm_js' wasm-pack build --target web --features wasm && rm -rf ../keyrx_ui/src/wasm/pkg && cp -r pkg ../keyrx_ui/src/wasm/",
-    "dev:wasm": "npm run build:wasm && vite",
+    "build:wasm": "cd ../keyrx_core && RUSTFLAGS='--cfg wasm_js' wasm-pack build --target web --release --features wasm && rm -rf ../keyrx_ui/src/wasm/pkg && cp -r pkg ../keyrx_ui/src/wasm/",
+    "build:wasm:dev": "cd ../keyrx_core && RUSTFLAGS='--cfg wasm_js' wasm-pack build --target web --dev --features wasm && rm -rf ../keyrx_ui/src/wasm/pkg && cp -r pkg ../keyrx_ui/src/wasm/",
+    "dev:wasm": "npm run build:wasm:dev && vite",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
