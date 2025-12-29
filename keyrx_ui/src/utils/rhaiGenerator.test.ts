@@ -468,5 +468,204 @@ describe('rhaiGenerator', () => {
       // Pretty version should have more newlines
       expect(resultPretty.split('\n').length).toBeGreaterThan(resultCompact.split('\n').length);
     });
+
+    it('should generate multiple locks with sequential IDs', () => {
+      const locks: Lock[] = [
+        { id: 'lock1', name: 'game_mode', triggerKey: 'ScrollLock' },
+        { id: 'lock2', name: 'num_lock', triggerKey: 'NumLock' },
+        { id: 'lock3', name: 'caps_lock', triggerKey: 'CapsLock' },
+      ];
+
+      const config: Pick<ConfigState, 'layers' | 'modifiers' | 'locks'> = {
+        layers: [],
+        modifiers: [],
+        locks,
+      };
+
+      const result = generateRhaiCode(config);
+
+      expect(result).toContain('map("ScrollLock", "LK_00");');
+      expect(result).toContain('map("NumLock", "LK_01");');
+      expect(result).toContain('map("CapsLock", "LK_02");');
+    });
+
+    it('should normalize VK_ prefix from source keys', () => {
+      const mapping: Mapping = {
+        id: 'm1',
+        sourceKey: 'VK_A',
+        targetKey: 'B',
+        type: 'simple',
+      };
+
+      const baseLayer: Layer = {
+        id: 'base',
+        name: 'base',
+        mappings: [mapping],
+        isBase: true,
+      };
+
+      const config: Pick<ConfigState, 'layers' | 'modifiers' | 'locks'> = {
+        layers: [baseLayer],
+        modifiers: [],
+        locks: [],
+      };
+
+      const result = generateRhaiCode(config);
+
+      expect(result).toContain('map("A", "VK_B")');
+      expect(result).not.toContain('map("VK_A"');
+    });
+
+    it('should handle modifier_trigger with unknown modifierId', () => {
+      const mapping: Mapping = {
+        id: 'm1',
+        sourceKey: 'Space',
+        targetKey: 'Enter',
+        type: 'modifier_trigger',
+        modifierId: 'unknown_mod',
+      };
+
+      const baseLayer: Layer = {
+        id: 'base',
+        name: 'base',
+        mappings: [mapping],
+        isBase: true,
+      };
+
+      const config: Pick<ConfigState, 'layers' | 'modifiers' | 'locks'> = {
+        layers: [baseLayer],
+        modifiers: [],
+        locks: [],
+      };
+
+      const result = generateRhaiCode(config);
+
+      // Should fallback to simple mapping
+      expect(result).toContain('map("Space", "VK_Enter")');
+    });
+
+    it('should preserve MD_ prefix in target keys', () => {
+      const mapping: Mapping = {
+        id: 'm1',
+        sourceKey: 'A',
+        targetKey: 'MD_05',
+        type: 'simple',
+      };
+
+      const baseLayer: Layer = {
+        id: 'base',
+        name: 'base',
+        mappings: [mapping],
+        isBase: true,
+      };
+
+      const config: Pick<ConfigState, 'layers' | 'modifiers' | 'locks'> = {
+        layers: [baseLayer],
+        modifiers: [],
+        locks: [],
+      };
+
+      const result = generateRhaiCode(config);
+
+      expect(result).toContain('map("A", "MD_05")');
+      expect(result).not.toContain('VK_MD_05');
+    });
+
+    it('should preserve LK_ prefix in target keys', () => {
+      const mapping: Mapping = {
+        id: 'm1',
+        sourceKey: 'B',
+        targetKey: 'LK_03',
+        type: 'simple',
+      };
+
+      const baseLayer: Layer = {
+        id: 'base',
+        name: 'base',
+        mappings: [mapping],
+        isBase: true,
+      };
+
+      const config: Pick<ConfigState, 'layers' | 'modifiers' | 'locks'> = {
+        layers: [baseLayer],
+        modifiers: [],
+        locks: [],
+      };
+
+      const result = generateRhaiCode(config);
+
+      expect(result).toContain('map("B", "LK_03")');
+      expect(result).not.toContain('VK_LK_03');
+    });
+
+    it('should generate configuration with multiple layers mapped to modifiers', () => {
+      const modifiers: Modifier[] = [
+        { id: 'mod1', name: 'nav_layer', triggerKey: 'CapsLock' },
+        { id: 'mod2', name: 'num_layer', triggerKey: 'Space' },
+      ];
+
+      const baseLayer: Layer = {
+        id: 'base',
+        name: 'base',
+        mappings: [],
+        isBase: true,
+      };
+
+      const navLayer: Layer = {
+        id: 'nav',
+        name: 'Navigation',
+        mappings: [
+          { id: 'm1', sourceKey: 'H', targetKey: 'Left', type: 'simple' },
+        ],
+        isBase: false,
+      };
+
+      const numLayer: Layer = {
+        id: 'num',
+        name: 'Numbers',
+        mappings: [
+          { id: 'm2', sourceKey: 'A', targetKey: '1', type: 'simple' },
+        ],
+        isBase: false,
+      };
+
+      const config: Pick<ConfigState, 'layers' | 'modifiers' | 'locks'> = {
+        layers: [baseLayer, navLayer, numLayer],
+        modifiers,
+        locks: [],
+      };
+
+      const result = generateRhaiCode(config);
+
+      // Check both layers have when() blocks with correct modifier IDs
+      expect(result).toContain('when("MD_00", [');
+      expect(result).toContain('map("H", "VK_Left")');
+      expect(result).toContain('when("MD_01", [');
+      expect(result).toContain('map("A", "VK_1")');
+    });
+
+    it('should handle hexadecimal modifier IDs correctly', () => {
+      // Create 16 modifiers to test hex formatting
+      const modifiers: Modifier[] = Array.from({ length: 16 }, (_, i) => ({
+        id: `mod${i}`,
+        name: `modifier_${i}`,
+        triggerKey: `F${i + 1}`,
+      }));
+
+      const config: Pick<ConfigState, 'layers' | 'modifiers' | 'locks'> = {
+        layers: [],
+        modifiers,
+        locks: [],
+      };
+
+      const result = generateRhaiCode(config);
+
+      // Check that hex IDs are properly formatted
+      expect(result).toContain('map("F1", "MD_00");');
+      expect(result).toContain('map("F10", "MD_09");');
+      expect(result).toContain('map("F11", "MD_0A");');
+      expect(result).toContain('map("F15", "MD_0E");');
+      expect(result).toContain('map("F16", "MD_0F");');
+    });
   });
 });

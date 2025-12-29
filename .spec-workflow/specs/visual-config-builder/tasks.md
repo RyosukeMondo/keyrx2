@@ -63,7 +63,7 @@
 
 ## Phase 5: Testing & Documentation
 
-- [ ] 12. Write unit tests for Rhai generator
+- [x] 12. Write unit tests for Rhai generator
   - Test simple mappings, layers, modifiers
   - _Prompt: Role: Test Engineer | Task: Test Rhai generator | Success: ✅ All cases tested_
 
