@@ -58,7 +58,7 @@
   - Record → edit → test → save
   - _Prompt: Role: QA Automation Engineer | Task: Test full macro workflow | Success: ✅ E2E test passes_
 
-- [ ] 12. Create documentation in docs/macro-recorder.md
+- [x] 12. Create documentation in docs/macro-recorder.md
   - How to record and use macros
   - _Prompt: Role: Technical Writer | Task: Document macro recorder | Success: ✅ Docs complete_
 
