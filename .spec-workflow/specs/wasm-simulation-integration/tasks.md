@@ -324,7 +324,7 @@
   - _Requirements: 5.1-5.6 (Output visualization), 7.1-7.5 (UI integration)_
   - _Prompt: Role: React Test Engineer with expertise in React Testing Library and user interaction testing | Task: Write comprehensive component tests for all Simulator components following requirements 5.1-5.6 and 7.1-7.5, testing rendering, user interactions, and state management | Restrictions: Must mock useSimulator hook, test user flows (load config → select scenario → view results), verify timeline rendering and latency display, ensure accessibility (screen reader support) | Success: All components tested, user interactions verified, rendering tested with various data scenarios, tests run quickly with mocked dependencies_
 
-- [ ] 24.5. Add accessibility testing to Simulator components
+- [x] 24.5. Add accessibility testing to Simulator components
   - Files: keyrx_ui/src/components/Simulator/*.test.tsx (enhance existing tests from Task 24)
   - Install @axe-core/react for automated accessibility auditing
   - Test keyboard navigation (Tab, Enter, Escape, Arrow keys work correctly)
