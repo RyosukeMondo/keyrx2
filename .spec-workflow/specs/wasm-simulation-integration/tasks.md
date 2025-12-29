@@ -102,7 +102,7 @@
   - _Requirements: 1.1 (WASM Build Pipeline), Development workflow with HMR_
   - _Prompt: Role: Frontend Build Engineer with expertise in Vite bundler and WASM integration | Task: Configure Vite in keyrx_ui/vite.config.ts to support WASM modules following requirement 1.1, adding vite-plugin-wasm and custom watch plugin for auto-rebuilding WASM on Rust file changes | Restrictions: Must maintain existing React HMR, ensure WASM loads asynchronously, do not break production builds | Success: WASM modules load in browser, HMR triggers on Rust changes (rebuilds WASM), production builds include optimized WASM_
 
-- [ ] 10. Create TypeScript API wrapper in keyrx_ui/src/wasm/core.ts
+- [x] 10. Create TypeScript API wrapper in keyrx_ui/src/wasm/core.ts
   - File: keyrx_ui/src/wasm/core.ts
   - Import generated WASM module from ./pkg/keyrx_core
   - Create WasmCore class with init() method for WASM module initialization
