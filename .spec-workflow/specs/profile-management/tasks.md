@@ -81,9 +81,11 @@
   - Keyboard accessibility, error handling, navigation persistence ✅
   - _Complete: keyrx_ui/tests/e2e/profile-management.spec.ts_
 
-- [ ] 12. Create documentation in docs/profile-management.md
-  - How to use profiles
-  - _Prompt: Role: Technical Writer | Task: Document profile management | Success: ✅ Docs complete_
+- [x] 12. Create documentation in docs/profile-management.md
+  - Complete user guide with Web UI and CLI usage ✅
+  - API reference, troubleshooting, best practices ✅
+  - Advanced usage examples and integrations ✅
+  - _Complete: docs/profile-management.md_
 
 - [ ] 13. Log implementation artifacts
   - Use spec-workflow log-implementation tool
