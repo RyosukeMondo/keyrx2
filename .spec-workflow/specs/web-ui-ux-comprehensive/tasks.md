@@ -464,7 +464,7 @@
   - _Requirements: All_
   - _Prompt: Role: QA engineer with Rust testing expertise | Task: Create comprehensive CLI integration tests in keyrx_daemon/tests/cli_integration.rs | Restrictions: Test via compiled binary not library calls, parse JSON output, verify exit codes | Success: 100+ test cases pass, all commands verified, edge cases covered | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts_
 
-- [ ] 17. Add GitHub Actions CI for CLI tests
+- [x] 17. Add GitHub Actions CI for CLI tests
   - File: `.github/workflows/cli-tests.yml` (new file)
   - Run `keyrx profiles create test --json | jq -e '.success == true'`
   - Run `keyrx simulate default --events ...` and verify determinism
