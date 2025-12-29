@@ -152,7 +152,7 @@
   | Success: ✅ Load/save roundtrip preserves data, ✅ Atomic writes verified (interruption test), ✅ Corrupted JSON returns RegistryCorrupted error with hint, ✅ Input validation rejects invalid names/IDs, ✅ Unit tests cover all methods and error paths, ✅ Code coverage ≥90%
   | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts (document DeviceEntry struct, all methods, error enum variants), then mark [x] when done
 
-- [-] 2. Create ProfileManager component
+- [x] 2. Create ProfileManager component
   - File: `keyrx_daemon/src/config/profile_manager.rs` (new file)
   - Purpose: Profile CRUD with hot-reload and concurrency-safe activation
   - _Leverage: keyrx_compiler (Rhai compilation), keyrx_core (config loading)_
@@ -301,7 +301,7 @@
   | Success: ✅ Profile activation <100ms (excluding compile time), ✅ Compilation timeout kills process and returns error, ✅ Concurrent activate() calls serialize (second waits), ✅ Rollback on compilation failure preserves previous profile, ✅ No daemon restart required, ✅ Unit tests cover all methods, ✅ Concurrency test verifies no race conditions, ✅ Coverage ≥90%
   | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts (document ProfileManager struct, ProfileMetadata, all methods, concurrency strategy), then mark [x] when done
 
-- [ ] 3. Create RhaiGenerator for programmatic code modification
+- [x] 3. Create RhaiGenerator for programmatic code modification
   - File: `keyrx_daemon/src/config/rhai_generator.rs` (new file)
   - Parse Rhai source into AST (use rhai::Engine)
   - Implement set_key_mapping (modify AST, regenerate code)

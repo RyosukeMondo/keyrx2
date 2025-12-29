@@ -21,6 +21,8 @@ log = "0.4"
 clap = { version = "4.5", features = ["derive"] }
 # Logging facade implementation for CLI
 env_logger = "0.11"
+# Rhai for code generation
+rhai = { workspace = true }
 
 # Web server dependencies
 axum = { workspace = true }
