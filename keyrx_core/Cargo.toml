@@ -24,9 +24,13 @@ serde-wasm-bindgen = { workspace = true, optional = true }
 console_error_panic_hook = { workspace = true, optional = true }
 once_cell = { workspace = true, optional = true }
 
+# Compiler dependencies (for WASM load_config functionality)
+rhai = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+
 [features]
 default = []
-wasm = ["wasm-bindgen", "serde-wasm-bindgen", "console_error_panic_hook", "once_cell"]
+wasm = ["wasm-bindgen", "serde-wasm-bindgen", "console_error_panic_hook", "once_cell", "rhai", "sha2"]
 
 [dev-dependencies]
 proptest = { workspace = true }

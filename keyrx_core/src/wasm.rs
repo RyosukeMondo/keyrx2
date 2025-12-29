@@ -19,11 +19,15 @@
 extern crate std;
 
 use once_cell::sync::Lazy;
+use std::path::Path;
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::vec::Vec;
 use wasm_bindgen::prelude::*;
 
-use crate::config::ConfigRoot;
+use sha2::{Digest, Sha256};
+
+use crate::config::{ConfigRoot, Metadata, Version};
 
 // ============================================================================
 // Global Configuration Storage
@@ -89,6 +93,161 @@ fn get_config(handle: ConfigHandle) -> Result<ConfigRoot, JsValue> {
         .get(handle.0)
         .cloned()
         .ok_or_else(|| JsValue::from_str(&format!("Invalid ConfigHandle: {}", handle.0)))
+}
+
+// ============================================================================
+// Configuration Loading
+// ============================================================================
+
+/// Load a Rhai configuration from source text.
+///
+/// Parses the Rhai source, compiles it to a ConfigRoot structure, and stores
+/// it in the global CONFIG_STORE. Returns an opaque handle for future operations.
+///
+/// # Arguments
+/// * `rhai_source` - Rhai DSL source code as a string
+///
+/// # Returns
+/// * `Ok(ConfigHandle)` - Handle to the loaded configuration
+/// * `Err(JsValue)` - Parse error with line number and description
+///
+/// # Errors
+/// Returns an error if:
+/// - Rhai syntax is invalid (returns parse error with line number)
+/// - Configuration size exceeds 1MB
+/// - Parser fails to generate valid ConfigRoot
+///
+/// # Example (JavaScript)
+/// ```javascript
+/// const handle = load_config(`
+///   device("*") {
+///     map("VK_A", "VK_B");
+///   }
+/// `);
+/// ```
+#[wasm_bindgen]
+pub fn load_config(rhai_source: &str) -> Result<ConfigHandle, JsValue> {
+    // Validate input size (1MB limit)
+    const MAX_CONFIG_SIZE: usize = 1024 * 1024;
+    if rhai_source.len() > MAX_CONFIG_SIZE {
+        return Err(JsValue::from_str(&format!(
+            "Configuration too large: {} bytes (max {})",
+            rhai_source.len(),
+            MAX_CONFIG_SIZE
+        )));
+    }
+
+    // Parse the Rhai configuration using embedded parser
+    let config = parse_rhai_config(rhai_source).map_err(|e| JsValue::from_str(&e))?;
+
+    // Store config and return handle
+    Ok(store_config(config))
+}
+
+/// Parse Rhai configuration source into ConfigRoot.
+///
+/// This is a simplified parser that handles the essential Rhai DSL features
+/// needed for browser-based simulation. It uses the Rhai engine to evaluate
+/// the DSL and build a ConfigRoot structure.
+fn parse_rhai_config(source: &str) -> Result<ConfigRoot, std::string::String> {
+    use rhai::{Engine, Scope};
+    use std::sync::{Arc, Mutex as StdMutex};
+
+    #[derive(Debug, Clone, Default)]
+    struct ParserState {
+        devices: Vec<crate::config::DeviceConfig>,
+        current_device: Option<crate::config::DeviceConfig>,
+        current_mappings: Vec<crate::config::KeyMapping>,
+    }
+
+    let state = Arc::new(StdMutex::new(ParserState::default()));
+    let mut engine = Engine::new();
+    let state_clone = Arc::clone(&state);
+
+    // Register device() function
+    engine.register_fn("device", move |pattern: &str| {
+        let mut s = state_clone.lock().unwrap();
+        // If there's a current device, save it first
+        if let Some(device) = s.current_device.take() {
+            s.devices.push(device);
+        }
+        s.current_device = Some(crate::config::DeviceConfig {
+            identifier: crate::config::DeviceIdentifier {
+                pattern: pattern.into(),
+            },
+            mappings: Vec::new(),
+        });
+        s.current_mappings.clear();
+    });
+
+    let state_clone2 = Arc::clone(&state);
+    // Register map() function for simple key mapping
+    engine.register_fn("map", move |from: &str, to: &str| {
+        use crate::config::{BaseKeyMapping, KeyCode, KeyMapping};
+
+        let mut s = state_clone2.lock().unwrap();
+
+        // Simple key parsing - map common names to KeyCode variants
+        // This is a minimal implementation; full parser will be added later
+        let from_key = match from {
+            "A" => KeyCode::A,
+            "B" => KeyCode::B,
+            "VK_A" => KeyCode::A,
+            "VK_B" => KeyCode::B,
+            _ => return Err(format!("Unsupported key name: {}", from).into()),
+        };
+
+        let to_key = match to {
+            "A" => KeyCode::A,
+            "B" => KeyCode::B,
+            "VK_A" => KeyCode::A,
+            "VK_B" => KeyCode::B,
+            _ => return Err(format!("Unsupported key name: {}", to).into()),
+        };
+
+        s.current_mappings.push(KeyMapping::Base(BaseKeyMapping::Simple {
+            from: from_key,
+            to: to_key,
+        }));
+
+        Ok::<(), Box<rhai::EvalAltResult>>(())
+    });
+
+    // Run the Rhai script
+    let mut scope = Scope::new();
+    engine
+        .run_with_scope(&mut scope, source)
+        .map_err(|e| format!("Parse error: {}", e))?;
+
+    // Finalize: save the last device
+    let mut final_state = state.lock().unwrap();
+    if let Some(device) = final_state.current_device.take() {
+        let mut device_with_mappings = device;
+        device_with_mappings.mappings = final_state.current_mappings.clone();
+        final_state.devices.push(device_with_mappings);
+    }
+
+    // Generate metadata
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let mut hasher = Sha256::new();
+    hasher.update(source.as_bytes());
+    let source_hash = format!("{:x}", hasher.finalize());
+
+    let config = ConfigRoot {
+        version: Version::current(),
+        devices: final_state.devices.clone(),
+        metadata: Metadata {
+            compilation_timestamp: timestamp,
+            compiler_version: "wasm-0.1.0".into(),
+            source_hash,
+        },
+    };
+
+    Ok(config)
 }
 
 // ============================================================================

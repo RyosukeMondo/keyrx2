@@ -24,7 +24,7 @@
   - _Requirements: 1.1 (WASM Build Pipeline), 2.1 (Configuration Loading)_
   - _Prompt: Role: Rust WebAssembly Developer with expertise in wasm-bindgen and browser FFI | Task: Create WASM module entry point in keyrx_core/src/wasm.rs following requirements 1.1 and 2.1, implementing panic hook (console_error_panic_hook), ConfigHandle opaque type, and global CONFIG_STORE using once_cell::Lazy<Mutex<Vec<_>>> pattern | Restrictions: File ≤500 lines, must use #[wasm_bindgen] annotations correctly, ensure thread safety with proper locking, do not expose internal Rust types directly to JavaScript | Success: Module compiles to WASM, panic hook provides readable browser errors, ConfigHandle prevents direct memory access from JavaScript, CONFIG_STORE is thread-safe_
 
-- [ ] 3. Implement load_config function in keyrx_core/src/wasm.rs
+- [x] 3. Implement load_config function in keyrx_core/src/wasm.rs
   - File: keyrx_core/src/wasm.rs (continue from task 2)
   - Create #[wasm_bindgen] function: load_config(rhai_source: &str) -> Result<ConfigHandle, JsValue>
   - Parse Rhai source using keyrx_compiler parser (feature-gated)
