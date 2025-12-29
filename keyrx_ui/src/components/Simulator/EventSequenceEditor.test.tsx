@@ -14,7 +14,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { EventSequenceEditor } from './EventSequenceEditor';
+
+// Extend Vitest matchers with jest-axe
+expect.extend(toHaveNoViolations);
 
 describe('EventSequenceEditor', () => {
   const mockOnSubmit = vi.fn();
@@ -505,6 +509,64 @@ describe('EventSequenceEditor', () => {
 
       expect(screen.getByText('Press')).toBeInTheDocument();
       expect(screen.getByText('Release')).toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have no axe violations in empty state', async () => {
+      const { container } = render(<EventSequenceEditor onSubmit={mockOnSubmit} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations with events', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<EventSequenceEditor onSubmit={mockOnSubmit} />);
+
+      await user.click(screen.getByText('+ Add Event'));
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations when disabled', async () => {
+      const { container } = render(<EventSequenceEditor onSubmit={mockOnSubmit} disabled={true} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have proper form labels', async () => {
+      const user = userEvent.setup();
+      render(<EventSequenceEditor onSubmit={mockOnSubmit} />);
+
+      await user.click(screen.getByText('+ Add Event'));
+
+      expect(screen.getByLabelText('Key Code:')).toBeInTheDocument();
+      expect(screen.getByLabelText('Type:')).toBeInTheDocument();
+      expect(screen.getByLabelText('Timestamp (μs):')).toBeInTheDocument();
+    });
+
+    it('should have accessible remove buttons', async () => {
+      const user = userEvent.setup();
+      render(<EventSequenceEditor onSubmit={mockOnSubmit} />);
+
+      await user.click(screen.getByText('+ Add Event'));
+
+      const removeButton = screen.getByLabelText(/Remove event/);
+      expect(removeButton).toBeInTheDocument();
+    });
+
+    it('should support keyboard navigation for adding events', async () => {
+      const user = userEvent.setup();
+      render(<EventSequenceEditor onSubmit={mockOnSubmit} />);
+
+      // Tab to add button and press Enter
+      await user.tab();
+      expect(screen.getByText('+ Add Event')).toHaveFocus();
+      await user.keyboard('{Enter}');
+
+      // Event should be added
+      expect(screen.getByLabelText('Key Code:')).toBeInTheDocument();
     });
   });
 });

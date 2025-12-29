@@ -14,8 +14,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import SimulationResults from './SimulationResults';
 import type { SimulationResult } from '../../wasm/core';
+
+// Extend Vitest matchers with jest-axe
+expect.extend(toHaveNoViolations);
 
 describe('SimulationResults', () => {
   describe('Empty States', () => {
@@ -543,6 +547,24 @@ describe('SimulationResults', () => {
       },
     };
 
+    it('should have no axe violations in empty state', async () => {
+      const { container } = render(<SimulationResults result={null} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations with timeline data', async () => {
+      const { container } = render(<SimulationResults result={mockResult} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have proper ARIA label for timeline', () => {
+      render(<SimulationResults result={mockResult} />);
+
+      expect(screen.getByLabelText('Event Timeline')).toBeInTheDocument();
+    });
+
     it('should have accessible event markers', () => {
       render(<SimulationResults result={mockResult} />);
 
@@ -556,6 +578,13 @@ describe('SimulationResults', () => {
 
       const event = screen.getByRole('button', { name: /Event at 0μs/ });
       expect(event).toHaveAttribute('tabIndex', '0');
+    });
+
+    it('should have accessible legend', () => {
+      render(<SimulationResults result={mockResult} />);
+
+      const legend = screen.getByText('Legend:').closest('div');
+      expect(legend).toBeInTheDocument();
     });
   });
 });

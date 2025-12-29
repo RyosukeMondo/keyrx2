@@ -13,7 +13,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { ScenarioSelector } from './ScenarioSelector';
+
+// Extend Vitest matchers with jest-axe
+expect.extend(toHaveNoViolations);
 
 // Mock the scenarios module
 vi.mock('../../utils/scenarios', () => ({
@@ -286,6 +290,24 @@ describe('ScenarioSelector', () => {
   });
 
   describe('Accessibility', () => {
+    it('should have no axe violations in default state', async () => {
+      const { container } = render(<ScenarioSelector onRunScenario={mockOnRunScenario} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations when disabled', async () => {
+      const { container } = render(<ScenarioSelector onRunScenario={mockOnRunScenario} disabled={true} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations when loading', async () => {
+      const { container } = render(<ScenarioSelector onRunScenario={mockOnRunScenario} isLoading={true} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
     it('should have proper aria labels', () => {
       render(<ScenarioSelector onRunScenario={mockOnRunScenario} />);
 

@@ -13,9 +13,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { SimulatorPanel } from './SimulatorPanel';
 import * as wasmCore from '../../wasm/core';
 import * as simulatorNavigation from '../../utils/simulatorNavigation';
+
+// Extend Vitest matchers with jest-axe
+expect.extend(toHaveNoViolations);
 
 // Mock the WASM core module
 vi.mock('../../wasm/core', () => ({
@@ -428,6 +432,130 @@ describe('SimulatorPanel', () => {
       // Step 3: Verify results displayed
       expect(screen.getByTestId('simulation-results')).toBeInTheDocument();
       expect(screen.getByTestId('latency-stats')).toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have no axe violations in initial state', async () => {
+      const { container } = render(<SimulatorPanel />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations with loaded config', async () => {
+      const user = userEvent.setup();
+      const mockConfigHandle = { id: 123 };
+      (wasmCore.wasmCore.loadConfig as ReturnType<typeof vi.fn>).mockResolvedValue(mockConfigHandle);
+
+      const { container } = render(<SimulatorPanel />);
+
+      // Load config
+      const loadButton = screen.getByText('Load Config');
+      await user.click(loadButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('scenario-selector')).toBeInTheDocument();
+      });
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations with simulation results', async () => {
+      const user = userEvent.setup();
+      const mockConfigHandle = { id: 123 };
+      const mockResult = {
+        timeline: [{ timestamp_us: 0, event_type: 'input', data: {} }],
+        latency_stats: { min_us: 1, avg_us: 2, max_us: 3, p95_us: 2.5, p99_us: 2.9 },
+      };
+
+      (wasmCore.wasmCore.loadConfig as ReturnType<typeof vi.fn>).mockResolvedValue(mockConfigHandle);
+      (wasmCore.wasmCore.simulate as ReturnType<typeof vi.fn>).mockResolvedValue(mockResult);
+
+      const { container } = render(<SimulatorPanel />);
+
+      // Load config and run simulation
+      await user.click(screen.getByText('Load Config'));
+      await waitFor(() => {
+        expect(screen.getByTestId('scenario-selector')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Run Scenario'));
+      await waitFor(() => {
+        expect(screen.getByTestId('simulation-results')).toBeInTheDocument();
+      });
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have proper ARIA labels on main sections', () => {
+      render(<SimulatorPanel />);
+
+      // Main panel should have accessible label
+      expect(screen.getByRole('heading', { name: 'Configuration Simulator' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: '1. Load Configuration' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: '2. Select or Create Event Sequence' })).toBeInTheDocument();
+    });
+
+    it('should have proper ARIA attributes for error alerts', async () => {
+      const user = userEvent.setup();
+      (wasmCore.wasmCore.loadConfig as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Test error')
+      );
+
+      render(<SimulatorPanel />);
+
+      const loadButton = screen.getByText('Load Config');
+      await user.click(loadButton);
+
+      await waitFor(() => {
+        const alert = screen.getByRole('alert');
+        expect(alert).toBeInTheDocument();
+        expect(alert).toHaveTextContent('Failed to load configuration: Test error');
+      });
+    });
+
+    it('should support keyboard navigation through main sections', async () => {
+      const user = userEvent.setup();
+      const mockConfigHandle = { id: 123 };
+      (wasmCore.wasmCore.loadConfig as ReturnType<typeof vi.fn>).mockResolvedValue(mockConfigHandle);
+
+      render(<SimulatorPanel />);
+
+      // Tab to load button and activate with Enter
+      await user.tab();
+      expect(screen.getByText('Load Config')).toHaveFocus();
+      await user.keyboard('{Enter}');
+
+      await waitFor(() => {
+        expect(wasmCore.wasmCore.loadConfig).toHaveBeenCalled();
+      });
+    });
+
+    it('should announce loading states to screen readers', async () => {
+      const user = userEvent.setup();
+      let resolveLoad: (value: unknown) => void;
+      const loadPromise = new Promise((resolve) => {
+        resolveLoad = resolve;
+      });
+      (wasmCore.wasmCore.loadConfig as ReturnType<typeof vi.fn>).mockReturnValue(loadPromise);
+
+      render(<SimulatorPanel />);
+
+      const loadButton = screen.getByText('Load Config');
+      await user.click(loadButton);
+
+      // Loading message should be in the document
+      await waitFor(() => {
+        expect(screen.getByText('Loading...')).toBeInTheDocument();
+      });
+
+      resolveLoad!({ id: 123 });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+      });
     });
   });
 });

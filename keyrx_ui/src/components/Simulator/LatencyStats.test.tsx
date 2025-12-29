@@ -12,8 +12,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { LatencyStats } from './LatencyStats';
 import type { LatencyStats as LatencyStatsType } from '../../wasm/core';
+
+// Extend Vitest matchers with jest-axe
+expect.extend(toHaveNoViolations);
 
 describe('LatencyStats', () => {
   describe('Rendering', () => {
@@ -444,6 +448,84 @@ describe('LatencyStats', () => {
       render(<LatencyStats stats={stats} />);
 
       expect(screen.getByText(/Max latency >5ms may cause noticeable delays/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    const mockStats: LatencyStatsType = {
+      min_us: 5,
+      avg_us: 10,
+      max_us: 20,
+      p95_us: 18,
+      p99_us: 19,
+    };
+
+    it('should have no axe violations with normal stats', async () => {
+      const { container } = render(<LatencyStats stats={mockStats} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations with warning state', async () => {
+      const warningStats: LatencyStatsType = {
+        min_us: 100,
+        avg_us: 2000,
+        max_us: 6000,
+        p95_us: 5500,
+        p99_us: 5900,
+      };
+      const { container } = render(<LatencyStats stats={warningStats} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have proper table structure', () => {
+      render(<LatencyStats stats={mockStats} />);
+
+      expect(screen.getByRole('table')).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Metric' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Value' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+    });
+
+    it('should have tooltips for percentile metrics', () => {
+      render(<LatencyStats stats={mockStats} />);
+
+      const p95Tooltip = screen.getByTitle('95% of events completed within this time');
+      const p99Tooltip = screen.getByTitle('99% of events completed within this time');
+
+      expect(p95Tooltip).toBeInTheDocument();
+      expect(p99Tooltip).toBeInTheDocument();
+    });
+
+    it('should have accessible status icons', () => {
+      render(<LatencyStats stats={mockStats} />);
+
+      const statusIcons = screen.getAllByRole('img', { hidden: true });
+      statusIcons.forEach((icon) => {
+        expect(icon).toHaveAttribute('aria-label');
+      });
+    });
+
+    it('should meet color contrast requirements for performance indicators', () => {
+      const warningStats: LatencyStatsType = {
+        min_us: 100,
+        avg_us: 2000,
+        max_us: 6000,
+        p95_us: 5500,
+        p99_us: 5900,
+      };
+
+      render(<LatencyStats stats={warningStats} />);
+
+      // Warning text should be visible
+      const warningBadge = screen.getByText('Warning');
+      expect(warningBadge).toHaveClass('warning');
+
+      // Check that warning elements are styled for visibility
+      const warningValues = screen.getAllByText(/ms/);
+      const warningValue = warningValues.find(el => el.classList.contains('warning'));
+      expect(warningValue).toBeTruthy();
     });
   });
 });

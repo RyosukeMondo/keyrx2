@@ -13,7 +13,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { ConfigLoader } from './ConfigLoader';
+
+// Extend Vitest matchers with jest-axe
+expect.extend(toHaveNoViolations);
 
 describe('ConfigLoader', () => {
   const mockOnLoad = vi.fn();
@@ -334,6 +338,34 @@ describe('ConfigLoader', () => {
   });
 
   describe('Accessibility', () => {
+    it('should have no axe violations in default state', async () => {
+      const { container } = render(<ConfigLoader onLoad={mockOnLoad} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations in file upload mode', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<ConfigLoader onLoad={mockOnLoad} />);
+
+      await user.click(screen.getByText('Upload File'));
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations with error state', async () => {
+      const { container } = render(<ConfigLoader onLoad={mockOnLoad} error="Parse error at line 5" />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no axe violations when loading', async () => {
+      const { container } = render(<ConfigLoader onLoad={mockOnLoad} isLoading={true} />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
     it('should have proper form structure', () => {
       render(<ConfigLoader onLoad={mockOnLoad} />);
 
