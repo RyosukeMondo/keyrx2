@@ -13,7 +13,7 @@
   - _Requirements: 1.1 (WASM Build Pipeline)_
   - _Prompt: Role: Rust Build Engineer with expertise in Cargo configuration and WebAssembly compilation | Task: Configure keyrx_core/Cargo.toml to support WASM compilation following requirement 1.1, adding necessary dependencies (wasm-bindgen 0.2+, serde-wasm-bindgen 0.5+) and crate-type configuration for both cdylib (WASM) and rlib (native) targets | Restrictions: Do not modify existing dependencies, ensure WASM feature flag excludes daemon-specific code (evdev, uinput), maintain no_std compatibility | Success: Cargo.toml allows both native and WASM builds, wasm-pack build succeeds without errors, WASM module size <15MB unoptimized_
 
-- [ ] 2. Create WASM module entry point in keyrx_core/src/wasm.rs
+- [x] 2. Create WASM module entry point in keyrx_core/src/wasm.rs
   - File: keyrx_core/src/wasm.rs
   - Create module with wasm-bindgen annotations
   - Set up panic hook for better error messages in browser console
@@ -70,7 +70,7 @@
   - _Requirements: 5.2 (State capture during simulation)_
   - _Prompt: Role: Rust API Developer with expertise in state management and serialization | Task: Implement get_state function in keyrx_core/src/wasm.rs following requirement 5.2, returning current simulation state in same JSON format as daemon IPC (active modifiers, locks, active layer, raw 255-bit state vector) | Restrictions: File ≤500 lines, must validate ConfigHandle, match exact DaemonState JSON schema from daemon API, ensure state vector serialization is correct | Success: State returned matches daemon format exactly, includes all active modifiers/locks/layer, raw state vector is 255 bits_
 
-- [ ] 7. Add WASM module exports to keyrx_core/src/lib.rs
+- [x] 7. Add WASM module exports to keyrx_core/src/lib.rs
   - File: keyrx_core/src/lib.rs
   - Add conditional compilation: #[cfg(target_arch = "wasm32")] pub mod wasm;
   - Ensure simulator module is public: pub mod simulator;

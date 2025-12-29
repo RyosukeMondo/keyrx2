@@ -13,6 +13,10 @@ pub mod runtime;
 pub mod simulator;
 pub mod state;
 
+// WASM module (only included when compiling for wasm32 target)
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
+pub mod wasm;
+
 // Re-export public types from config module
 pub use config::{
     BaseKeyMapping, Condition, ConditionItem, ConfigRoot, DeviceConfig, DeviceIdentifier, KeyCode,
