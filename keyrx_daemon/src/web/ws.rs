@@ -1,28 +1,211 @@
-use axum::{routing::get, Router};
+//! WebSocket endpoint for real-time event streaming.
+//!
+//! This module provides a WebSocket endpoint at /ws/events that streams
+//! real-time events from the daemon to connected web clients.
 
-#[allow(dead_code)]
+use axum::{
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
+    response::IntoResponse,
+    routing::get,
+    Router,
+};
+use serde_json::json;
+use tokio::time::{interval, Duration};
+
 pub fn create_router() -> Router {
-    Router::new().route("/events", get(websocket_handler))
+    Router::new().route("/", get(websocket_handler))
 }
 
-#[allow(dead_code)]
-async fn websocket_handler() -> &'static str {
-    "WebSocket endpoint placeholder"
+/// WebSocket upgrade handler
+async fn websocket_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
+    ws.on_upgrade(handle_websocket)
 }
+
+/// Handle WebSocket connection
+async fn handle_websocket(mut socket: WebSocket) {
+    log::info!("WebSocket client connected");
+
+    // Send welcome message
+    let welcome = json!({
+        "type": "connected",
+        "payload": {
+            "version": env!("CARGO_PKG_VERSION"),
+            "timestamp": std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        }
+    });
+
+    if socket
+        .send(Message::Text(welcome.to_string()))
+        .await
+        .is_err()
+    {
+        log::warn!("Failed to send welcome message");
+        return;
+    }
+
+    // Send periodic heartbeat messages
+    let mut heartbeat_interval = interval(Duration::from_secs(30));
+
+    loop {
+        tokio::select! {
+            // Send heartbeat
+            _ = heartbeat_interval.tick() => {
+                let heartbeat = json!({
+                    "type": "heartbeat",
+                    "payload": {
+                        "timestamp": std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    }
+                });
+
+                if socket.send(Message::Text(heartbeat.to_string())).await.is_err() {
+                    log::info!("WebSocket client disconnected (heartbeat failed)");
+                    break;
+                }
+            }
+
+            // Handle incoming messages
+            msg = socket.recv() => {
+                match msg {
+                    Some(Ok(Message::Text(text))) => {
+                        log::debug!("Received WebSocket message: {}", text);
+                        // TODO: Handle client commands (subscribe/unsubscribe to event types)
+                    }
+                    Some(Ok(Message::Close(_))) => {
+                        log::info!("WebSocket client closed connection");
+                        break;
+                    }
+                    Some(Ok(_)) => {
+                        // Ignore binary/ping/pong messages
+                    }
+                    Some(Err(e)) => {
+                        log::warn!("WebSocket error: {}", e);
+                        break;
+                    }
+                    None => {
+                        log::info!("WebSocket client disconnected");
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    log::info!("WebSocket connection closed");
+}
+
+// ============================================================================
+// TODO: Implement Real-time Event Streaming
+// ============================================================================
+//
+// The WebSocket currently provides connection management and heartbeats.
+// To add real-time event streaming, the following architecture changes are needed:
+//
+// 1. **Event Broadcasting Mechanism in Daemon**
+//    - Add a broadcast channel in the daemon's main event loop
+//    - Publish events (key press/release, state changes, latency updates) to the channel
+//    - Example: use tokio::sync::broadcast::channel for multi-subscriber support
+//
+// 2. **Event Subscription in Web Server**
+//    - When the web server starts, subscribe to the daemon's broadcast channel
+//    - Store the channel receiver in Arc<Mutex<>> for sharing across WebSocket handlers
+//    - Forward events from the channel to all connected WebSocket clients
+//
+// 3. **Event Filtering and Client Subscriptions**
+//    - Allow clients to subscribe to specific event types (events, state, latency, errors)
+//    - Maintain per-client subscription state
+//    - Only forward events matching client's active subscriptions
+//
+// 4. **Event Message Format**
+//    - Standardize on JSON messages with type-tagged payloads
+//    - Example event types:
+//      * "event" - Key press/release events
+//      * "state" - Daemon state changes (modifiers/locks/layers)
+//      * "latency" - Performance metrics updates
+//      * "error" - Error notifications
+//
+// 5. **Implementation Example**
+//
+// ```rust
+// // In daemon main.rs:
+// let (event_tx, _) = tokio::sync::broadcast::channel(1000);
+// let event_tx_clone = event_tx.clone();
+//
+// // In event processing loop:
+// event_tx.send(Event::KeyPress { ... }).ok();
+//
+// // In web server (ws.rs):
+// async fn handle_websocket(mut socket: WebSocket, event_rx: Receiver<Event>) {
+//     loop {
+//         tokio::select! {
+//             // Forward daemon events to client
+//             Ok(event) = event_rx.recv() => {
+//                 let msg = json!({
+//                     "type": "event",
+//                     "payload": event,
+//                 });
+//                 socket.send(Message::Text(msg.to_string())).await.ok();
+//             }
+//             // ... other select branches ...
+//         }
+//     }
+// }
+// ```
+//
+// Expected event message formats:
+//
+// ```json
+// {
+//   "type": "event",
+//   "payload": {
+//     "timestamp_us": 1234567890,
+//     "event_type": "press",
+//     "key_code": "A",
+//     "device_id": "serial-ABC123",
+//     "layer": "base",
+//     "latency_us": 2300
+//   }
+// }
+// ```
+//
+// ```json
+// {
+//   "type": "state",
+//   "payload": {
+//     "timestamp_us": 1234567890,
+//     "active_modifiers": ["MD_00", "MD_01"],
+//     "active_locks": ["LK_00"],
+//     "active_layer": "base"
+//   }
+// }
+// ```
+//
+// ```json
+// {
+//   "type": "latency",
+//   "payload": {
+//     "timestamp_us": 1234567890,
+//     "min_us": 1200,
+//     "avg_us": 2300,
+//     "max_us": 4500,
+//     "p95_us": 3800,
+//     "p99_us": 4200
+//   }
+// }
+// ```
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_create_router() {
+    #[test]
+    fn test_create_router() {
         let router = create_router();
         assert!(std::mem::size_of_val(&router) > 0);
-    }
-
-    #[tokio::test]
-    async fn test_websocket_handler() {
-        let result = websocket_handler().await;
-        assert_eq!(result, "WebSocket endpoint placeholder");
     }
 }
