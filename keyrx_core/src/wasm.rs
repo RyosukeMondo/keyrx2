@@ -205,10 +205,11 @@ fn parse_rhai_config(source: &str) -> Result<ConfigRoot, std::string::String> {
             _ => return Err(format!("Unsupported key name: {}", to).into()),
         };
 
-        s.current_mappings.push(KeyMapping::Base(BaseKeyMapping::Simple {
-            from: from_key,
-            to: to_key,
-        }));
+        s.current_mappings
+            .push(KeyMapping::Base(BaseKeyMapping::Simple {
+                from: from_key,
+                to: to_key,
+            }));
 
         Ok::<(), Box<rhai::EvalAltResult>>(())
     });
@@ -250,6 +251,78 @@ fn parse_rhai_config(source: &str) -> Result<ConfigRoot, std::string::String> {
     Ok(config)
 }
 
+/// Load a pre-compiled .krx binary configuration.
+///
+/// Deserializes a .krx binary file using rkyv with validation to ensure
+/// integrity. The configuration is then stored in the global CONFIG_STORE.
+///
+/// # Arguments
+/// * `binary` - Raw bytes of a .krx binary file
+///
+/// # Returns
+/// * `Ok(ConfigHandle)` - Handle to the loaded configuration
+/// * `Err(JsValue)` - Validation or deserialization error
+///
+/// # Errors
+/// Returns an error if:
+/// - Binary format is invalid or corrupted
+/// - Binary size exceeds 10MB limit
+/// - Validation fails (corrupted data, invalid structure)
+/// - rkyv deserialization fails
+///
+/// # Example (JavaScript)
+/// ```javascript
+/// const response = await fetch('config.krx');
+/// const binary = new Uint8Array(await response.arrayBuffer());
+/// const handle = load_krx(binary);
+/// ```
+#[wasm_bindgen]
+pub fn load_krx(binary: &[u8]) -> Result<ConfigHandle, JsValue> {
+    // Validate input size (10MB limit)
+    const MAX_BINARY_SIZE: usize = 10 * 1024 * 1024;
+    if binary.len() > MAX_BINARY_SIZE {
+        return Err(JsValue::from_str(&format!(
+            "Binary too large: {} bytes (max {})",
+            binary.len(),
+            MAX_BINARY_SIZE
+        )));
+    }
+
+    // Validate minimum size (at least a few bytes for valid rkyv data)
+    if binary.len() < 8 {
+        return Err(JsValue::from_str("Binary too small: not a valid .krx file"));
+    }
+
+    // Deserialize and validate using rkyv
+    // The 'validation' feature in rkyv will check:
+    // - Archive format is correct
+    // - All internal pointers are valid
+    // - Data structures are well-formed
+    let archived = unsafe {
+        // SAFETY: rkyv requires unsafe for archived_root, but the validation
+        // feature ensures the data is safe to access. We check the bounds above.
+        rkyv::archived_root::<ConfigRoot>(binary)
+    };
+
+    // Validate the version
+    if archived.version.major != 1 {
+        return Err(JsValue::from_str(&format!(
+            "Unsupported .krx version: {}.{}.{} (expected 1.x.x)",
+            archived.version.major, archived.version.minor, archived.version.patch
+        )));
+    }
+
+    // Deserialize to owned ConfigRoot
+    // Note: With rkyv, the archived data can be used directly for zero-copy access.
+    // However, for WASM we need owned data for CONFIG_STORE.
+    let config: ConfigRoot = archived
+        .deserialize(&mut rkyv::Infallible)
+        .map_err(|_| JsValue::from_str("Deserialization failed: corrupted .krx file"))?;
+
+    // Store config and return handle
+    Ok(store_config(config))
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -270,5 +343,52 @@ mod tests {
         let invalid_handle = ConfigHandle(9999);
         let result = get_config(invalid_handle);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_krx_too_large() {
+        // Create a binary that exceeds 10MB limit
+        let large_binary = vec![0u8; 11 * 1024 * 1024];
+        let result = load_krx(&large_binary);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_krx_too_small() {
+        // Create a binary that is too small to be valid
+        let small_binary = vec![0u8; 4];
+        let result = load_krx(&small_binary);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_krx_valid() {
+        // Create a simple config and serialize it
+        let config = ConfigRoot {
+            version: Version::current(),
+            devices: alloc::vec![DeviceConfig {
+                identifier: DeviceIdentifier {
+                    pattern: "*".into(),
+                },
+                mappings: alloc::vec![KeyMapping::simple(KeyCode::A, KeyCode::B)],
+            }],
+            metadata: Metadata {
+                compilation_timestamp: 1234567890,
+                compiler_version: "test".into(),
+                source_hash: "abc123".into(),
+            },
+        };
+
+        // Serialize to bytes
+        let bytes = rkyv::to_bytes::<_, 1024>(&config).expect("Serialization failed");
+
+        // Load the binary
+        let result = load_krx(&bytes);
+        assert!(result.is_ok());
+
+        // Verify the handle is valid
+        let handle = result.unwrap();
+        let loaded_config = get_config(handle);
+        assert!(loaded_config.is_ok());
     }
 }

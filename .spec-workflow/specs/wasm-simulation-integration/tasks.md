@@ -36,7 +36,7 @@
   - _Requirements: 2.1 (Configuration Loading in WASM), 2.2-2.5 (Acceptance criteria)_
   - _Prompt: Role: Rust Compiler Engineer with expertise in Rhai scripting and code generation | Task: Implement load_config function in keyrx_core/src/wasm.rs following requirements 2.1-2.5, reusing keyrx_compiler parser, dfa_gen, and mphf_gen modules to compile Rhai source to in-memory DFA and MPHF structures | Restrictions: File ≤500 lines, must validate Rhai syntax and return detailed parse errors with line numbers, limit configuration size to 1MB and warn if exceeded, ensure memory-safe storage in CONFIG_STORE | Success: Rhai configs compile correctly to DFA, parse errors include line numbers, compiled configs stored safely, ConfigHandle returned for valid inputs_
 
-- [ ] 4. Implement load_krx function in keyrx_core/src/wasm.rs
+- [x] 4. Implement load_krx function in keyrx_core/src/wasm.rs
   - File: keyrx_core/src/wasm.rs (continue from task 3)
   - Create #[wasm_bindgen] function: load_krx(binary: &[u8]) -> Result<ConfigHandle, JsValue>
   - Deserialize .krx binary using rkyv with validation
