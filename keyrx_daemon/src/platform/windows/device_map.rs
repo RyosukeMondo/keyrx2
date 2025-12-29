@@ -17,6 +17,20 @@ pub struct DeviceInfo {
     pub serial: Option<String>,
 }
 
+impl DeviceInfo {
+    /// Returns a unique device ID for this device.
+    #[must_use]
+    pub fn device_id(&self) -> String {
+        if let Some(ref serial) = self.serial {
+            if !serial.is_empty() {
+                return format!("serial-{}", serial);
+            }
+        }
+        // Fallback to path-based ID
+        format!("path-{}", self.path)
+    }
+}
+
 /// Manages mapping between Raw Input handles and device information.
 #[derive(Clone)]
 pub struct DeviceMap {
@@ -91,6 +105,13 @@ impl DeviceMap {
         // Store using handle as key (cast to usize for hashing)
         match self.devices.write() {
             Ok(mut devices) => {
+                if devices.len() >= 50 && !devices.contains_key(&(handle as usize)) {
+                    log::warn!(
+                        "Device map limit reached (50), ignoring new device: {}",
+                        info.path
+                    );
+                    return Err("Device map limit reached".to_string());
+                }
                 devices.insert(handle as usize, info.clone());
             }
             Err(_) => {
@@ -114,6 +135,13 @@ impl DeviceMap {
         };
         match self.devices.write() {
             Ok(mut devices) => {
+                if devices.len() >= 50 && !devices.contains_key(&handle) {
+                    log::warn!(
+                        "Device map limit reached (50), ignoring synthetic device: {}",
+                        info.path
+                    );
+                    return;
+                }
                 devices.insert(handle, info);
             }
             Err(_) => {
@@ -271,5 +299,38 @@ mod tests {
 
         map.remove_device(0x1234 as HANDLE);
         assert!(map.get(0x1234 as HANDLE).is_none());
+    }
+
+    #[test]
+    fn test_device_map_limit() {
+        let map = DeviceMap::new();
+        // Fill up to 50
+        for i in 0..50 {
+            map.add_synthetic_device(i, format!("path-{}", i), None);
+        }
+        assert_eq!(map.all().len(), 50);
+
+        // Try to add 51st
+        map.add_synthetic_device(50, "path-50".to_string(), None);
+        assert_eq!(map.all().len(), 50);
+        assert!(map.get(50 as HANDLE).is_none());
+
+        // Replace existing device should work
+        map.add_synthetic_device(0, "new-path-0".to_string(), None);
+        assert_eq!(map.all().len(), 50);
+        assert_eq!(map.get(0 as HANDLE).unwrap().path, "new-path-0");
+    }
+
+    #[test]
+    fn test_device_removal() {
+        let map = DeviceMap::new();
+        map.add_synthetic_device(1, "path-1".to_string(), None);
+        map.add_synthetic_device(2, "path-2".to_string(), None);
+        assert_eq!(map.all().len(), 2);
+
+        map.remove_device(1 as HANDLE);
+        assert_eq!(map.all().len(), 1);
+        assert!(map.get(1 as HANDLE).is_none());
+        assert!(map.get(2 as HANDLE).is_some());
     }
 }

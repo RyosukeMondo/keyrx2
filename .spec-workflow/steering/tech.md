@@ -47,8 +47,8 @@ keyrx is a hybrid system combining:
 
 **Windows**:
 - **windows-sys** (0.48+): Raw Windows API bindings
-  - `WM_INPUT` (Raw Input API for device discrimination)
-  - `GetRawInputDeviceInfo` (device identification)
+  - `WM_INPUT` (Raw Input API for per-device discrimination)
+  - `GetRawInputDeviceInfo` (device identification and serial extraction)
   - `SendInput` (event injection)
 
 **Embedded Web Server** (optional feature, enabled by default):
@@ -100,7 +100,7 @@ keyrx is a hybrid system combining:
           ▼               ▼
 ┌──────────────────────────┐  ┌─────────────────────┐
 │ keyrx_daemon             │  │ keyrx_ui            │
-│ - OS hooks (evdev/WinLL) │  │ - React + WASM      │
+│ - OS hooks (evdev/RawIn) │  │ - React + WASM      │
 │ - .krx loader (mmap)     │  │ - Browser simulator │
 │ - Embedded web server:   │  │ - Static files only │
 │   * axum HTTP/WebSocket  │  │                     │
@@ -291,7 +291,7 @@ right.map(Key::A, conditional(
 #### APIs
 - **OS Input Subsystem APIs** (core integration):
   - Linux: evdev ioctl, uinput write
-  - Windows: SetWindowsHookEx, SendInput, GetRawInputDeviceInfo
+  - Windows: Raw Input (WM_INPUT), SendInput, GetRawInputDeviceInfo
 
 #### Protocols
 - **WebSocket**: Daemon ↔ UI real-time communication
@@ -448,7 +448,7 @@ Per CLAUDE.md requirements:
 ### Target Platform(s)
 - **Linux**: x86_64, kernel 5.10+ (evdev requirement)
   - Tested: Ubuntu 22.04+, Fedora 38+, Arch Linux
-- **Windows**: x86_64, Windows 10 1903+ (Low-Level Hooks stability)
+- **Windows**: x86_64, Windows 10 1903+ (Raw Input API stability)
 - **WASM**: Any modern browser (Chrome 90+, Firefox 88+, Safari 15+)
 
 ### Distribution Method
@@ -465,8 +465,8 @@ Per CLAUDE.md requirements:
 - Input group membership (non-root access to `/dev/input/event*`)
 
 **Windows**:
-- Administrator privileges for initial setup (Low-Level Hook registration)
-- User-mode execution after setup
+- Administrator privileges for initial setup (or for remapping elevated apps)
+- User-mode execution for standard applications
 
 ### Update Mechanism
 - **Manual**: Download new binary, restart daemon
@@ -623,12 +623,12 @@ Per CLAUDE.md requirements:
 
 ## Known Limitations
 
-### 1. Windows Hook Timeout Risk
-**Impact**: If keyrx_daemon processing exceeds ~300ms, Windows may silently unhook
+### 1. Windows Input Sinking
+**Impact**: Raw Input requires a message-only window and a message loop on the capturing thread.
 
-**Mitigation**: Lock-free event queue + immediate CallNextHookEx return
+**Mitigation**: Dedicated message window + background thread processing.
 
-**Future Solution**: Kernel driver (requires signing, deployment complexity)
+**Future Solution**: Kernel driver (removes dependency on UI message queue).
 
 ### 2. macOS Not Supported
 **Impact**: macOS users cannot use keyrx

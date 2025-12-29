@@ -77,16 +77,7 @@ async fn get_devices() -> Json<DevicesListResponse> {
         Ok(keyboards) => keyboards
             .into_iter()
             .map(|kb| {
-                // Generate device ID following the same pattern as ManagedDevice::device_id()
-                let id = if let Some(ref serial) = kb.serial {
-                    if !serial.is_empty() {
-                        format!("serial-{}", serial)
-                    } else {
-                        format!("path-{}", kb.path.display())
-                    }
-                } else {
-                    format!("path-{}", kb.path.display())
-                };
+                let id = kb.device_id();
 
                 DeviceResponse {
                     id,

@@ -168,6 +168,23 @@ pub struct KeyboardInfo {
     pub phys: Option<String>,
 }
 
+impl KeyboardInfo {
+    /// Returns a unique device ID for this keyboard.
+    ///
+    /// The ID is generated from the serial number if available, otherwise
+    /// falls back to a path-based identifier for stability.
+    #[must_use]
+    pub fn device_id(&self) -> String {
+        if let Some(ref serial) = self.serial {
+            if !serial.is_empty() {
+                return format!("serial-{}", serial);
+            }
+        }
+        // Fallback to path-based ID
+        format!("path-{}", self.path.display())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

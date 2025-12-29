@@ -120,6 +120,12 @@ impl ManagedDevice {
     pub fn lookup_and_state_mut(&mut self) -> (&KeyLookup, &mut DeviceState) {
         (&self.lookup, &mut self.state)
     }
+
+    /// Returns a unique device ID for this device.
+    #[must_use]
+    pub fn device_id(&self) -> String {
+        self.info.device_id()
+    }
 }
 
 pub struct DeviceManager {
@@ -282,5 +288,31 @@ impl DeviceManager {
         }
 
         Ok(RefreshResult { added, removed })
+    }
+
+    /// Returns a list of all device IDs.
+    #[must_use]
+    pub fn device_ids(&self) -> Vec<String> {
+        self.devices.iter().map(|d| d.device_id()).collect()
+    }
+
+    /// Returns keyboard info for a device by its ID.
+    #[must_use]
+    pub fn device_info(&self, id: &str) -> Option<&KeyboardInfo> {
+        self.devices
+            .iter()
+            .find(|d| d.device_id() == id)
+            .map(|d| &d.info)
+    }
+
+    /// Returns a reference to a managed device by its ID.
+    #[must_use]
+    pub fn get_device_by_id(&self, id: &str) -> Option<&ManagedDevice> {
+        self.devices.iter().find(|d| d.device_id() == id)
+    }
+
+    /// Returns a mutable reference to a managed device by its ID.
+    pub fn get_device_by_id_mut(&mut self, id: &str) -> Option<&mut ManagedDevice> {
+        self.devices.iter_mut().find(|d| d.device_id() == id)
     }
 }
