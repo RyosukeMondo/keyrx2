@@ -93,6 +93,11 @@ enum Commands {
     /// Queries the daemon for the current 255-bit modifier/lock state via IPC.
     State(keyrx_daemon::cli::state::StateArgs),
 
+    /// Query daemon performance metrics.
+    ///
+    /// Provides latency statistics (min, avg, max, p95, p99) and recent event tail.
+    Metrics(keyrx_daemon::cli::metrics::MetricsArgs),
+
     /// List available input devices on the system.
     ///
     /// Displays all input devices with their names, paths, and serial numbers.
@@ -189,6 +194,10 @@ fn main() {
             Err(e) => Err((exit_codes::CONFIG_ERROR, e.to_string())),
         },
         Commands::State(args) => match keyrx_daemon::cli::state::execute(args) {
+            Ok(()) => Ok(()),
+            Err(e) => Err((exit_codes::CONFIG_ERROR, e.to_string())),
+        },
+        Commands::Metrics(args) => match keyrx_daemon::cli::metrics::execute(args) {
             Ok(()) => Ok(()),
             Err(e) => Err((exit_codes::CONFIG_ERROR, e.to_string())),
         },

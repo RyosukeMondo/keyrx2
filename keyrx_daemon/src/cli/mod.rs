@@ -7,6 +7,7 @@ pub mod config;
 pub mod devices;
 pub mod layers;
 pub mod layouts;
+pub mod metrics;
 pub mod profiles;
 pub mod simulate;
 pub mod state;
