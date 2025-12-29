@@ -400,7 +400,7 @@
   - _Requirements: Future enhancement (shared scenarios)_
   - _Prompt: Role: Full-stack Developer with expertise in file I/O and JSON serialization | Task: Add export/import functionality to EventSequenceEditor for saving and loading custom event sequences as JSON files | Restrictions: Must validate imported JSON schema, limit file size to 1MB, provide clear error messages for invalid files, use EventSequence type for validation | Success: Users can export sequences as JSON, import works with validation, files are human-readable JSON, invalid imports show helpful errors_
 
-- [ ] 31. Add visualization toggle for timeline detail level in SimulationResults
+- [x] 31. Add visualization toggle for timeline detail level in SimulationResults
   - File: keyrx_ui/src/components/Simulator/SimulationResults.tsx (modify from task 16)
   - Add toggle: "Show State Changes" (on by default)
   - Add toggle: "Show All Events" vs "Show Differences Only"

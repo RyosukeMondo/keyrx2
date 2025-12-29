@@ -5,7 +5,7 @@
  * input/output comparison, and interactive tooltips.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { SimulationResult, TimelineEntry, SimKeyEvent } from '../../wasm/core';
 import './SimulationResults.css';
 
@@ -16,6 +16,8 @@ interface SimulationResultsProps {
 export default function SimulationResults({ result }: SimulationResultsProps): React.JSX.Element {
   const [hoveredEntry, setHoveredEntry] = useState<TimelineEntry | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+  const [showStateChanges, setShowStateChanges] = useState<boolean>(true);
+  const [showDifferencesOnly, setShowDifferencesOnly] = useState<boolean>(false);
 
   if (!result) {
     return (
@@ -29,31 +31,13 @@ export default function SimulationResults({ result }: SimulationResultsProps): R
 
   const { timeline } = result;
 
-  if (timeline.length === 0) {
+  // Check if entry has state changes
+  const hasStateChange = (entry: TimelineEntry): boolean => {
     return (
-      <div className="simulation-results">
-        <div className="empty-state">
-          <p>Simulation completed with no events.</p>
-        </div>
-      </div>
+      entry.state.active_modifiers.length > 0 ||
+      entry.state.active_locks.length > 0 ||
+      entry.state.active_layer !== null
     );
-  }
-
-  // Calculate timeline scale
-  const minTime = Math.min(...timeline.map((entry) => entry.timestamp_us));
-  const maxTime = Math.max(...timeline.map((entry) => entry.timestamp_us));
-  const timeRange = maxTime - minTime || 1;
-
-  // Event type colors
-  const getEventTypeColor = (entry: TimelineEntry): string => {
-    const hasModifierChange = entry.state.active_modifiers.length > 0;
-    const hasLockChange = entry.state.active_locks.length > 0;
-    const hasLayerChange = entry.state.active_layer !== null;
-
-    if (hasLayerChange) return 'layer-change';
-    if (hasLockChange) return 'lock-change';
-    if (hasModifierChange) return 'modifier-change';
-    return 'regular-event';
   };
 
   // Check if input and output differ
@@ -66,6 +50,79 @@ export default function SimulationResults({ result }: SimulationResultsProps): R
       entry.input.keycode !== output.keycode ||
       entry.input.event_type !== output.event_type
     );
+  };
+
+  // Filter timeline based on toggle states
+  const filteredTimeline = useMemo(() => {
+    let filtered = timeline;
+
+    if (showDifferencesOnly) {
+      filtered = filtered.filter((entry) => hasInputOutputDiff(entry));
+    }
+
+    if (!showStateChanges) {
+      filtered = filtered.filter((entry) => !hasStateChange(entry));
+    }
+
+    return filtered;
+  }, [timeline, showDifferencesOnly, showStateChanges]);
+
+  if (timeline.length === 0) {
+    return (
+      <div className="simulation-results">
+        <div className="empty-state">
+          <p>Simulation completed with no events.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (filteredTimeline.length === 0) {
+    return (
+      <div className="simulation-results">
+        <h3 className="results-title">Simulation Results</h3>
+
+        <div className="visualization-controls">
+          <label className="control-toggle">
+            <input
+              type="checkbox"
+              checked={showStateChanges}
+              onChange={(e) => setShowStateChanges(e.target.checked)}
+            />
+            <span>Show State Changes</span>
+          </label>
+          <label className="control-toggle">
+            <input
+              type="checkbox"
+              checked={showDifferencesOnly}
+              onChange={(e) => setShowDifferencesOnly(e.target.checked)}
+            />
+            <span>Show Differences Only</span>
+          </label>
+        </div>
+
+        <div className="empty-state">
+          <p>No events match the current filters. Try adjusting the visualization controls.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate timeline scale using filtered events
+  const minTime = Math.min(...filteredTimeline.map((entry) => entry.timestamp_us));
+  const maxTime = Math.max(...filteredTimeline.map((entry) => entry.timestamp_us));
+  const timeRange = maxTime - minTime || 1;
+
+  // Event type colors
+  const getEventTypeColor = (entry: TimelineEntry): string => {
+    const hasModifierChange = entry.state.active_modifiers.length > 0;
+    const hasLockChange = entry.state.active_locks.length > 0;
+    const hasLayerChange = entry.state.active_layer !== null;
+
+    if (hasLayerChange) return 'layer-change';
+    if (hasLockChange) return 'lock-change';
+    if (hasModifierChange) return 'modifier-change';
+    return 'regular-event';
   };
 
   const handleMouseEnter = (entry: TimelineEntry, event: React.MouseEvent): void => {
@@ -96,7 +153,31 @@ export default function SimulationResults({ result }: SimulationResultsProps): R
 
   return (
     <div className="simulation-results">
-      <h3 className="results-title">Simulation Results</h3>
+      <div className="results-header">
+        <h3 className="results-title">Simulation Results</h3>
+        <div className="event-count">
+          {filteredTimeline.length} / {timeline.length} events
+        </div>
+      </div>
+
+      <div className="visualization-controls">
+        <label className="control-toggle">
+          <input
+            type="checkbox"
+            checked={showStateChanges}
+            onChange={(e) => setShowStateChanges(e.target.checked)}
+          />
+          <span>Show State Changes</span>
+        </label>
+        <label className="control-toggle">
+          <input
+            type="checkbox"
+            checked={showDifferencesOnly}
+            onChange={(e) => setShowDifferencesOnly(e.target.checked)}
+          />
+          <span>Show Differences Only</span>
+        </label>
+      </div>
 
       <div className="timeline-container">
         <div className="timeline-header">
@@ -109,7 +190,7 @@ export default function SimulationResults({ result }: SimulationResultsProps): R
 
         <div className="timeline-track">
           <div className="timeline-line" />
-          {timeline.map((entry, index) => {
+          {filteredTimeline.map((entry, index) => {
             const position = ((entry.timestamp_us - minTime) / timeRange) * 100;
             const eventType = getEventTypeColor(entry);
             const hasDiff = hasInputOutputDiff(entry);
