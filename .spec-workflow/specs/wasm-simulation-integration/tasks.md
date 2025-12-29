@@ -345,7 +345,7 @@
   - _Requirements: All requirements (end-to-end user scenarios)_
   - _Prompt: Role: QA Automation Engineer with expertise in E2E testing and Playwright/Cypress | Task: Write end-to-end test for full simulation workflow in keyrx_ui/tests/e2e/simulator.spec.ts, testing complete user journey from config loading to result visualization | Restrictions: Must test real WASM module (not mocked), verify timeline rendering, check latency stats display, test "Test Configuration" button from editor, ensure tests run in CI headless mode | Success: E2E test covers full user workflow, WASM loads and executes correctly, results display as expected, test runs reliably in CI pipeline_
 
-- [ ] 26. Optimize WASM module size in keyrx_core/Cargo.toml
+- [x] 26. Optimize WASM module size in keyrx_core/Cargo.toml
   - File: keyrx_core/Cargo.toml (modify from task 1)
   - Add release profile optimizations: opt-level = "z", lto = true, codegen-units = 1
   - Configure wasm-opt in package.json build script (-Oz flag)
