@@ -26,7 +26,7 @@
 
 ## Phase 3: Macro Code Generation
 
-- [ ] 5. Implement Rhai macro generator in keyrx_ui/src/utils/macroGenerator.ts
+- [x] 5. Implement Rhai macro generator in keyrx_ui/src/utils/macroGenerator.ts
   - Convert MacroEvent[] to Rhai macro syntax
   - _Prompt: Role: Code Generation Expert | Task: Generate Rhai macro code | Restrictions: File ≤300 lines, generate valid Rhai syntax | Success: ✅ Valid Rhai generated_
 
