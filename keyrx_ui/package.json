@@ -26,6 +26,9 @@
     "monaco-editor": "0.45.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-use-websocket": "^4.13.0",
+    "react-window": "^1.8.11",
+    "recharts": "^2.15.4",
     "vite-plugin-wasm": "^3.5.0",
     "zustand": "^5.0.9"
   },
@@ -40,6 +43,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/ui": "^4.0.16",
     "axe-core": "^4.11.0",
