@@ -145,6 +145,15 @@ impl SystemTray for LinuxSystemTray {
 
     fn shutdown(&mut self) -> Result<(), TrayError> {
         log::info!("Shutting down system tray");
+
+        // Hide the tray icon by setting status to Passive
+        if let Ok(indicator) = self._indicator.try_borrow_mut() {
+            indicator.set_status(IndicatorStatus::Passive);
+            log::debug!("Tray icon set to passive (hidden)");
+        } else {
+            log::warn!("Could not borrow indicator to hide it");
+        }
+
         Ok(())
     }
 }

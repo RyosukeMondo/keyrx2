@@ -242,7 +242,7 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
     );
 
     // Try to create system tray (optional - gracefully handle if not available)
-    let tray = match LinuxSystemTray::new() {
+    let mut tray = match LinuxSystemTray::new() {
         Ok(tray) => {
             log::info!("System tray initialized successfully");
             Some(tray)
@@ -309,8 +309,8 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
         }
 
         // Poll tray events (if tray is available)
-        if let Some(ref tray) = tray {
-            if let Some(event) = tray.poll_event() {
+        if let Some(ref mut tray_ref) = tray {
+            if let Some(event) = tray_ref.poll_event() {
                 match event {
                     TrayControlEvent::Reload => {
                         log::info!("Reload requested from system tray");
@@ -320,6 +320,10 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                     }
                     TrayControlEvent::Exit => {
                         log::info!("Exit requested from system tray");
+                        // Shutdown tray to hide icon before exiting
+                        if let Err(e) = tray_ref.shutdown() {
+                            log::warn!("Failed to shutdown tray: {}", e);
+                        }
                         daemon
                             .running_flag()
                             .store(false, std::sync::atomic::Ordering::SeqCst);
