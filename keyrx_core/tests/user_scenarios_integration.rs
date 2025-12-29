@@ -436,3 +436,95 @@ fn test_repro_tap_hold_sticky_with_rapid_input() {
         "BUG: MD_02 should deactivate when M is released, but it stays sticky"
     );
 }
+
+/// Test press/release consistency for ModifiedOutput (e.g., Shift+Key)
+/// This ensures that when a key is pressed on one layer and released after layer changes,
+/// all output keys (including modifiers) are properly released.
+#[test]
+fn test_press_release_consistency_modified_output() {
+    let config = create_config(vec![
+        // M: Tap=Backspace, Hold=MD_02
+        KeyMapping::tap_hold(KeyCode::M, KeyCode::Backspace, 2, 200),
+        // When MD_02 active: E -> Shift+Num9 (produces `)`)
+        KeyMapping::conditional(
+            Condition::ModifierActive(2),
+            vec![BaseKeyMapping::ModifiedOutput {
+                from: KeyCode::E,
+                to: KeyCode::Num9,
+                shift: true,
+                ctrl: false,
+                alt: false,
+                win: false,
+            }],
+        ),
+    ]);
+    let lookup = KeyLookup::from_device_config(&config);
+    let mut state = DeviceState::new();
+
+    // Press M at t=0
+    process_event(
+        KeyEvent::press(KeyCode::M).with_timestamp(0),
+        &lookup,
+        &mut state,
+    );
+
+    // Press E at t=50ms (triggers permissive hold)
+    let press_outputs = process_event(
+        KeyEvent::press(KeyCode::E).with_timestamp(50_000),
+        &lookup,
+        &mut state,
+    );
+
+    // Verify MD_02 is active
+    assert!(
+        state.is_modifier_active(2),
+        "MD_02 should be active via permissive hold"
+    );
+
+    // Verify press output is [LShift press, Num9 press]
+    assert_eq!(press_outputs.len(), 2, "Should output 2 keys (Shift+Num9)");
+    assert!(
+        press_outputs[0].keycode() == KeyCode::LShift && press_outputs[0].is_press(),
+        "First output should be LShift press"
+    );
+    assert!(
+        press_outputs[1].keycode() == KeyCode::Num9 && press_outputs[1].is_press(),
+        "Second output should be Num9 press"
+    );
+
+    // Release M at t=100ms (MD_02 deactivates, layer changes)
+    process_event(
+        KeyEvent::release(KeyCode::M).with_timestamp(100_000),
+        &lookup,
+        &mut state,
+    );
+
+    // Verify MD_02 is now inactive
+    assert!(
+        !state.is_modifier_active(2),
+        "MD_02 should be inactive after releasing M"
+    );
+
+    // **CRITICAL**: Release E at t=150ms
+    // Even though MD_02 is now inactive, we should release what we pressed: [Num9, LShift]
+    let release_outputs = process_event(
+        KeyEvent::release(KeyCode::E).with_timestamp(150_000),
+        &lookup,
+        &mut state,
+    );
+
+    // Verify release output is [Num9 release, LShift release] (in reverse order)
+    assert_eq!(
+        release_outputs.len(),
+        2,
+        "Should release 2 keys (Num9, LShift)"
+    );
+    assert!(
+        release_outputs[0].keycode() == KeyCode::Num9 && !release_outputs[0].is_press(),
+        "First release should be Num9"
+    );
+    assert!(
+        release_outputs[1].keycode() == KeyCode::LShift && !release_outputs[1].is_press(),
+        "Second release should be LShift"
+    );
+}

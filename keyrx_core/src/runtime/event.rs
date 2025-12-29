@@ -234,14 +234,22 @@ pub fn process_event(
     // For RELEASE events: Check if we have a tracked press mapping
     // This ensures releases match their presses even if mapping changed
     if !is_press {
-        let tracked_output = state.get_release_key(input_keycode);
-        if tracked_output != input_keycode {
-            // We have a tracked mapping! Use it instead of normal lookup
+        let tracked_outputs = state.get_release_key(input_keycode);
+
+        // Check if we have a real tracking (not just [input_keycode])
+        if tracked_outputs.len() == 1 && tracked_outputs[0] == input_keycode {
+            // No tracked mapping - proceed with normal lookup
             state.clear_press(input_keycode);
-            return alloc::vec![event.with_keycode(tracked_output)];
+        } else {
+            // We have tracked mappings! Release all keys in REVERSE order
+            // (If press was [LShift, Z], release should be [Z, LShift])
+            state.clear_press(input_keycode);
+            let mut result = alloc::vec::Vec::new();
+            for &keycode in tracked_outputs.iter().rev() {
+                result.push(event.clone().with_keycode(keycode));
+            }
+            return result;
         }
-        // No tracked mapping or it matches input - proceed with normal lookup
-        state.clear_press(input_keycode); // Clean up tracking anyway
     }
 
     // Look up the mapping for this key
@@ -383,13 +391,17 @@ pub fn process_event(
     // For PRESS events: Record the mapping for press/release consistency
     // This must happen AFTER processing, so we know the actual output
     if is_press && !result.is_empty() {
-        // Find the first press event in the output (skip modifiers)
-        if let Some(output_event) = result.iter().find(|e| e.is_press()) {
-            let output_key = output_event.keycode();
-            if output_key != input_keycode {
-                // Output differs from input - track it!
-                state.record_press(input_keycode, output_key);
-            }
+        // Collect ALL press event keycodes from the result
+        let output_keys: alloc::vec::Vec<KeyCode> = result
+            .iter()
+            .filter(|e| e.is_press())
+            .map(|e| e.keycode())
+            .collect();
+
+        // Only track if outputs differ from just [input_keycode]
+        if !(output_keys.is_empty() || (output_keys.len() == 1 && output_keys[0] == input_keycode))
+        {
+            state.record_press(input_keycode, &output_keys);
         }
     }
 

@@ -56,7 +56,8 @@ pub struct DeviceState {
     /// Pressed key tracking: (input_key, [output_keys]) pairs
     /// This ensures release events match their corresponding press events
     /// Supports multiple output keys per input (e.g., Shift+Z generates 2 keys)
-    pressed_keys: ArrayVec<(KeyCode, ArrayVec<KeyCode, MAX_OUTPUT_KEYS_PER_INPUT>), MAX_PRESSED_KEYS>,
+    pressed_keys:
+        ArrayVec<(KeyCode, ArrayVec<KeyCode, MAX_OUTPUT_KEYS_PER_INPUT>), MAX_PRESSED_KEYS>,
 }
 
 impl DeviceState {
@@ -431,38 +432,47 @@ impl DeviceState {
         &self.tap_hold
     }
 
-    /// Records that an input key was pressed and remapped to an output key
+    /// Records that an input key was pressed and remapped to output key(s)
     ///
-    /// This ensures that when the input key is released, we release the output key,
+    /// This ensures that when the input key is released, we release ALL output keys,
     /// even if the mapping has changed due to modifier state changes.
     ///
     /// # Arguments
     ///
     /// * `input` - The physical key that was pressed
-    /// * `output` - The key that was sent to the OS
+    /// * `outputs` - The keys that were sent to the OS (e.g., [LShift, Z] for Shift+Z)
     ///
     /// # Example
     ///
     /// ```rust,ignore
-    /// // User pressed A, but MD_02 was active, so we sent B
-    /// state.record_press(KeyCode::A, KeyCode::B);
-    /// // Later, when A is released, we'll release B (even if MD_02 is now inactive)
+    /// // User pressed A, but MD_02 was active, so we sent Shift+B
+    /// state.record_press(KeyCode::A, &[KeyCode::LShift, KeyCode::B]);
+    /// // Later, when A is released, we'll release B then LShift (even if MD_02 is now inactive)
     /// ```
-    pub fn record_press(&mut self, input: KeyCode, output: KeyCode) {
-        // If this input key is already tracked, update its output
+    pub fn record_press(&mut self, input: KeyCode, outputs: &[KeyCode]) {
+        // If this input key is already tracked, update its outputs
         // This handles the case where the same key is pressed multiple times
         if let Some(entry) = self.pressed_keys.iter_mut().find(|(k, _)| *k == input) {
-            entry.1 = output;
+            entry.1.clear();
+            for &output in outputs {
+                let _ = entry.1.try_push(output);
+            }
             return;
         }
 
-        // Add new tracking entry (ignore if array is full - unlikely scenario)
-        let _ = self.pressed_keys.try_push((input, output));
+        // Add new tracking entry
+        let mut output_vec = ArrayVec::new();
+        for &output in outputs {
+            let _ = output_vec.try_push(output);
+        }
+
+        // Ignore if array is full - unlikely scenario
+        let _ = self.pressed_keys.try_push((input, output_vec));
     }
 
-    /// Gets the output key that should be released for a given input key
+    /// Gets the output keys that should be released for a given input key
     ///
-    /// Returns the tracked output key if found, otherwise returns the input key itself.
+    /// Returns the tracked output keys if found, otherwise returns the input key itself.
     /// This ensures press/release consistency even when mappings change.
     ///
     /// # Arguments
@@ -471,21 +481,23 @@ impl DeviceState {
     ///
     /// # Returns
     ///
-    /// The output key that should be released (either tracked or input itself)
+    /// The output keys that should be released (either tracked keys or input itself)
     ///
     /// # Example
     ///
     /// ```rust,ignore
-    /// state.record_press(KeyCode::A, KeyCode::B);
-    /// let output = state.get_release_key(KeyCode::A); // Returns KeyCode::B
+    /// state.record_press(KeyCode::A, &[KeyCode::LShift, KeyCode::B]);
+    /// let outputs = state.get_release_key(KeyCode::A); // Returns [LShift, B]
     /// state.clear_press(KeyCode::A);
     /// ```
-    pub fn get_release_key(&self, input: KeyCode) -> KeyCode {
-        self.pressed_keys
-            .iter()
-            .find(|(k, _)| *k == input)
-            .map(|(_, output)| *output)
-            .unwrap_or(input)
+    pub fn get_release_key(&self, input: KeyCode) -> ArrayVec<KeyCode, MAX_OUTPUT_KEYS_PER_INPUT> {
+        if let Some((_, outputs)) = self.pressed_keys.iter().find(|(k, _)| *k == input) {
+            outputs.clone()
+        } else {
+            let mut result = ArrayVec::new();
+            let _ = result.try_push(input);
+            result
+        }
     }
 
     /// Clears the press tracking for an input key after it's been released
