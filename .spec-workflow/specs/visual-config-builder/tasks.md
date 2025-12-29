@@ -2,15 +2,15 @@
 
 ## Phase 1: Drag-and-Drop Foundation
 
-- [ ] 1. Install drag-and-drop dependencies
+- [x] 1. Install drag-and-drop dependencies
   - Add @dnd-kit/core@^6.1.0, @dnd-kit/sortable@^8.0.0
   - _Prompt: Role: Frontend Build Engineer | Task: Add dnd-kit dependencies | Success: ✅ Installed_
 
-- [ ] 2. Create ConfigState type definitions in keyrx_ui/src/types/configBuilder.ts
+- [x] 2. Create ConfigState type definitions in keyrx_ui/src/types/configBuilder.ts
   - Define ConfigState, Layer, Mapping, Modifier types
   - _Prompt: Role: TypeScript Types Architect | Task: Define config builder state types | Restrictions: File ≤200 lines, strict mode | Success: ✅ Types defined_
 
-- [ ] 3. Create Zustand config builder store in keyrx_ui/src/store/configBuilderStore.ts
+- [x] 3. Create Zustand config builder store in keyrx_ui/src/store/configBuilderStore.ts
   - State: ConfigState with layers, modifiers, locks
   - Actions: addLayer, removeLayer, addMapping, removeMapping
   - _Prompt: Role: React State Expert | Task: Create Zustand store for visual builder | Restrictions: File ≤300 lines | Success: ✅ Store works_
