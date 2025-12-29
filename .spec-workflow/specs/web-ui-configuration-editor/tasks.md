@@ -1096,7 +1096,7 @@
   - _Requirements: All user flows_
   - _Success: ✅ All scenarios pass, ✅ Screenshots match expected, ✅ Tests run in CI
 
-- [ ] 35. Visual regression tests
+- [x] 35. Visual regression tests
   - Files: `tests/visual/*.spec.ts`
   - Screenshots: all pages at 3 breakpoints (mobile, tablet, desktop)
   - Compare: against baseline screenshots
