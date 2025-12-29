@@ -380,7 +380,7 @@
 
 ## Phase 6: Final Integration & Polish
 
-- [ ] 29. Add keyboard shortcuts to EventSequenceEditor
+- [x] 29. Add keyboard shortcuts to EventSequenceEditor
   - File: keyrx_ui/src/components/Simulator/EventSequenceEditor.tsx (modify from task 15)
   - Add Ctrl+Enter to add event quickly
   - Add Delete key to remove selected event

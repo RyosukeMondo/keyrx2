@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { SimKeyEvent, EventSequence } from '../../wasm/core';
 import './EventSequenceEditor.css';
 
@@ -57,6 +57,8 @@ export const EventSequenceEditor: React.FC<EventSequenceEditorProps> = ({
   const [nextId, setNextId] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const createNewEvent = (): EventForm => ({
     id: `event-${nextId}`,
@@ -151,8 +153,93 @@ export const EventSequenceEditor: React.FC<EventSequenceEditorProps> = ({
     onSubmit(sequence);
   };
 
+  const adjustTimestamp = (id: string, delta: number) => {
+    setEvents(
+      events.map((e) =>
+        e.id === id ? { ...e, timestamp: Math.max(0, e.timestamp + delta) } : e
+      )
+    );
+  };
+
+  // Keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (disabled) return;
+
+      // Don't trigger shortcuts when typing in input fields
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT'
+      ) {
+        // Allow arrow keys for timestamp adjustment in number inputs
+        if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'number') {
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            // Let browser handle number input arrows
+            return;
+          }
+        }
+        // Allow Ctrl+Enter in input fields
+        if (e.ctrlKey && e.key === 'Enter') {
+          e.preventDefault();
+          addEvent();
+          return;
+        }
+        return;
+      }
+
+      // Ctrl+Enter: Add new event
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        addEvent();
+        return;
+      }
+
+      // Delete: Remove selected event
+      if (e.key === 'Delete' && selectedEventId) {
+        e.preventDefault();
+        removeEvent(selectedEventId);
+        setSelectedEventId(null);
+        return;
+      }
+
+      // Arrow keys: Adjust timestamp of selected event
+      if (selectedEventId && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          adjustTimestamp(selectedEventId, 10); // Increase by 10μs
+          return;
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          adjustTimestamp(selectedEventId, -10); // Decrease by 10μs
+          return;
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          adjustTimestamp(selectedEventId, 100); // Increase by 100μs
+          return;
+        }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          adjustTimestamp(selectedEventId, -100); // Decrease by 100μs
+          return;
+        }
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('keydown', handleKeyDown);
+      return () => {
+        container.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [disabled, events, selectedEventId, nextId]);
+
   return (
-    <div className="event-sequence-editor">
+    <div className="event-sequence-editor" ref={containerRef} tabIndex={0}>
       <div className="editor-header">
         <h3>Custom Event Sequence</h3>
         <button
@@ -163,6 +250,11 @@ export const EventSequenceEditor: React.FC<EventSequenceEditorProps> = ({
         >
           + Add Event
         </button>
+      </div>
+
+      <div className="keyboard-shortcuts-hint">
+        <strong>Keyboard Shortcuts:</strong> Ctrl+Enter to add event, Delete to remove selected,
+        Arrow keys to adjust timestamp (↑↓: ±10μs, ←→: ±100μs)
       </div>
 
       {events.length === 0 && (
@@ -180,7 +272,17 @@ export const EventSequenceEditor: React.FC<EventSequenceEditorProps> = ({
             key={event.id}
             className={`event-item ${editingId === event.id ? 'editing' : ''} ${
               validationErrors[event.id] ? 'error' : ''
-            }`}
+            } ${selectedEventId === event.id ? 'selected' : ''}`}
+            onClick={() => setSelectedEventId(event.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setSelectedEventId(event.id);
+              }
+            }}
+            aria-label={`Event ${index + 1}: ${event.keyCode} ${event.eventType} at ${event.timestamp}μs`}
           >
             <div className="event-number">{index + 1}</div>
 

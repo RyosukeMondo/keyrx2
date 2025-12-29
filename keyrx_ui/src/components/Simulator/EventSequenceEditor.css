@@ -6,6 +6,25 @@
   margin-bottom: 1.5rem;
 }
 
+.event-sequence-editor:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.keyboard-shortcuts-hint {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.keyboard-shortcuts-hint strong {
+  color: var(--text-primary);
+}
+
 .editor-header {
   display: flex;
   justify-content: space-between;
@@ -72,6 +91,18 @@
   border: 1px solid var(--border-color);
   border-radius: 6px;
   transition: all 0.2s;
+  cursor: pointer;
+}
+
+.event-item:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.event-item.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.25);
+  background: rgba(76, 175, 80, 0.05);
 }
 
 .event-item.editing {
@@ -82,6 +113,11 @@
 .event-item.error {
   border-color: var(--error-color);
   background: rgba(244, 67, 54, 0.05);
+}
+
+.event-item:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 .event-number {
