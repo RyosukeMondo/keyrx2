@@ -13,7 +13,7 @@
 
 ## Phase 2: React UI Components
 
-- [ ] 3. Create MacroRecorderPage component in keyrx_ui/src/pages/MacroRecorderPage.tsx
+- [x] 3. Create MacroRecorderPage component in keyrx_ui/src/components/MacroRecorderPage.tsx
   - Record/stop buttons
   - Display captured events
   - Generate Rhai code
