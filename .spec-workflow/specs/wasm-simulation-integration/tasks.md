@@ -367,7 +367,7 @@
   - _Requirements: 1.1 (WASM Build Pipeline), CI integration_
   - _Prompt: Role: DevOps Engineer with expertise in GitHub Actions and Rust CI/CD | Task: Create WASM build workflow in .github/workflows/wasm.yml, installing dependencies, building WASM, verifying size, and running browser tests | Restrictions: Must fail build if WASM >10MB, run wasm-pack test in headless Chrome, cache Rust dependencies for faster builds, run on push and pull requests | Success: WASM builds automatically on push/PR, size verified (<10MB), browser tests run and pass, artifacts uploaded for debugging_
 
-- [ ] 28. Create WASM Simulation documentation in docs/wasm-simulation.md
+- [x] 28. Create WASM Simulation documentation in docs/wasm-simulation.md
   - File: docs/wasm-simulation.md (new file)
   - Document how to use simulator in web UI
   - Explain built-in scenarios and custom event sequences
