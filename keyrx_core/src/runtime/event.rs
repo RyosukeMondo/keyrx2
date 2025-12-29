@@ -227,17 +227,21 @@ pub fn process_event(
 ) -> Vec<KeyEvent> {
     use crate::config::BaseKeyMapping;
 
+    // Cache event properties before event is potentially moved
+    let is_press = event.is_press();
+    let input_keycode = event.keycode();
+
     // For RELEASE events: Check if we have a tracked press mapping
     // This ensures releases match their presses even if mapping changed
-    if event.is_release() {
-        let tracked_output = state.get_release_key(event.keycode());
-        if tracked_output != event.keycode() {
+    if !is_press {
+        let tracked_output = state.get_release_key(input_keycode);
+        if tracked_output != input_keycode {
             // We have a tracked mapping! Use it instead of normal lookup
-            state.clear_press(event.keycode());
+            state.clear_press(input_keycode);
             return alloc::vec![event.with_keycode(tracked_output)];
         }
         // No tracked mapping or it matches input - proceed with normal lookup
-        state.clear_press(event.keycode()); // Clean up tracking anyway
+        state.clear_press(input_keycode); // Clean up tracking anyway
     }
 
     // Look up the mapping for this key
@@ -375,6 +379,19 @@ pub fn process_event(
             events
         }
     };
+
+    // For PRESS events: Record the mapping for press/release consistency
+    // This must happen AFTER processing, so we know the actual output
+    if is_press && !result.is_empty() {
+        // Find the first press event in the output (skip modifiers)
+        if let Some(output_event) = result.iter().find(|e| e.is_press()) {
+            let output_key = output_event.keycode();
+            if output_key != input_keycode {
+                // Output differs from input - track it!
+                state.record_press(input_keycode, output_key);
+            }
+        }
+    }
 
     // Prepend prefix events (from permissive hold) to the result
     if !prefix_events.is_empty() {

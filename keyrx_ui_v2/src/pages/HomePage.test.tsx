@@ -26,7 +26,8 @@ describe('HomePage', () => {
     const { container } = renderWithRouter(<HomePage />);
     const mainDiv = container.querySelector('.flex.flex-col');
     expect(mainDiv).toBeTruthy();
-    expect(mainDiv?.classList.contains('gap-lg')).toBe(true);
+    // HomePage uses responsive gap classes (gap-4 md:gap-6 lg:gap-8)
+    expect(mainDiv?.classList.contains('gap-4')).toBe(true);
   });
 
   it('renders heading with correct accessibility level', () => {
