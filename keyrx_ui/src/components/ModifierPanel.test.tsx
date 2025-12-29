@@ -7,25 +7,24 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DndContext } from '@dnd-kit/core';
 import { ModifierPanel } from './ModifierPanel';
 import { useConfigBuilderStore } from '../store/configBuilderStore';
 
 // Mock the store
-jest.mock('../store/configBuilderStore');
+vi.mock('../store/configBuilderStore');
 
-const mockUseConfigBuilderStore = useConfigBuilderStore as jest.MockedFunction<
-  typeof useConfigBuilderStore
->;
+const mockUseConfigBuilderStore = useConfigBuilderStore as ReturnType<typeof vi.fn>;
 
 describe('ModifierPanel', () => {
-  const mockAddModifier = jest.fn();
-  const mockRemoveModifier = jest.fn();
-  const mockAddLock = jest.fn();
-  const mockRemoveLock = jest.fn();
+  const mockAddModifier = vi.fn();
+  const mockRemoveModifier = vi.fn();
+  const mockAddLock = vi.fn();
+  const mockRemoveLock = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockUseConfigBuilderStore.mockReturnValue({
       modifiers: [],
       locks: [],
@@ -37,21 +36,21 @@ describe('ModifierPanel', () => {
       layers: [],
       currentLayerId: 'base',
       isDirty: false,
-      addLayer: jest.fn(),
-      removeLayer: jest.fn(),
-      renameLayer: jest.fn(),
-      setCurrentLayer: jest.fn(),
-      reorderLayers: jest.fn(),
-      addMapping: jest.fn(),
-      removeMapping: jest.fn(),
-      updateMapping: jest.fn(),
-      clearMappings: jest.fn(),
-      updateModifier: jest.fn(),
-      updateLock: jest.fn(),
-      setConfig: jest.fn(),
-      resetConfig: jest.fn(),
-      markDirty: jest.fn(),
-      markClean: jest.fn(),
+      addLayer: vi.fn(),
+      removeLayer: vi.fn(),
+      renameLayer: vi.fn(),
+      setCurrentLayer: vi.fn(),
+      reorderLayers: vi.fn(),
+      addMapping: vi.fn(),
+      removeMapping: vi.fn(),
+      updateMapping: vi.fn(),
+      clearMappings: vi.fn(),
+      updateModifier: vi.fn(),
+      updateLock: vi.fn(),
+      setConfig: vi.fn(),
+      resetConfig: vi.fn(),
+      markDirty: vi.fn(),
+      markClean: vi.fn(),
     });
   });
 

@@ -69,17 +69,17 @@ describe('LayerPanel', () => {
 
   describe('layer selection', () => {
     it('should switch active layer on click', () => {
-      const store = useConfigBuilderStore.getState();
-      store.addLayer('test-layer');
+      const initialStore = useConfigBuilderStore.getState();
+      initialStore.addLayer('test-layer');
 
       render(<LayerPanel />);
 
       const testLayer = screen.getByText('test-layer').closest('.layer-info');
       fireEvent.click(testLayer!);
 
-      expect(store.currentLayerId).toBe(
-        store.layers.find((l) => l.name === 'test-layer')?.id
-      );
+      const updatedStore = useConfigBuilderStore.getState();
+      const testLayerId = updatedStore.layers.find((l) => l.name === 'test-layer')?.id;
+      expect(updatedStore.currentLayerId).toBe(testLayerId);
     });
   });
 
@@ -104,14 +104,14 @@ describe('LayerPanel', () => {
     });
 
     it('should set new layer as current', () => {
-      const store = useConfigBuilderStore.getState();
       render(<LayerPanel />);
 
       const addButton = screen.getByText('+ Add Layer');
       fireEvent.click(addButton);
 
-      const newLayer = store.layers.find((l) => l.name === 'layer_1');
-      expect(store.currentLayerId).toBe(newLayer?.id);
+      const updatedStore = useConfigBuilderStore.getState();
+      const newLayer = updatedStore.layers.find((l) => l.name === 'layer_1');
+      expect(updatedStore.currentLayerId).toBe(newLayer?.id);
     });
   });
 
@@ -323,21 +323,22 @@ describe('LayerPanel', () => {
 
   describe('state management integration', () => {
     it('should mark config as dirty when adding layer', () => {
-      const store = useConfigBuilderStore.getState();
       render(<LayerPanel />);
 
-      expect(store.isDirty).toBe(false);
+      const initialStore = useConfigBuilderStore.getState();
+      expect(initialStore.isDirty).toBe(false);
 
       const addButton = screen.getByText('+ Add Layer');
       fireEvent.click(addButton);
 
-      expect(store.isDirty).toBe(true);
+      const updatedStore = useConfigBuilderStore.getState();
+      expect(updatedStore.isDirty).toBe(true);
     });
 
     it('should mark config as dirty when deleting layer', () => {
-      const store = useConfigBuilderStore.getState();
-      store.addLayer('test-layer');
-      store.markClean();
+      const initialStore = useConfigBuilderStore.getState();
+      initialStore.addLayer('test-layer');
+      initialStore.markClean();
 
       render(<LayerPanel />);
 
@@ -345,13 +346,14 @@ describe('LayerPanel', () => {
       const deleteButton = testLayerItem?.querySelector('.delete-btn') as HTMLElement;
       fireEvent.click(deleteButton);
 
-      expect(store.isDirty).toBe(true);
+      const updatedStore = useConfigBuilderStore.getState();
+      expect(updatedStore.isDirty).toBe(true);
     });
 
     it('should mark config as dirty when renaming layer', async () => {
-      const store = useConfigBuilderStore.getState();
-      store.addLayer('test-layer');
-      store.markClean();
+      const initialStore = useConfigBuilderStore.getState();
+      initialStore.addLayer('test-layer');
+      initialStore.markClean();
 
       render(<LayerPanel />);
 
@@ -366,7 +368,8 @@ describe('LayerPanel', () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(store.isDirty).toBe(true);
+        const updatedStore = useConfigBuilderStore.getState();
+        expect(updatedStore.isDirty).toBe(true);
       });
     });
   });
