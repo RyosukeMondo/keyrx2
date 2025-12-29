@@ -68,7 +68,7 @@
   - _Requirements: Editor integration_
   - _Prompt: Role: Monaco Editor Configuration Expert | Task: Configure Rhai language syntax for Monaco in keyrx_ui/src/utils/monacoConfig.ts, defining monarch tokenizer for Rhai keywords, operators, strings, comments | **Language registration**: `monaco.languages.register({ id: 'rhai', extensions: ['.rhai'] })` | **Monarch tokenizer**: Define keywords (layer, map, to, if, else, fn), operators (=, ==, !=, &&, ||), strings (double quotes), comments (// and /* */), numbers | **Language config**: Set brackets [['{', '}'], ['[', ']']], autoClosingPairs, comments ({ lineComment: '//', blockComment: ['/*', '*/'] }) | Restrictions: File ≤250 lines, must include all Rhai keywords from language spec, syntax highlighting must work in both light and dark themes | Success: ✅ Rhai files syntax-highlighted correctly, ✅ Keywords colored distinctly, ✅ Comments grayed out, ✅ Bracket matching works_
 
-- [ ] 7. Implement Monaco error markers in keyrx_ui/src/utils/monacoMarkers.ts
+- [x] 7. Implement Monaco error markers in keyrx_ui/src/utils/monacoMarkers.ts
   - File: keyrx_ui/src/utils/monacoMarkers.ts
   - Create updateEditorMarkers() function to display errors/warnings
   - Convert ValidationResult to Monaco IMarkerData format
