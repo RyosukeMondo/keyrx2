@@ -170,7 +170,7 @@
   - _Requirements: Testing strategy_
   - _Prompt: Role: React Hooks Test Engineer | Task: Write unit tests for useConfigValidator hook in keyrx_ui/src/hooks/useConfigValidator.test.ts, testing debouncing, state management, and cleanup | **Test debouncing**: Use vi.useFakeTimers(), call validate() multiple times within 500ms, advance timers by 500ms, verify only one validator.validate() call made | **Test isValidating**: Call validate(), verify isValidating becomes true, await completion, verify becomes false | **Test WASM unavailable**: Mock WasmCore.init() to reject, verify wasmAvailable false, validate() returns fallback error | **Test cleanup**: Render hook, call validate(), unmount before completion, verify debounce timer cancelled | Restrictions: File ≤300 lines, use @testing-library/react, vi.useFakeTimers for debounce testing, coverage ≥85% | Success: ✅ Debouncing verified (only 1 call per 500ms), ✅ State updates correct, ✅ Cleanup prevents memory leaks_
 
-- [ ] 16. Write React component tests for ConfigEditor in keyrx_ui/src/components/ConfigEditor.test.tsx
+- [x] 16. Write React component tests for ConfigEditor in keyrx_ui/src/components/ConfigEditor.test.tsx
   - File: keyrx_ui/src/components/ConfigEditor.test.tsx
   - Test Monaco editor rendering
   - Test validation triggers on typing (debounced)
