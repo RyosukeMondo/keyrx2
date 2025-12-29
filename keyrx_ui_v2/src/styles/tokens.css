@@ -82,6 +82,47 @@
   --z-tooltip: 1070;
 }
 
+/* Range Slider Styles */
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--color-primary-500);
+  cursor: pointer;
+  border-radius: 50%;
+  border: 2px solid var(--color-bg-secondary);
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--color-primary-500);
+  cursor: pointer;
+  border-radius: 50%;
+  border: 2px solid var(--color-bg-secondary);
+}
+
+input[type="range"].slider::-webkit-slider-track {
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+}
+
+input[type="range"].slider::-moz-range-track {
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+}
+
+input[type="range"].slider:focus {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
 /* Ripple animation for Button component */
 .ripple {
   position: absolute;

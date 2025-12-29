@@ -892,7 +892,7 @@
   | Restrictions: File ≤500 lines total (extract KeyButton to separate component if needed), parseKLEJson function ≤50 lines, must use React.memo on KeyButton (104 keys re-rendering is expensive), CSS Grid for layout (no manual positioning), useMemo for keyButtons array (don't recalculate on every render), Tooltip must not cause performance issues (virtualize if needed)
   | Success: ✅ All 5 layouts render correctly with accurate key positions, ✅ Hover shows tooltip with current mapping description, ✅ Modified keys (custom mappings) have blue tint (bg-blue-700), ✅ Tooltip positions correctly without viewport overflow, ✅ Click calls onKeyClick with correct keyCode, ✅ Simulator mode shows pressed keys in green, ✅ Keyboard navigation works (Tab through keys, Enter clicks), ✅ aria-label describes key and mapping, ✅ No dropped frames during hover (60fps maintained), ✅ Component memoized and performant (no unnecessary re-renders)
 
-- [ ] 17. Create KeyConfigDialog modal
+- [x] 17. Create KeyConfigDialog modal
   - File: `src/components/KeyConfigDialog.tsx`
   - Features: action type selector, dynamic form (tap-hold/simple/macro/layer)
   - Forms: TapHoldForm, SimpleRemapForm, MacroForm, LayerSwitchForm
