@@ -314,7 +314,7 @@
   - _Requirements: Error handling scenarios from design doc_
   - _Prompt: Role: TypeScript Test Engineer with expertise in mocking and async testing | Task: Write unit tests for WasmCore wrapper in keyrx_ui/src/wasm/core.test.ts, mocking WASM module to test error conversion, input validation, and Promise handling | Restrictions: Must mock WASM module completely (do not load actual WASM in tests), test all error scenarios (parse errors, invalid handles, panics), verify input validation catches invalid data | Success: All WasmCore methods tested with mocked WASM, error conversion verified, input validation prevents invalid calls, tests run quickly without WASM compilation_
 
-- [ ] 24. Write React component tests for Simulator UI in keyrx_ui/src/components/Simulator/*.test.tsx
+- [x] 24. Write React component tests for Simulator UI in keyrx_ui/src/components/Simulator/*.test.tsx
   - Files: keyrx_ui/src/components/Simulator/SimulatorPanel.test.tsx, EventSequenceEditor.test.tsx, SimulationResults.test.tsx, etc.
   - Use React Testing Library for component testing
   - Test user interactions (button clicks, form inputs)
