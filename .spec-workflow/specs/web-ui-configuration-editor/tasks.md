@@ -465,7 +465,7 @@
   - _Requirements: Design.md card pattern_
   - _Success: ✅ Card renders with correct padding and shadow, ✅ Header and footer slots work, ✅ Elevated variant has larger shadow
 
-- [ ] 5. Create Modal component
+- [x] 5. Create Modal component
   - File: `src/components/Modal.tsx`
   - Features: backdrop, close button, Escape to close, focus trap
   - Animations: fade in/out, scale transform
@@ -487,14 +487,140 @@
   - _Success: ✅ Arrow keys navigate options, ✅ Enter selects, ✅ Escape closes, ✅ Search filters options
 
 - [ ] 7. Create Tooltip component
-  - File: `src/components/Tooltip.tsx`
-  - Positioning: auto (top, bottom, left, right based on viewport)
-  - Delay: 500ms before show
-  - Props: `content`, `children`, `position`
-  - Purpose: Contextual help on hover
-  - _Leverage: Floating UI for positioning_
-  - _Requirements: Req 7 (keyboard hover tooltips)_
-  - _Success: ✅ Tooltip shows on hover after delay, ✅ Positions correctly near viewport edges, ✅ Hides on mouseout
+  - File: `src/components/Tooltip.tsx`, `src/components/Tooltip.test.tsx`
+  - Purpose: Contextual help component that appears on hover/focus to provide additional information about UI elements. Automatically positions itself to avoid viewport edges. Used throughout the UI for keyboard key tooltips, button explanations, and form field hints.
+  - Requirements: Req 7.2 (keyboard hover tooltips), Req 3 (Accessibility - keyboard focus triggers tooltip)
+  - Prompt: Role: React Component Developer | Task: Create Tooltip component with:
+
+    **TypeScript Interface**:
+    ```typescript
+    import { ReactNode } from 'react';
+
+    interface TooltipProps {
+      content: string | ReactNode;
+      children: ReactNode;
+      position?: 'top' | 'bottom' | 'left' | 'right' | 'auto';
+      delay?: number;  // Default 500ms
+      disabled?: boolean;
+      className?: string;
+    }
+    ```
+
+    **Positioning Logic** (use @floating-ui/react):
+    ```typescript
+    import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/react';
+
+    const { x, y, refs, strategy } = useFloating({
+      placement: position === 'auto' ? 'top' : position,
+      middleware: [
+        offset(8),  // 8px gap from trigger
+        flip(),     // Flip to opposite side if no space
+        shift({ padding: 8 }),  // Shift within viewport
+      ],
+      whileElementsMounted: autoUpdate,
+    });
+    ```
+
+    **Show/Hide Behavior**:
+    ```typescript
+    const [isVisible, setIsVisible] = useState(false);
+    const timeoutRef = useRef<NodeJS.Timeout>();
+
+    const handleMouseEnter = () => {
+      if (disabled) return;
+      timeoutRef.current = setTimeout(() => {
+        setIsVisible(true);
+      }, delay || 500);
+    };
+
+    const handleMouseLeave = () => {
+      clearTimeout(timeoutRef.current);
+      setIsVisible(false);
+    };
+
+    const handleFocus = () => {
+      if (disabled) return;
+      setIsVisible(true);  // Instant show on keyboard focus
+    };
+
+    const handleBlur = () => {
+      setIsVisible(false);
+    };
+
+    useEffect(() => {
+      return () => clearTimeout(timeoutRef.current);
+    }, []);
+    ```
+
+    **Visual Styling**:
+    - Background: `bg-slate-800` (dark background)
+    - Text: `text-slate-100 text-sm` (light text, 13px)
+    - Padding: `px-3 py-2` (12px horizontal, 8px vertical)
+    - Border radius: `rounded-md` (8px)
+    - Shadow: `shadow-lg` (prominent shadow for elevation)
+    - Arrow: Small triangle pointing to trigger element
+    - Z-index: `z-tooltip` (1070 from design tokens)
+    - Fade animation: `opacity-0 → opacity-100` over 150ms
+
+    **Accessibility**:
+    - Trigger element has `aria-describedby` pointing to tooltip ID
+    - Tooltip has `role="tooltip"`
+    - Tooltip has unique `id` attribute
+    - Keyboard focus on trigger shows tooltip instantly (no delay)
+    - Escape key doesn't close tooltip (only blur does)
+
+    **Component Structure**:
+    ```typescript
+    export const Tooltip: React.FC<TooltipProps> = ({
+      content,
+      children,
+      position = 'auto',
+      delay = 500,
+      disabled = false,
+      className = '',
+    }) => {
+      const tooltipId = useId();
+      const [isVisible, setIsVisible] = useState(false);
+
+      return (
+        <>
+          <div
+            ref={refs.setReference}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            aria-describedby={isVisible ? tooltipId : undefined}
+          >
+            {children}
+          </div>
+
+          {isVisible && !disabled && (
+            <div
+              ref={refs.setFloating}
+              id={tooltipId}
+              role="tooltip"
+              className={cn(
+                'absolute bg-slate-800 text-slate-100 text-sm px-3 py-2 rounded-md shadow-lg z-tooltip',
+                'transition-opacity duration-150',
+                className
+              )}
+              style={{
+                position: strategy,
+                top: y ?? 0,
+                left: x ?? 0,
+              }}
+            >
+              {content}
+            </div>
+          )}
+        </>
+      );
+    };
+    ```
+
+  | Restrictions: File ≤200 lines, function ≤40 lines, must use @floating-ui/react for positioning (no manual calculations), must clean up timeout in useEffect, no inline styles except positioning (use Tailwind), MUST use useId for tooltip ID (React 18+)
+  | Success: ✅ Tooltip shows after 500ms delay on hover, ✅ Tooltip shows instantly on keyboard focus, ✅ Tooltip positions correctly near viewport edges (doesn't overflow), ✅ Tooltip flips to opposite side when no space, ✅ Tooltip hides on mouseout/blur, ✅ aria-describedby set correctly, ✅ role="tooltip" present, ✅ No memory leaks (timeout cleaned up), ✅ Disabled prop prevents tooltip from showing
 
 ---
 
