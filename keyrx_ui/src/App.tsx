@@ -2,8 +2,9 @@ import { useState } from 'react'
 import './App.css'
 import { DeviceList } from './components/DeviceList'
 import { SimulatorPanel } from './components/Simulator/SimulatorPanel'
+import { ConfigurationPage } from './components/ConfigurationPage'
 
-type ActiveView = 'devices' | 'simulator'
+type ActiveView = 'devices' | 'simulator' | 'config'
 
 function App() {
   const [activeView, setActiveView] = useState<ActiveView>('devices')
@@ -26,11 +27,18 @@ function App() {
           >
             Simulator
           </button>
+          <button
+            className={activeView === 'config' ? 'nav-button active' : 'nav-button'}
+            onClick={() => setActiveView('config')}
+          >
+            Config Editor
+          </button>
         </nav>
       </header>
       <main>
         {activeView === 'devices' && <DeviceList />}
         {activeView === 'simulator' && <SimulatorPanel />}
+        {activeView === 'config' && <ConfigurationPage />}
       </main>
     </div>
   )
