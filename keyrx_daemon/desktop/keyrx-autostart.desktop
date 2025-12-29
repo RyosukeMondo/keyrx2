@@ -1,0 +1,17 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=KeyRx Daemon
+GenericName=Keyboard Remapper
+Comment=Start KeyRx keyboard remapping daemon on login
+Icon=keyrx
+Exec=bash -c "keyrx_daemon run --config \\$HOME/.config/keyrx/config.krx"
+Terminal=false
+Categories=Utility;
+Keywords=keyboard;remap;keymap;mapping;input;
+StartupNotify=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
+X-GNOME-UsesNotifications=true
+Hidden=false

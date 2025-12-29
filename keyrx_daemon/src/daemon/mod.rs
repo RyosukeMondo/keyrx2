@@ -760,7 +760,7 @@ impl Daemon {
     /// Uses a 100ms timeout to allow periodic signal checking.
     /// Uses a 100ms timeout to allow periodic signal checking.
     #[cfg(target_os = "linux")]
-    fn poll_devices(&self) -> Result<Vec<usize>, DaemonError> {
+    pub fn poll_devices(&self) -> Result<Vec<usize>, DaemonError> {
         // Collect raw file descriptors from all devices
         let raw_fds: Vec<i32> = self
             .device_manager
@@ -959,7 +959,7 @@ impl Daemon {
     ///
     /// Returns the number of events processed.
     #[cfg(target_os = "linux")]
-    fn process_device_events(&mut self, device_idx: usize) -> Result<usize, DaemonError> {
+    pub fn process_device_events(&mut self, device_idx: usize) -> Result<usize, DaemonError> {
         let mut processed_count = 0;
 
         loop {
@@ -1021,7 +1021,7 @@ impl Daemon {
     /// # Errors
     ///
     /// Returns an error if event injection fails.
-    fn check_tap_hold_timeouts(&mut self) -> Result<(), DaemonError> {
+    pub fn check_tap_hold_timeouts(&mut self) -> Result<(), DaemonError> {
         let current_time = current_time_us();
 
         // Check each device for tap-hold timeouts

@@ -14,7 +14,6 @@ use crate::platform::{SystemTray, TrayControlEvent, TrayError};
 ///
 /// This struct is spawned in a background thread and communicates
 /// with the main daemon via a crossbeam channel.
-#[allow(dead_code)] // Will be used when LinuxSystemTray is integrated in task 7
 struct TrayService {
     /// Channel sender for communicating menu events back to the daemon.
     event_sender: Sender<TrayControlEvent>,
@@ -84,7 +83,6 @@ impl ksni::Tray for TrayService {
 ///
 /// The ksni crate expects icons in ARGB32 format (network byte order),
 /// which means each pixel is 4 bytes: [A, R, G, B].
-#[allow(dead_code)] // Will be used when LinuxSystemTray is integrated in task 7
 fn load_icon(bytes: &[u8]) -> Result<(Vec<u8>, i32, i32), TrayError> {
     let image = image::load_from_memory(bytes)
         .map_err(|e| TrayError::IconLoadFailed(e.to_string()))?
@@ -143,7 +141,6 @@ fn load_icon(bytes: &[u8]) -> Result<(Vec<u8>, i32, i32), TrayError> {
 /// }
 /// # Ok::<(), keyrx_daemon::platform::TrayError>(())
 /// ```
-#[allow(dead_code)] // Will be integrated in task 7
 pub struct LinuxSystemTray {
     /// Handle to the ksni tray service for shutdown.
     handle: ksni::blocking::Handle<TrayService>,

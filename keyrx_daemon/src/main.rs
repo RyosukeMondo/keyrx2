@@ -221,6 +221,9 @@ fn main() {
 #[cfg(target_os = "linux")]
 fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, String)> {
     use keyrx_daemon::daemon::Daemon;
+    use keyrx_daemon::platform::linux::tray::LinuxSystemTray;
+    use keyrx_daemon::platform::{SystemTray, TrayControlEvent};
+    use std::time::{Duration, Instant};
 
     // Initialize logging
     init_logging(debug);
@@ -230,7 +233,7 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
         config_path.display()
     );
 
-    // Create and run the daemon
+    // Create the daemon
     let mut daemon = Daemon::new(config_path).map_err(daemon_error_to_exit)?;
 
     log::info!(
@@ -238,8 +241,104 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
         daemon.device_count()
     );
 
-    // Run the event loop
-    daemon.run().map_err(daemon_error_to_exit)?;
+    // Try to create system tray (optional - gracefully handle if not available)
+    let tray = match LinuxSystemTray::new() {
+        Ok(tray) => {
+            log::info!("System tray initialized successfully");
+            Some(tray)
+        }
+        Err(e) => {
+            log::warn!(
+                "System tray not available: {}. Daemon will run without tray icon.",
+                e
+            );
+            None
+        }
+    };
+
+    // Grab all input devices before starting the loop
+    daemon.grab_all_devices().map_err(daemon_error_to_exit)?;
+
+    log::info!("Starting event processing loop");
+
+    // Track metrics for periodic logging
+    let mut event_count: u64 = 0;
+    let mut last_stats_time = Instant::now();
+    const STATS_INTERVAL: Duration = Duration::from_secs(60);
+
+    // Main event loop (similar to daemon.run() but with tray integration)
+    while daemon.is_running() {
+        // Check for SIGHUP (reload request)
+        if daemon.signal_handler().check_reload() {
+            log::info!("Reload signal received (SIGHUP)");
+            if let Err(e) = daemon.reload() {
+                log::warn!("Configuration reload failed: {}", e);
+            }
+        }
+
+        // Poll devices for available events
+        let ready_devices = match daemon.poll_devices() {
+            Ok(devices) => devices,
+            Err(e) => {
+                // Check if we were interrupted by signal
+                if !daemon.is_running() {
+                    break;
+                }
+                log::warn!("Poll error: {}", e);
+                // Sleep to prevent busy loop on persistent errors
+                std::thread::sleep(Duration::from_millis(100));
+                continue;
+            }
+        };
+
+        // Process events from ready devices
+        for device_idx in ready_devices {
+            match daemon.process_device_events(device_idx) {
+                Ok(count) => {
+                    event_count += count as u64;
+                }
+                Err(e) => {
+                    log::warn!("Error processing device {}: {}", device_idx, e);
+                }
+            }
+        }
+
+        // Check for tap-hold timeouts on all devices
+        if let Err(e) = daemon.check_tap_hold_timeouts() {
+            log::warn!("Error checking tap-hold timeouts: {}", e);
+        }
+
+        // Poll tray events (if tray is available)
+        if let Some(ref tray) = tray {
+            if let Some(event) = tray.poll_event() {
+                match event {
+                    TrayControlEvent::Reload => {
+                        log::info!("Reload requested from system tray");
+                        if let Err(e) = daemon.reload() {
+                            log::warn!("Configuration reload failed: {}", e);
+                        }
+                    }
+                    TrayControlEvent::Exit => {
+                        log::info!("Exit requested from system tray");
+                        daemon
+                            .running_flag()
+                            .store(false, std::sync::atomic::Ordering::SeqCst);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Periodic stats logging
+        if last_stats_time.elapsed() >= STATS_INTERVAL {
+            log::info!("Processed {} events in the last 60 seconds", event_count);
+            event_count = 0;
+            last_stats_time = Instant::now();
+        }
+
+        // Small sleep to prevent 100% CPU usage in case poll returns immediately
+        std::thread::sleep(Duration::from_millis(1));
+    }
 
     log::info!("Daemon stopped gracefully");
     Ok(())
