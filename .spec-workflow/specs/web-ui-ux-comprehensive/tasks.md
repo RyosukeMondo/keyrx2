@@ -440,7 +440,7 @@
   - _Requirements: 5.4_
   - _Prompt: Role: Rust CLI developer | Task: Implement `keyrx state inspect` command in keyrx_daemon/src/cli/state.rs | Restrictions: Query daemon IPC, JSON array output, handle daemon offline | Success: State accurate during active remapping, graceful offline handling, integration tests pass | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts_
 
-- [ ] 15. Implement `keyrx metrics` command
+- [x] 15. Implement `keyrx metrics` command
   - File: `keyrx_daemon/src/cli/metrics.rs` (new file)
   - Subcommand `latency`: Output min, avg, max, p95, p99
   - Subcommand `events`: Tail last N events
