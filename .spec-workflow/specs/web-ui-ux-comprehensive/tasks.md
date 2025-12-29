@@ -323,7 +323,7 @@
   - _Requirements: 6.1-6.5_
   - _Prompt: Role: Rust developer with embedded data expertise | Task: Create LayoutManager in keyrx_daemon/src/config/layout_manager.rs with builtin KLE layouts | Restrictions: Embed layouts in binary, validate KLE schema, reject invalid JSON | Success: All builtin layouts parse correctly, custom imports validated, tests pass | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts_
 
-- [ ] 5. Create SimulationEngine for deterministic testing
+- [x] 5. Create SimulationEngine for deterministic testing
   - File: `keyrx_daemon/src/config/simulation_engine.rs` (new file)
   - Load .krx config and initialize keyrx_core EventProcessor
   - Implement replay with VirtualClock (deterministic timing)
