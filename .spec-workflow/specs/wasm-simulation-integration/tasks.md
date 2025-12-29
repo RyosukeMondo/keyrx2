@@ -166,7 +166,7 @@
   - _Requirements: 2.1 (Configuration Loading), 2.2 (Parse errors with line numbers)_
   - _Prompt: Role: React UI Developer with expertise in form handling and file uploads | Task: Create ConfigLoader component in keyrx_ui/src/components/Simulator/ConfigLoader.tsx following requirements 2.1-2.2, supporting both textarea input and file upload for Rhai configs with inline parse error display | Restrictions: File ≤250 lines, must validate file type (.rhai), limit file size to 1MB, highlight error line in textarea if parse error includes line number, maintain responsive UI during loading | Success: Users can paste or upload Rhai configs, parse errors show line numbers and helpful messages, file upload validates size and type_
 
-- [ ] 14. Create ScenarioSelector component in keyrx_ui/src/components/Simulator/ScenarioSelector.tsx
+- [x] 14. Create ScenarioSelector component in keyrx_ui/src/components/Simulator/ScenarioSelector.tsx
   - File: keyrx_ui/src/components/Simulator/ScenarioSelector.tsx
   - Create dropdown menu listing built-in scenarios (tap-hold-under, tap-hold-over, layer-switch, modifier-combo)
   - Add "Run Scenario" button calling onSelect(eventSequence: EventSequence) prop

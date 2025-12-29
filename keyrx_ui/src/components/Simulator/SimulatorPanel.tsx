@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react';
 import { wasmCore, WasmError } from '../../wasm/core';
 import type { ConfigHandle, EventSequence, SimulationResult } from '../../wasm/core';
 import { ConfigLoader } from './ConfigLoader';
+import { ScenarioSelector } from './ScenarioSelector';
 import './SimulatorPanel.css';
 
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
@@ -50,9 +51,7 @@ export function SimulatorPanel() {
 
   /**
    * Handle simulation execution with the loaded configuration.
-   * TODO: Wire to ScenarioSelector and EventSequenceEditor (Tasks 14-15)
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSimulate = useCallback(async (eventSequence: EventSequence) => {
     if (!loadedConfig) {
       setError('No configuration loaded. Please load a configuration first.');
@@ -107,9 +106,11 @@ export function SimulatorPanel() {
         )}
         {loadedConfig && (
           <>
-            <div className="placeholder-message">
-              ScenarioSelector component will be inserted here (Task 14)
-            </div>
+            <ScenarioSelector
+              onRunScenario={handleSimulate}
+              disabled={!loadedConfig}
+              isLoading={loadingState === 'loading'}
+            />
             <div className="placeholder-message">
               EventSequenceEditor component will be inserted here (Task 15)
             </div>
