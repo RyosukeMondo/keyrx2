@@ -66,9 +66,14 @@
   - 40 comprehensive unit tests with 80.0% coverage ✅
   - _Complete: keyrx_daemon/src/config/profile_manager.rs tests_
 
-- [ ] 10. Write component tests for ProfilesPage
-  - Test profile list, actions
-  - _Prompt: Role: React Test Engineer | Task: Test profiles UI | Success: ✅ Tests pass_
+- [x] 10. Write component tests for ProfilesPage
+  - Test profile list, actions ✅
+  - 25 comprehensive unit tests covering all functionality ✅
+  - Tests for rendering, loading, error states ✅
+  - Tests for create, activate, delete, duplicate, export, rename ✅
+  - Tests for API integration and error handling ✅
+  - All tests passing with vitest and @testing-library/react ✅
+  - _Complete: keyrx_ui/src/components/ProfilesPage.test.tsx_
 
 - [ ] 11. Write E2E test for profile workflow
   - Create → activate → rename → delete
