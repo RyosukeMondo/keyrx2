@@ -79,6 +79,6 @@
   - How to use visual builder
   - _Prompt: Role: Technical Writer | Task: Document visual builder | Success: ✅ Docs complete_
 
-- [ ] 16. Log implementation artifacts
+- [x] 16. Log implementation artifacts
   - Use spec-workflow log-implementation tool
   - _Prompt: Role: Documentation Engineer | Task: Log artifacts | Success: ✅ Artifacts logged_
