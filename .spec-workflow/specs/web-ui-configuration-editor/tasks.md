@@ -1144,7 +1144,7 @@
   - _Requirements: Non-functional_
   - _Success: ✅ Build completes without errors, ✅ Output is minified, ✅ Source maps generated
 
-- [ ] 39. Embed UI in daemon
+- [x] 39. Embed UI in daemon
   - Files: `keyrx_daemon/src/web/static_files.rs`, `keyrx_daemon/Cargo.toml`
   - Embed built UI files in binary using `include_dir!` macro
   - Serve from `/` route (Axum)

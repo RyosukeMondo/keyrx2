@@ -31,6 +31,9 @@ tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 humantime = "2.3.0"
+# Embed static files in binary
+include_dir = "0.7"
+mime_guess = "2.0"
 # IPC and metrics dependencies
 interprocess = { version = "1.2", features = ["tokio_support"] }
 hdrhistogram = "7.5"
