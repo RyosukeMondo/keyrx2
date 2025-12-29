@@ -13,8 +13,11 @@ import init, {
   load_krx as wasmLoadKrx,
   simulate as wasmSimulate,
   get_state as wasmGetState,
-  ConfigHandle
+  type ConfigHandle
 } from './pkg/keyrx_core';
+
+// Re-export ConfigHandle for use in other modules
+export type { ConfigHandle };
 
 // ============================================================================
 // Type Definitions
@@ -118,9 +121,12 @@ export interface DaemonState {
  * Error class for WASM-related errors.
  */
 export class WasmError extends Error {
-  constructor(message: string, public readonly cause?: unknown) {
+  public readonly cause?: unknown;
+
+  constructor(message: string, cause?: unknown) {
     super(message);
     this.name = 'WasmError';
+    this.cause = cause;
   }
 }
 

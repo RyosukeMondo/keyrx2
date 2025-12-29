@@ -10,6 +10,7 @@ import { wasmCore, WasmError } from '../../wasm/core';
 import type { ConfigHandle, EventSequence, SimulationResult } from '../../wasm/core';
 import { ConfigLoader } from './ConfigLoader';
 import { ScenarioSelector } from './ScenarioSelector';
+import { EventSequenceEditor } from './EventSequenceEditor';
 import './SimulatorPanel.css';
 
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
@@ -111,9 +112,10 @@ export function SimulatorPanel() {
               disabled={!loadedConfig}
               isLoading={loadingState === 'loading'}
             />
-            <div className="placeholder-message">
-              EventSequenceEditor component will be inserted here (Task 15)
-            </div>
+            <EventSequenceEditor
+              onSubmit={handleSimulate}
+              disabled={!loadedConfig || loadingState === 'loading'}
+            />
           </>
         )}
       </section>

@@ -1,4 +1,4 @@
-import { defineConfig, Plugin } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import wasm from 'vite-plugin-wasm'
 import topLevelAwait from 'vite-plugin-top-level-await'
@@ -45,5 +45,10 @@ export default defineConfig({
   ],
   optimizeDeps: {
     exclude: ['@keyrx/core'],
+  },
+  build: {
+    rollupOptions: {
+      external: ['env'],
+    },
   },
 })

@@ -7,7 +7,7 @@
  * @module utils/scenarios
  */
 
-import { EventSequence, SimKeyEvent } from '../wasm/core';
+import type { EventSequence, SimKeyEvent } from '../wasm/core';
 
 // ============================================================================
 // Scenario Generator Options

@@ -189,7 +189,7 @@
   - _Requirements: 4.1-4.5 (Built-in Test Scenarios)_
   - _Prompt: Role: React UI Developer with expertise in dropdown menus and user interactions | Task: Create ScenarioSelector component in keyrx_ui/src/components/Simulator/ScenarioSelector.tsx following requirements 4.1-4.5, providing dropdown of built-in scenarios with descriptions and "Run" button | Restrictions: File ≤250 lines, must call scenario generators from utils/scenarios.ts, show scenario description before running, disable button if no config loaded, maintain dropdown accessibility (keyboard navigation) | Success: All built-in scenarios selectable, descriptions are clear, scenarios execute correctly when selected_
 
-- [ ] 15. Create EventSequenceEditor component in keyrx_ui/src/components/Simulator/EventSequenceEditor.tsx
+- [x] 15. Create EventSequenceEditor component in keyrx_ui/src/components/Simulator/EventSequenceEditor.tsx
   - File: keyrx_ui/src/components/Simulator/EventSequenceEditor.tsx
   - Create UI for adding/removing events manually (key code, type press/release, timestamp)
   - Display event list with edit/delete buttons
