@@ -443,7 +443,7 @@
   | Restrictions: File ≤200 lines (extract ripple logic to `hooks/useRipple.ts` if needed), function ≤30 lines, no inline styles (Tailwind classes only), MUST use React.memo for performance, no console.log, ESLint 0 errors
   | Success: ✅ All 4 variants render with correct colors from design tokens, ✅ All 3 sizes have correct padding (sm: 8/12px, md: 12/16px, lg: 16/24px), ✅ Ripple animates in 600ms without dropped frames (60fps), ✅ Focus outline visible on Tab (2px blue), ✅ Disabled state prevents clicks and shows cursor-not-allowed, ✅ Loading state shows spinner and disables interaction, ✅ aria-label, aria-disabled, aria-busy attributes set correctly, ✅ Keyboard navigation works (Enter/Space trigger onClick), ✅ No console warnings in development mode, ✅ Unit tests pass (Button.test.tsx)
 
-- [ ] 3. Create Input component
+- [x] 3. Create Input component
   - File: `src/components/Input.tsx`
   - Types: text, number
   - States: default, focus, error, disabled
