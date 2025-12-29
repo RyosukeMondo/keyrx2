@@ -152,7 +152,7 @@
   | Success: ✅ Load/save roundtrip preserves data, ✅ Atomic writes verified (interruption test), ✅ Corrupted JSON returns RegistryCorrupted error with hint, ✅ Input validation rejects invalid names/IDs, ✅ Unit tests cover all methods and error paths, ✅ Code coverage ≥90%
   | Instructions: Set task status to [-] in tasks.md before starting, use log-implementation tool after completion with detailed artifacts (document DeviceEntry struct, all methods, error enum variants), then mark [x] when done
 
-- [ ] 2. Create ProfileManager component
+- [-] 2. Create ProfileManager component
   - File: `keyrx_daemon/src/config/profile_manager.rs` (new file)
   - Purpose: Profile CRUD with hot-reload and concurrency-safe activation
   - _Leverage: keyrx_compiler (Rhai compilation), keyrx_core (config loading)_
