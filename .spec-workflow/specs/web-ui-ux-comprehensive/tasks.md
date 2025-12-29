@@ -360,7 +360,7 @@
 
 ## Phase 3: CLI Commands (Configuration & Layers)
 
-- [ ] 8. Implement `keyrx config` command
+- [-] 8. Implement `keyrx config` command
   - File: `keyrx_daemon/src/cli/config.rs` (new file)
   - Implement set-key (simple, tap-hold, macro), get-key, delete-key
   - Implement validate (dry-run compilation)

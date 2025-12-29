@@ -58,6 +58,11 @@ enum Commands {
     /// Profile management commands for Rhai configuration files.
     Profiles(keyrx_daemon::cli::profiles::ProfilesArgs),
 
+    /// Manage key mappings and configuration.
+    ///
+    /// Configuration commands for setting key mappings, tap-hold, macros, etc.
+    Config(keyrx_daemon::cli::config::ConfigArgs),
+
     /// List available input devices on the system.
     ///
     /// Displays all input devices with their names, paths, and serial numbers.
@@ -123,6 +128,12 @@ fn main() {
         }
         Commands::Profiles(args) => {
             match keyrx_daemon::cli::profiles::execute(args, None) {
+                Ok(()) => Ok(()),
+                Err(code) => Err((code, String::new())), // Error already printed by execute
+            }
+        }
+        Commands::Config(args) => {
+            match keyrx_daemon::cli::config::execute(args, None) {
                 Ok(()) => Ok(()),
                 Err(code) => Err((code, String::new())), // Error already printed by execute
             }
