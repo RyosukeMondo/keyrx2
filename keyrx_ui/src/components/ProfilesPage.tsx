@@ -206,10 +206,25 @@ export function ProfilesPage() {
           mode="rename"
           initialName={renameProfile.name}
           onClose={() => setRenameProfile(null)}
-          onSubmit={(name) => {
-            // Rename is not implemented in the API yet - would need to be added
-            alert('Rename functionality not yet implemented in API');
-            setRenameProfile(null);
+          onSubmit={async (newName) => {
+            try {
+              const response = await fetch(
+                `${apiBaseUrl}/api/profiles/${encodeURIComponent(renameProfile.name)}/rename`,
+                {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ new_name: newName }),
+                }
+              );
+              if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error?.message || 'Failed to rename profile');
+              }
+              setRenameProfile(null);
+              loadProfiles();
+            } catch (err) {
+              alert(err instanceof Error ? err.message : 'Failed to rename profile');
+            }
           }}
         />
       )}
