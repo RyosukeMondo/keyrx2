@@ -13,8 +13,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { ProfilesPage, type Profile } from './ProfilesPage';
+import { renderWithProviders } from '../../tests/testUtils';
 
 // Mock ProfileCard component
 vi.mock('./ProfileCard', () => ({
@@ -106,7 +107,7 @@ describe('ProfilesPage', () => {
         () => new Promise(() => {}) // Never resolves
       );
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       expect(screen.getByText('Loading profiles...')).toBeInTheDocument();
     });
@@ -117,7 +118,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -134,7 +135,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -149,7 +150,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: [] }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('No profiles found.')).toBeInTheDocument();
@@ -165,7 +166,7 @@ describe('ProfilesPage', () => {
     it('should show error state when fetch fails', async () => {
       vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'));
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText(/Error: Network error/)).toBeInTheDocument();
@@ -180,7 +181,7 @@ describe('ProfilesPage', () => {
         status: 500,
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText(/Error: HTTP error! status: 500/)).toBeInTheDocument();
@@ -191,7 +192,7 @@ describe('ProfilesPage', () => {
       // First call fails
       vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'));
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText(/Error: Network error/)).toBeInTheDocument();
@@ -221,7 +222,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -240,7 +241,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -262,7 +263,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -319,7 +320,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -355,7 +356,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -401,7 +402,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -430,7 +431,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -480,7 +481,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -508,7 +509,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -539,7 +540,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -603,7 +604,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -627,7 +628,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -658,7 +659,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -714,7 +715,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -743,7 +744,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -763,7 +764,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Profiles')).toBeInTheDocument();
@@ -789,11 +790,91 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: mockProfiles }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith('http://localhost:3030/api/profiles');
       });
+    });
+
+    it('should use custom API base URL when provided via ApiProvider', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ profiles: mockProfiles }),
+      } as Response);
+
+      renderWithProviders(<ProfilesPage />, {
+        apiBaseUrl: 'http://mock-api:8080',
+      });
+
+      await waitFor(() => {
+        expect(fetch).toHaveBeenCalledWith('http://mock-api:8080/api/profiles');
+      });
+    });
+
+    it('should use custom API URL for all API calls', async () => {
+      const customApiUrl = 'http://test-server:9999';
+
+      // Initial load
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ profiles: mockProfiles }),
+      } as Response);
+
+      renderWithProviders(<ProfilesPage />, { apiBaseUrl: customApiUrl });
+
+      await waitFor(() => {
+        expect(screen.getByText('Profiles')).toBeInTheDocument();
+      });
+
+      // Test activate with custom URL
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ profiles: mockProfiles }),
+      } as Response);
+
+      const activateButton = screen.getByTestId('activate-gaming');
+      await act(async () => {
+        fireEvent.click(activateButton);
+      });
+
+      await waitFor(() => {
+        expect(fetch).toHaveBeenCalledWith(
+          `${customApiUrl}/api/profiles/gaming/activate`,
+          { method: 'POST' }
+        );
+      });
+    });
+
+    it('should work with different mock API URLs for testing', async () => {
+      const mockUrls = [
+        'http://localhost:3030',
+        'http://test-api:5000',
+        'http://mock-backend:8888',
+      ];
+
+      for (const apiUrl of mockUrls) {
+        vi.clearAllMocks();
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ profiles: mockProfiles }),
+        } as Response);
+
+        const { unmount } = renderWithProviders(<ProfilesPage />, {
+          apiBaseUrl: apiUrl,
+        });
+
+        await waitFor(() => {
+          expect(fetch).toHaveBeenCalledWith(`${apiUrl}/api/profiles`);
+        });
+
+        unmount();
+      }
     });
 
     it('should handle profiles with special characters in names', async () => {
@@ -811,7 +892,7 @@ describe('ProfilesPage', () => {
         json: async () => ({ profiles: [specialProfile] }),
       } as Response);
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('profile-card-my-profile_v2')).toBeInTheDocument();

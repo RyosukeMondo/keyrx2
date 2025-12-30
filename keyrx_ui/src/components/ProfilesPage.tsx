@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ProfileCard } from './ProfileCard';
 import { ProfileDialog } from './ProfileDialog';
+import { useApi } from '../contexts/ApiContext';
 import './ProfilesPage.css';
 
 export interface Profile {
@@ -17,6 +18,7 @@ interface ProfilesListResponse {
 }
 
 export function ProfilesPage() {
+  const { apiBaseUrl } = useApi();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function ProfilesPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:3030/api/profiles');
+      const response = await fetch(`${apiBaseUrl}/api/profiles`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -46,7 +48,7 @@ export function ProfilesPage() {
 
   const handleCreateProfile = async (name: string, template: string) => {
     try {
-      const response = await fetch('http://localhost:3030/api/profiles', {
+      const response = await fetch(`${apiBaseUrl}/api/profiles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, template }),
@@ -65,7 +67,7 @@ export function ProfilesPage() {
   const handleActivateProfile = async (profile: Profile) => {
     try {
       const response = await fetch(
-        `http://localhost:3030/api/profiles/${encodeURIComponent(profile.name)}/activate`,
+        `${apiBaseUrl}/api/profiles/${encodeURIComponent(profile.name)}/activate`,
         { method: 'POST' }
       );
       if (!response.ok) {
@@ -83,7 +85,7 @@ export function ProfilesPage() {
     }
     try {
       const response = await fetch(
-        `http://localhost:3030/api/profiles/${encodeURIComponent(profile.name)}`,
+        `${apiBaseUrl}/api/profiles/${encodeURIComponent(profile.name)}`,
         { method: 'DELETE' }
       );
       if (!response.ok) {
@@ -101,7 +103,7 @@ export function ProfilesPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:3030/api/profiles/${encodeURIComponent(profile.name)}/duplicate`,
+        `${apiBaseUrl}/api/profiles/${encodeURIComponent(profile.name)}/duplicate`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

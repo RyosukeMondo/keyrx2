@@ -10,6 +10,7 @@
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
+import { ApiProvider } from '../src/contexts/ApiContext';
 import type { ConfigState } from '../src/types/configBuilder';
 
 /**
@@ -28,12 +29,25 @@ export interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
    * Tests should use useConfigBuilderStore.getState() to set initial state
    */
   initialConfigState?: Partial<ConfigState>;
+
+  /**
+   * Custom API base URL for testing
+   * @default 'http://localhost:3030'
+   */
+  apiBaseUrl?: string;
+
+  /**
+   * Custom WebSocket base URL for testing
+   * @default 'ws://localhost:9867'
+   */
+  wsBaseUrl?: string;
 }
 
 /**
  * Renders a React component wrapped with common test providers.
  *
  * Automatically wraps components with:
+ * - ApiProvider (with optional custom URLs)
  * - DndContext (if withDnd is true)
  *
  * @param ui - The React element to render
@@ -48,6 +62,9 @@ export interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
  * // With drag-and-drop support
  * renderWithProviders(<VirtualKeyboard />, { withDnd: true });
  *
+ * // With custom API URL for testing
+ * renderWithProviders(<ProfilesPage />, { apiBaseUrl: 'http://mock-api:3030' });
+ *
  * // With custom container
  * renderWithProviders(<MyComponent />, { container: document.body });
  * ```
@@ -56,14 +73,29 @@ export function renderWithProviders(
   ui: ReactElement,
   options: CustomRenderOptions = {}
 ) {
-  const { withDnd = false, initialConfigState, ...renderOptions } = options;
+  const {
+    withDnd = false,
+    initialConfigState,
+    apiBaseUrl = 'http://localhost:3030',
+    wsBaseUrl = 'ws://localhost:9867',
+    ...renderOptions
+  } = options;
 
   // Build the wrapper component based on options
   function Wrapper({ children }: { children: React.ReactNode }) {
+    let content = children;
+
+    // Wrap with DndContext if needed
     if (withDnd) {
-      return <DndContext>{children}</DndContext>;
+      content = <DndContext>{content}</DndContext>;
     }
-    return <>{children}</>;
+
+    // Always wrap with ApiProvider
+    return (
+      <ApiProvider apiBaseUrl={apiBaseUrl} wsBaseUrl={wsBaseUrl}>
+        {content}
+      </ApiProvider>
+    );
   }
 
   // If initial config state is provided, set it before rendering
