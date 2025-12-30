@@ -4,6 +4,7 @@
 //! for managing Rhai configuration profiles, including creation, activation,
 //! deletion, duplication, import, and export.
 
+use crate::cli::common::output_error;
 use crate::config::profile_manager::{
     ProfileError, ProfileManager, ProfileMetadata, ProfileTemplate,
 };
@@ -111,14 +112,6 @@ struct ProfileCreatedOutput {
 struct SuccessOutput {
     success: bool,
     message: String,
-}
-
-/// JSON output structure for errors.
-#[derive(Serialize)]
-struct ErrorOutput {
-    success: bool,
-    error: String,
-    code: u32,
 }
 
 /// Parse template string to ProfileTemplate enum.
@@ -320,8 +313,8 @@ fn handle_activate(manager: &mut ProfileManager, name: &str, json: bool) -> Resu
             output_error(&format!("Profile '{}' not found", name), 1001, json);
             Err(1)
         }
-        Err(ProfileError::CompilationTimeout) => {
-            output_error("Compilation timeout (exceeded 30s)", 2004, json);
+        Err(ProfileError::Compilation(e)) => {
+            output_error(&format!("Compilation error: {}", e), 2004, json);
             Err(1)
         }
         Err(e) => {
@@ -493,20 +486,6 @@ fn handle_import(
             output_error(&format!("Failed to import profile: {}", e), 3001, json);
             Err(1)
         }
-    }
-}
-
-/// Output an error message.
-fn output_error(message: &str, code: u32, json: bool) {
-    if json {
-        let output = ErrorOutput {
-            success: false,
-            error: message.to_string(),
-            code,
-        };
-        eprintln!("{}", serde_json::to_string_pretty(&output).unwrap());
-    } else {
-        eprintln!("Error: {}", message);
     }
 }
 
