@@ -39,7 +39,7 @@
 
 ## Phase 2: File Size Refactoring
 
-- [ ] 5. Refactor profile_manager.rs to comply with 500-line limit
+- [-] 5. Refactor profile_manager.rs to comply with 500-line limit
   - Files: keyrx_daemon/src/config/profile_manager.rs, keyrx_daemon/src/config/profile_compiler.rs (new)
   - Extract compilation logic (lines 200-350) to profile_compiler.rs
   - Maintain all existing tests and functionality
