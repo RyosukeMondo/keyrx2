@@ -2,13 +2,13 @@
 
 ## Phase 1: Daemon WebSocket Event Broadcasting (Rust)
 
-- [ ] 1. Add broadcast channel to daemon main loop in keyrx_daemon/src/main.rs
+- [x] 1. Add broadcast channel to daemon main loop in keyrx_daemon/src/main.rs
   - Create tokio::sync::broadcast::channel(1000) for event broadcasting
   - Clone sender to share across event loop and WebSocket handler
   - Broadcast state changes, key events, latency stats
   - _Prompt: Role: Rust Async Developer | Task: Add broadcast channel to daemon main loop for WebSocket event streaming | Restrictions: File ≤500 lines, use tokio::sync::broadcast, broadcast on state changes only (not every event), batch if >100 events/sec | Success: ✅ Channel created, ✅ Events broadcast, ✅ No performance impact_
 
-- [ ] 2. Implement WebSocket event streaming in keyrx_daemon/src/web/ws.rs
+- [x] 2. Implement WebSocket event streaming in keyrx_daemon/src/web/ws.rs
   - Subscribe to broadcast channel in handle_websocket
   - Forward events to WebSocket clients as JSON
   - Implement batching (50ms intervals when high-frequency)
@@ -16,16 +16,16 @@
 
 ## Phase 2: React WebSocket Integration
 
-- [ ] 3. Install WebSocket and state management dependencies
+- [x] 3. Install WebSocket and state management dependencies
   - Add react-use-websocket@^4.8.1, zustand@^4.5.0, recharts@^2.10.0, react-window@^1.8.10
   - _Prompt: Role: Frontend Build Engineer | Task: Add WebSocket and visualization dependencies to package.json | Success: ✅ Dependencies installed, ✅ No conflicts_
 
-- [ ] 4. Create Zustand dashboard store in keyrx_ui/src/store/dashboardStore.ts
+- [x] 4. Create Zustand dashboard store in keyrx_ui/src/store/dashboardStore.ts
   - Define store with currentState, events[], metrics
   - Actions: updateState, addEvent, updateMetrics
   - _Prompt: Role: React State Management Expert | Task: Create Zustand store for dashboard state | Restrictions: File ≤200 lines, TypeScript strict mode, persist last 100 events only | Success: ✅ Store created, ✅ Actions work, ✅ FIFO for events_
 
-- [ ] 5. Create useDaemonWebSocket hook in keyrx_ui/src/hooks/useDaemonWebSocket.ts
+- [x] 5. Create useDaemonWebSocket hook in keyrx_ui/src/hooks/useDaemonWebSocket.ts
   - Wrap react-use-websocket with auto-reconnect
   - Parse JSON messages and update Zustand store
   - Handle connection state (connected, connecting, disconnected)
@@ -56,7 +56,7 @@
 
 ## Phase 4: Testing & Documentation
 
-- [ ] 10. Write unit tests for WebSocket broadcasting (Rust)
+- [-] 10. Write unit tests for WebSocket broadcasting (Rust)
   - Test broadcast channel publishes events
   - Test batching when >100 events/sec
   - _Prompt: Role: Rust Test Engineer | Task: Write unit tests for WebSocket broadcasting | Success: ✅ All tests pass, ✅ Batching verified_

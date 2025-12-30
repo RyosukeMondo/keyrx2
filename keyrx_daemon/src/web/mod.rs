@@ -3,6 +3,9 @@ pub mod events;
 pub mod static_files;
 pub mod ws;
 
+#[cfg(test)]
+mod ws_test;
+
 use axum::Router;
 use std::net::SocketAddr;
 use tokio::sync::broadcast;
