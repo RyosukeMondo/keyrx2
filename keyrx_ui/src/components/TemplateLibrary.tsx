@@ -1,8 +1,23 @@
 /**
  * TemplateLibrary - Browse and select macro templates
  *
- * This component displays a searchable library of pre-built macro templates
- * organized by category with filtering and preview capabilities.
+ * Searchable library of pre-built macro templates organized by category.
+ * Provides filtering, search, preview, and template selection functionality.
+ *
+ * Categories include:
+ * - Productivity (clipboard, text shortcuts)
+ * - Gaming (rapid fire, combos)
+ * - Development (code snippets, IDE shortcuts)
+ * - Media (playback controls)
+ *
+ * @example
+ * ```tsx
+ * <TemplateLibrary
+ *   onSelectTemplate={(events, name) => loadTemplate(events, name)}
+ *   isOpen={showLibrary}
+ *   onClose={() => setShowLibrary(false)}
+ * />
+ * ```
  */
 
 import { useState, useMemo } from 'react';
@@ -19,17 +34,30 @@ import {
 } from '../utils/macroTemplates';
 import './TemplateLibrary.css';
 
+/**
+ * Props for TemplateLibrary component
+ */
 interface TemplateLibraryProps {
-  /** Callback when a template is selected */
+  /** Callback when a template is selected and loaded */
   onSelectTemplate: (events: MacroEvent[], templateName: string) => void;
-  /** Whether the library is currently active */
+  /** Whether the library modal is currently displayed (default: true) */
   isOpen?: boolean;
-  /** Callback to close the library */
+  /** Callback to close the library modal */
   onClose?: () => void;
 }
 
 /**
- * TemplateLibrary component.
+ * TemplateLibrary component for browsing and selecting macro templates
+ *
+ * Features:
+ * - Search templates by name or description
+ * - Filter by category (productivity, gaming, development, media)
+ * - Preview template details and event count
+ * - Load template into editor
+ * - Responsive grid layout
+ *
+ * @param props - Component props
+ * @returns Rendered template library or null if not open
  */
 export function TemplateLibrary({ onSelectTemplate, isOpen = true, onClose }: TemplateLibraryProps) {
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all');

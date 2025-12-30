@@ -1,8 +1,20 @@
 /**
- * DashboardPage Component
+ * DashboardPage - Real-time daemon monitoring dashboard
  *
- * Real-time daemon monitoring dashboard with state indicators, metrics chart, and event timeline.
- * Connects to daemon via WebSocket and displays live updates.
+ * Main dashboard view displaying live daemon state, performance metrics,
+ * and key event timeline. Connects to daemon via WebSocket for real-time updates.
+ *
+ * Dashboard sections:
+ * - Connection status banner (connected/disconnected)
+ * - State indicator panel (active modifiers, locks, current layer)
+ * - Metrics chart (latency over 60-second rolling window)
+ * - Event timeline (last 100 key events)
+ *
+ * @example
+ * ```tsx
+ * // Component manages WebSocket connection automatically
+ * <DashboardPage />
+ * ```
  */
 
 import { useDaemonWebSocket } from '../hooks/useDaemonWebSocket';
@@ -13,13 +25,19 @@ import { DashboardEventTimeline } from './DashboardEventTimeline';
 import './DashboardPage.css';
 
 /**
- * Main dashboard page component
+ * DashboardPage component - Main monitoring interface
+ *
+ * Establishes WebSocket connection to daemon on mount and displays real-time
+ * updates across multiple visualization components. Automatically reconnects
+ * on connection loss.
  *
  * Layout:
- * - Connection status banner
- * - State indicator panel (modifiers, locks, layer)
+ * - Connection status banner (green: connected, red: disconnected)
+ * - State indicator panel (modifiers, locks, layer badges)
  * - Metrics chart (latency over time)
  * - Event timeline (last 100 events)
+ *
+ * @returns Rendered dashboard page
  */
 export function DashboardPage() {
   // WebSocket connection

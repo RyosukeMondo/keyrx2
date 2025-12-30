@@ -1,11 +1,26 @@
 /**
- * EventTimeline - Visual timeline editor for macro events.
+ * EventTimeline - Visual timeline editor for macro events
+ *
+ * Interactive timeline view for visualizing and editing key event sequences.
+ * Events are displayed proportionally to their timing with drag-and-drop support
+ * for adjusting event timing and order.
  *
  * Features:
- * - Timeline visualization of key events
+ * - Visual timeline with proportional spacing based on timing
  * - Drag events to adjust timing
- * - Edit event timestamps
- * - Delete events
+ * - Click to select and edit event timestamps
+ * - Delete events with backspace/delete keys
+ * - Automatic scaling based on total duration
+ * - Keyboard navigation and editing
+ *
+ * @example
+ * ```tsx
+ * <EventTimeline
+ *   events={macroEvents}
+ *   onEventsChange={handleEventsUpdate}
+ *   editable={true}
+ * />
+ * ```
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -14,17 +29,28 @@ import { formatDuration } from '../utils/timeFormatting';
 import { formatKeyCode } from '../utils/keyCodeMapping';
 import './EventTimeline.css';
 
+/**
+ * Props for EventTimeline component
+ */
 interface EventTimelineProps {
-  /** Array of macro events to display */
+  /** Array of macro events to display on the timeline */
   events: MacroEvent[];
-  /** Callback when events are modified */
+  /** Callback when events are modified (reordered, timestamps changed, deleted) */
   onEventsChange: (events: MacroEvent[]) => void;
-  /** Whether the timeline is editable */
+  /** Whether the timeline allows editing (default: true) */
   editable?: boolean;
 }
 
 /**
- * EventTimeline component for editing macro event sequences.
+ * EventTimeline component for editing macro event sequences
+ *
+ * Displays events on a proportionally-scaled timeline where position represents
+ * timing. Users can drag events to adjust timing, click to select, and delete
+ * with keyboard. Timeline automatically scales to fit all events with appropriate
+ * spacing.
+ *
+ * @param props - Component props
+ * @returns Rendered timeline component
  */
 export function EventTimeline({
   events,

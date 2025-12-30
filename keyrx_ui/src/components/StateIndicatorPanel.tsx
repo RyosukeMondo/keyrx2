@@ -1,24 +1,43 @@
 /**
- * StateIndicatorPanel Component
+ * StateIndicatorPanel - Real-time daemon state visualization
  *
- * Displays active modifiers, locks, and current layer as color-coded badges
- * with animations on state changes.
+ * Displays active modifiers, lock keys, and current layer as color-coded badges.
+ * Badges appear/disappear with animations as state changes in real-time.
+ *
+ * Badge colors and meanings:
+ * - Blue badges: Active modifiers (Shift, Ctrl, Alt, etc.)
+ * - Orange badges: Active lock keys (Caps Lock, Num Lock, Scroll Lock)
+ * - Green badge: Current layer (base layer if none active)
+ *
+ * Features:
+ * - Real-time updates from WebSocket
+ * - Fade-in animations for new badges
+ * - Grouped by type (modifiers, locks, layer)
+ * - Empty state messages when no modifiers/locks active
+ *
+ * @example
+ * ```tsx
+ * // Component reads from dashboardStore automatically
+ * <StateIndicatorPanel />
+ * ```
  */
 
 import { useDashboardStore } from '../store/dashboardStore';
 import './StateIndicatorPanel.css';
 
 /**
- * State indicator panel with color-coded badges
+ * StateIndicatorPanel component displaying daemon state as badges
  *
- * Badge colors:
- * - Modifiers: Blue (#2196f3)
- * - Locks: Orange (#ff9800)
- * - Layer: Green (#4caf50)
+ * Subscribes to dashboard state store and renders color-coded badges
+ * for active modifiers, locks, and current layer. Badges animate in
+ * when state changes.
  *
- * Animations:
- * - Fade in when badge appears
- * - Pulse on state change
+ * State mapping:
+ * - modifiers: Array of modifier IDs (converted to names)
+ * - locks: Array of lock IDs (converted to names)
+ * - layer: Current layer number (0 = base layer)
+ *
+ * @returns Rendered state indicator panel
  */
 export function StateIndicatorPanel() {
   const currentState = useDashboardStore((state) => state.currentState);

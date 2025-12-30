@@ -1,8 +1,23 @@
 /**
- * DashboardEventTimeline Component
+ * DashboardEventTimeline - Real-time key event timeline display
  *
- * Virtualized event timeline displaying the last 100 key events from the daemon.
- * Features pause/resume functionality and tooltips on hover.
+ * Virtualized list showing the last 100 key events from the daemon with
+ * pause/resume controls and hover tooltips. Uses react-window for efficient
+ * rendering of large event lists.
+ *
+ * Features:
+ * - Virtualized scrolling for performance (only renders visible events)
+ * - Pause/Resume controls to freeze timeline during analysis
+ * - Hover tooltips showing full event details
+ * - Automatic scroll to latest event when resumed
+ * - Color-coded event types (press/release)
+ * - 100-event rolling window
+ *
+ * @example
+ * ```tsx
+ * // Component reads from dashboardStore automatically
+ * <DashboardEventTimeline />
+ * ```
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -11,7 +26,9 @@ import { useDashboardStore, KeyEvent } from '../store/dashboardStore';
 import './DashboardEventTimeline.css';
 
 /**
- * Format microseconds to human-readable time
+ * Formats timestamp from microseconds to HH:MM:SS
+ * @param microseconds - Timestamp in microseconds since epoch
+ * @returns Formatted time string
  */
 const formatTime = (microseconds: number): string => {
   const date = new Date(microseconds / 1000);

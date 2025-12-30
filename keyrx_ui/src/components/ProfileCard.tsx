@@ -1,16 +1,57 @@
+/**
+ * ProfileCard - Display a keyboard configuration profile with action buttons
+ *
+ * Renders a card UI showing profile metadata (name, layer count, modified time)
+ * and status indicator. Provides action buttons for managing the profile.
+ *
+ * @example
+ * ```tsx
+ * <ProfileCard
+ *   profile={myProfile}
+ *   onActivate={() => activateProfile(myProfile.name)}
+ *   onDelete={() => deleteProfile(myProfile.name)}
+ *   onDuplicate={() => duplicateProfile(myProfile.name)}
+ *   onExport={() => exportProfile(myProfile.name)}
+ *   onRename={() => renameProfile(myProfile.name)}
+ * />
+ * ```
+ */
+
 import { Profile } from './ProfilesPage';
 import { formatTimestampRelative } from '../utils/timeFormatting';
 import './ProfileCard.css';
 
+/**
+ * Props for ProfileCard component
+ */
 interface ProfileCardProps {
+  /** Profile object containing name, layer count, modification time, and active status */
   profile: Profile;
+  /** Callback when user clicks the Activate button (only shown if profile is inactive) */
   onActivate: () => void;
+  /** Callback when user clicks the Delete button (disabled if profile is active) */
   onDelete: () => void;
+  /** Callback when user clicks the Duplicate button */
   onDuplicate: () => void;
+  /** Callback when user clicks the Export button */
   onExport: () => void;
+  /** Callback when user clicks the Rename button */
   onRename: () => void;
 }
 
+/**
+ * ProfileCard component displays a single profile with metadata and action buttons
+ *
+ * Features:
+ * - Visual status indicator (active/inactive)
+ * - Profile metadata (name, layer count, last modified time)
+ * - Primary action: Activate button (hidden for active profile)
+ * - Secondary actions: Rename, Duplicate, Export, Delete
+ * - Delete button is disabled for the active profile
+ *
+ * @param props - Component props
+ * @returns Rendered profile card component
+ */
 export function ProfileCard({
   profile,
   onActivate,

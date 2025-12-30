@@ -1,18 +1,74 @@
+/**
+ * ProfileDialog - Modal dialog for creating or renaming keyboard profiles
+ *
+ * Provides a form with validation for profile names and template selection
+ * for new profiles. Supports both create and rename modes.
+ *
+ * Validation rules:
+ * - Name is required
+ * - Maximum 32 characters
+ * - Only letters, numbers, dashes, and underscores allowed
+ *
+ * @example
+ * ```tsx
+ * // Create mode
+ * <ProfileDialog
+ *   mode="create"
+ *   onClose={handleClose}
+ *   onSubmit={(name, template) => createProfile(name, template)}
+ * />
+ *
+ * // Rename mode
+ * <ProfileDialog
+ *   mode="rename"
+ *   initialName="old-name"
+ *   onClose={handleClose}
+ *   onSubmit={(name) => renameProfile('old-name', name)}
+ * />
+ * ```
+ */
+
 import { useState } from 'react';
 import './ProfileDialog.css';
 
+/**
+ * Props for ProfileDialog component
+ */
 interface ProfileDialogProps {
+  /** Dialog mode: 'create' shows template selector, 'rename' shows only name field */
   mode: 'create' | 'rename';
+  /** Initial value for the name field (used in rename mode) */
   initialName?: string;
+  /** Callback when dialog is closed without submitting */
   onClose: () => void;
+  /** Callback when form is submitted successfully. In create mode, includes template selection */
   onSubmit: (name: string, template?: string) => void;
 }
 
+/**
+ * ProfileDialog component for creating or renaming profiles
+ *
+ * Features:
+ * - Real-time validation with error messages
+ * - Template selection in create mode (blank or QMK-style layers)
+ * - Escape key and overlay click to close
+ * - Submit button disabled when validation fails
+ * - Auto-focus on name input
+ *
+ * @param props - Component props
+ * @returns Rendered dialog component
+ */
 export function ProfileDialog({ mode, initialName = '', onClose, onSubmit }: ProfileDialogProps) {
   const [name, setName] = useState(initialName);
   const [template, setTemplate] = useState('blank');
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Validates profile name against constraints
+   * Sets error state if validation fails
+   * @param value - Profile name to validate
+   * @returns true if valid, false otherwise
+   */
   const validateName = (value: string): boolean => {
     if (!value.trim()) {
       setError('Profile name is required');

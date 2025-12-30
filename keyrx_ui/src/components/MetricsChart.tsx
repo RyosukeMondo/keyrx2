@@ -1,8 +1,22 @@
 /**
- * MetricsChart Component
+ * MetricsChart - Real-time latency visualization
  *
- * Line chart displaying latency metrics over a 60-second rolling window.
- * Highlights latency values >5ms in red.
+ * Line chart displaying processing latency over a 60-second rolling window
+ * using Recharts library. Highlights high latency (>5ms) with red reference line.
+ *
+ * Features:
+ * - 60-second rolling window (1 data point per second)
+ * - Automatic Y-axis scaling
+ * - Red reference line at 5ms threshold
+ * - Responsive container (fills parent width)
+ * - Hover tooltips showing exact values
+ * - X-axis shows relative time (0s to 60s)
+ *
+ * @example
+ * ```tsx
+ * // Component reads from dashboardStore automatically
+ * <MetricsChart />
+ * ```
  */
 
 import { useEffect, useState } from 'react';
@@ -48,7 +62,12 @@ const MAX_DATA_POINTS = 60;
 const LATENCY_THRESHOLD_MS = 5;
 
 /**
- * Metrics chart component with 60-second rolling window
+ * MetricsChart component displaying real-time latency metrics
+ *
+ * Subscribes to dashboard metrics store and visualizes latency data
+ * in a line chart with automatic rolling window management.
+ *
+ * @returns Rendered metrics chart component
  */
 export function MetricsChart() {
   const metrics = useDashboardStore((state) => state.metrics);

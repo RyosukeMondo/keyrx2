@@ -1,25 +1,79 @@
+/**
+ * DeviceList - Real-time display of connected input devices
+ *
+ * Fetches device list from REST API and maintains WebSocket connection
+ * for real-time updates. Displays device status and handles reconnection
+ * automatically on connection loss.
+ *
+ * @example
+ * ```tsx
+ * // Default URLs
+ * <DeviceList />
+ *
+ * // Custom endpoints
+ * <DeviceList
+ *   wsUrl="ws://localhost:9867/ws"
+ *   apiBaseUrl="http://localhost:9867/api"
+ * />
+ * ```
+ */
+
 import { useEffect, useState, useCallback, useRef } from 'react'
 import './DeviceList.css'
 
+/**
+ * Device information from daemon
+ */
 interface Device {
+  /** Unique device identifier */
   id: string
+  /** Human-readable device name */
   name: string
+  /** System device path (e.g., /dev/input/event0) */
   path: string
+  /** Device serial number if available */
   serial: string | null
+  /** Whether the device is currently being monitored */
   active: boolean
 }
 
+/**
+ * API response structure for device list
+ */
 interface DevicesResponse {
+  /** Array of connected devices */
   devices: Device[]
 }
 
+/**
+ * Props for DeviceList component
+ */
 interface DeviceListProps {
+  /** WebSocket URL for real-time device updates (default: ws://localhost:9867/ws) */
   wsUrl?: string
+  /** REST API base URL for fetching device list (default: http://localhost:9867/api) */
   apiBaseUrl?: string
 }
 
+/**
+ * Loading state for async operations
+ */
 type LoadingState = 'loading' | 'success' | 'error'
 
+/**
+ * DeviceList component displays connected input devices with real-time updates
+ *
+ * Features:
+ * - Fetches initial device list from REST API
+ * - WebSocket connection for live device updates
+ * - Automatic reconnection on WebSocket disconnect (5 second interval)
+ * - Visual indication of active devices
+ * - Error handling with user-friendly messages
+ * - Loading states during API calls
+ *
+ * @param props - Component props
+ * @returns Rendered device list component
+ */
 export function DeviceList({
   wsUrl = 'ws://localhost:9867/ws',
   apiBaseUrl = 'http://localhost:9867/api'
