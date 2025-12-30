@@ -61,7 +61,7 @@
   - Test batching when >100 events/sec
   - _Prompt: Role: Rust Test Engineer | Task: Write unit tests for WebSocket broadcasting | Success: ✅ All tests pass, ✅ Batching verified_
 
-- [ ] 11. Write unit tests for useDaemonWebSocket hook
+- [x] 11. Write unit tests for useDaemonWebSocket hook
   - Test auto-reconnect on disconnect
   - Test message parsing
   - _Prompt: Role: React Test Engineer | Task: Write hook tests with mocked WebSocket | Success: ✅ Auto-reconnect tested, ✅ Parsing verified_
