@@ -1,4 +1,5 @@
 import { Profile } from './ProfilesPage';
+import { formatTimestampRelative } from '../utils/timeFormatting';
 import './ProfileCard.css';
 
 interface ProfileCardProps {
@@ -18,24 +19,6 @@ export function ProfileCard({
   onExport,
   onRename,
 }: ProfileCardProps) {
-  const formatTimestamp = (timestamp: number): string => {
-    const date = new Date(timestamp * 1000);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays}d ago`;
-    } else if (diffDays < 30) {
-      return `${Math.floor(diffDays / 7)}w ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
-  };
 
   return (
     <div className={`profile-card ${profile.is_active ? 'active' : ''}`}>
@@ -53,7 +36,7 @@ export function ProfileCard({
             <span className="profile-layers">{profile.layer_count} layers</span>
             <span className="profile-separator">•</span>
             <span className="profile-modified">
-              Modified {formatTimestamp(profile.modified_at)}
+              Modified {formatTimestampRelative(profile.modified_at)}
             </span>
           </div>
         </div>

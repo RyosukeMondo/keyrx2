@@ -24,20 +24,9 @@ import {
   getTextSnippetStats,
   TEXT_SNIPPET_TEMPLATES,
 } from '../utils/textSnippetTemplate';
+import { formatTimestampMs } from '../utils/timeFormatting';
 import type { EventSequence, SimKeyEvent } from '../wasm/core';
 import './MacroRecorderPage.css';
-
-/**
- * Formats a timestamp in microseconds to a human-readable string.
- */
-function formatTimestamp(timestampUs: number): string {
-  const ms = timestampUs / 1000;
-  if (ms < 1000) {
-    return `${ms.toFixed(2)}ms`;
-  }
-  const seconds = ms / 1000;
-  return `${seconds.toFixed(3)}s`;
-}
 
 /**
  * Formats a key code to a human-readable key name.
@@ -383,7 +372,7 @@ export function MacroRecorderPage() {
                   {editedEvents.map((event, index) => (
                     <tr key={index}>
                       <td>{index + 1}</td>
-                      <td>{formatTimestamp(event.relative_timestamp_us)}</td>
+                      <td>{formatTimestampMs(event.relative_timestamp_us)}</td>
                       <td className="key-code">{formatKeyCode(event.event.code)}</td>
                       <td className={event.event.value === 1 ? 'action-press' : 'action-release'}>
                         {event.event.value === 1 ? 'Press' : 'Release'}
@@ -477,7 +466,7 @@ export function MacroRecorderPage() {
                   {simulator.state.result.timeline.slice(0, 20).map((entry, index) => (
                     <div key={index} className="timeline-entry">
                       <span className="timeline-timestamp">
-                        {formatTimestamp(entry.timestamp_us)}
+                        {formatTimestampMs(entry.timestamp_us)}
                       </span>
                       {entry.input && (
                         <span className="timeline-input">

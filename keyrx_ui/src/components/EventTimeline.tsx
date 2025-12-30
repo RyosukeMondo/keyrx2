@@ -10,6 +10,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { MacroEvent } from '../hooks/useMacroRecorder';
+import { formatDuration } from '../utils/timeFormatting';
 import './EventTimeline.css';
 
 interface EventTimelineProps {
@@ -19,17 +20,6 @@ interface EventTimelineProps {
   onEventsChange: (events: MacroEvent[]) => void;
   /** Whether the timeline is editable */
   editable?: boolean;
-}
-
-/**
- * Formats a timestamp in microseconds to display string.
- */
-function formatTime(timestampUs: number): string {
-  const ms = timestampUs / 1000;
-  if (ms < 1000) {
-    return `${ms.toFixed(0)}ms`;
-  }
-  return `${(ms / 1000).toFixed(2)}s`;
 }
 
 /**
@@ -157,7 +147,7 @@ export function EventTimeline({
       <div className="timeline-header">
         <h3>Event Timeline</h3>
         <div className="timeline-info">
-          {events.length} events • {formatTime(maxTimestamp)} total
+          {events.length} events • {formatDuration(maxTimestamp)} total
         </div>
       </div>
 
@@ -177,7 +167,7 @@ export function EventTimeline({
             >
               <div className="marker-line" />
               <div className="marker-label">
-                {formatTime(maxTimestamp * fraction)}
+                {formatDuration(maxTimestamp * fraction)}
               </div>
             </div>
           ))}
@@ -268,7 +258,7 @@ export function EventTimeline({
                   className={`detail-value ${editable ? 'editable' : ''}`}
                   onClick={() => editable && setEditingTimestamp(selectedEventIndex)}
                 >
-                  {formatTime(events[selectedEventIndex].relative_timestamp_us)}
+                  {formatDuration(events[selectedEventIndex].relative_timestamp_us)}
                   {editable && <span className="edit-hint"> (click to edit)</span>}
                 </span>
               )}
