@@ -151,7 +151,7 @@
   - _Requirements: 2.4, 2.10, 2.11_
   - _Prompt: Role: Frontend Test Engineer specializing in page and integration testing | Task: Implement the task for spec technical-debt-remediation, first run spec-workflow-guide to get the workflow guide then implement the task: Create comprehensive unit tests for DashboardPage component at keyrx_ui/src/components/DashboardPage.test.tsx. Use testUtils. Test scenarios: page renders with all child components (EventTimeline, MetricsChart, StateIndicatorPanel, etc.), layout is correct, navigation works if present, integrates with WebSocket for real-time data, handles connection failures gracefully, updates child components when data changes, displays loading states during initialization, handles errors with user-friendly messages. Mock WebSocket connections and child components if needed for unit testing. Aim for ≥80% coverage. | Restrictions: Do not modify component; focus on integration between components; test page-level behavior; ensure tests are maintainable; use React Testing Library | Success: DashboardPage.test.tsx created with ≥8 test cases; all tests pass; coverage ≥80%; tests verify child component integration; handles async data correctly; no flaky tests; TypeScript compilation succeeds | After completing this task: (1) Mark this task as in-progress [-] in tasks.md before starting, (2) Implement the changes, (3) Use log-implementation tool to record detailed artifacts (test file created, test cases count), (4) Mark this task as complete [x] in tasks.md_
 
-- [ ] 17. Create unit tests for DeviceList component
+- [x] 17. Create unit tests for DeviceList component
   - File: keyrx_ui/src/components/DeviceList.test.tsx
   - Test device rendering, WebSocket connection, selection
   - Achieve ≥80% coverage
