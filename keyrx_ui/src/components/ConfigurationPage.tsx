@@ -11,6 +11,7 @@ import { ValidationStatusPanel } from './ValidationStatusPanel';
 import type { ValidationResult, ValidationError, ValidationWarning } from '@/types/validation';
 import type { ConfigStorage } from '@/services/ConfigStorage';
 import { LocalStorageImpl } from '@/services/LocalStorageImpl';
+import { useApi } from '../contexts/ApiContext';
 import './ConfigurationPage.css';
 
 /**
@@ -36,6 +37,7 @@ export function ConfigurationPage({
   initialConfig = '',
   storage = new LocalStorageImpl(),
 }: ConfigurationPageProps) {
+  const { apiBaseUrl } = useApi();
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -43,34 +45,62 @@ export function ConfigurationPage({
 
   /**
    * Handle save configuration.
-   * Uses ConfigStorage abstraction for persistence.
-   * TODO: Replace with actual API call to backend (see GitHub issue for API integration)
+   * Saves to backend API via PUT /api/config.
+   * Falls back to ConfigStorage for local persistence if API is unavailable.
    */
   const handleSaveConfig = useCallback(async (content: string) => {
     try {
       console.log('Saving configuration:', content);
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Save to backend via API
+      const response = await fetch(`${apiBaseUrl}/api/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
+      });
 
-      // Save using ConfigStorage abstraction
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: 'Failed to save configuration' } }));
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Also save to local storage as backup
       await storage.save('keyrx_config', content);
 
       setSaveStatus('success');
       setSaveErrorMessage('');
+
+      // Show validation warning if present
+      if (result.validation_error) {
+        setSaveErrorMessage(`Saved with validation warning: ${result.validation_error}`);
+      }
+
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
       console.error('Failed to save configuration:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setSaveStatus('error');
       setSaveErrorMessage(errorMessage);
+
+      // Try to save to local storage as fallback
+      try {
+        await storage.save('keyrx_config', content);
+        setSaveErrorMessage(`${errorMessage} (saved to local storage as backup)`);
+      } catch (storageError) {
+        console.error('Failed to save to local storage:', storageError);
+      }
+
       setTimeout(() => {
         setSaveStatus('idle');
         setSaveErrorMessage('');
       }, 5000);
       // Don't rethrow - error is handled via state
     }
-  }, [storage]);
+  }, [apiBaseUrl, storage]);
 
   /**
    * Handle validation result changes from the editor.

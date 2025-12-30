@@ -103,7 +103,7 @@ pub fn create_router() -> Router {
         .route("/profiles/:name", delete(delete_profile))
         .route("/profiles/:name/duplicate", post(duplicate_profile))
         // Configuration
-        .route("/config", get(get_config))
+        .route("/config", get(get_config).put(update_config))
         .route("/config/key-mappings", post(set_key_mapping))
         .route("/config/key-mappings/:id", delete(delete_key_mapping))
         // Layers
@@ -638,6 +638,45 @@ async fn delete_key_mapping(Path(id): Path<String>) -> Result<Json<Value>, ApiEr
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     Ok(Json(json!({ "success": true })))
+}
+
+/// PUT /api/config - Update configuration (save raw Rhai content)
+#[derive(Deserialize)]
+struct UpdateConfigRequest {
+    content: String,
+}
+
+async fn update_config(Json(payload): Json<UpdateConfigRequest>) -> Result<Json<Value>, ApiError> {
+    let config_dir = get_config_dir()?;
+    let active_profile = query_active_profile().unwrap_or_else(|| "default".to_string());
+
+    let rhai_path = config_dir
+        .join("profiles")
+        .join(format!("{}.rhai", active_profile));
+
+    // Write the configuration content to the file
+    std::fs::write(&rhai_path, payload.content.as_bytes())
+        .map_err(|e| ApiError::InternalError(format!("Failed to write config file: {}", e)))?;
+
+    // Validate the configuration by attempting to load it
+    // This ensures syntax errors are caught
+    match RhaiGenerator::load(&rhai_path) {
+        Ok(_) => Ok(Json(json!({
+            "success": true,
+            "message": "Configuration saved successfully",
+            "profile": active_profile,
+        }))),
+        Err(e) => {
+            // If validation fails, the file has been written but is invalid
+            // Return success=true but include validation error
+            Ok(Json(json!({
+                "success": true,
+                "message": "Configuration saved but has validation errors",
+                "profile": active_profile,
+                "validation_error": e.to_string(),
+            })))
+        }
+    }
 }
 
 // ============================================================================
