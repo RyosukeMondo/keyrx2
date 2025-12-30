@@ -7,6 +7,7 @@
 
 import { useDaemonWebSocket } from '../hooks/useDaemonWebSocket';
 import { useDashboardStore } from '../store/dashboardStore';
+import { StateIndicatorPanel } from './StateIndicatorPanel';
 import './DashboardPage.css';
 
 /**
@@ -77,55 +78,6 @@ export function DashboardPage() {
               <EventTimeline />
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Placeholder for StateIndicatorPanel component
- * Will be replaced with actual implementation in task 7
- */
-function StateIndicatorPanel() {
-  const currentState = useDashboardStore((state) => state.currentState);
-
-  return (
-    <div className="state-indicator-placeholder">
-      <div className="state-section">
-        <h3>Modifiers</h3>
-        <div className="badge-list">
-          {currentState.modifiers.length === 0 ? (
-            <span className="empty-state">No active modifiers</span>
-          ) : (
-            currentState.modifiers.map((mod) => (
-              <span key={mod} className="badge badge-modifier">
-                {mod}
-              </span>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="state-section">
-        <h3>Locks</h3>
-        <div className="badge-list">
-          {currentState.locks.length === 0 ? (
-            <span className="empty-state">No active locks</span>
-          ) : (
-            currentState.locks.map((lock) => (
-              <span key={lock} className="badge badge-lock">
-                {lock}
-              </span>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="state-section">
-        <h3>Layer</h3>
-        <div className="badge-list">
-          <span className="badge badge-layer">{currentState.layer}</span>
         </div>
       </div>
     </div>
