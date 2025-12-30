@@ -6,8 +6,9 @@ import { ConfigurationPage } from './components/ConfigurationPage'
 import { MacroRecorderPage } from './components/MacroRecorderPage'
 import { ProfilesPage } from './components/ProfilesPage'
 import { VisualBuilderPage } from './components/VisualBuilderPage'
+import { DashboardPage } from './components/DashboardPage'
 
-type ActiveView = 'devices' | 'simulator' | 'config' | 'macros' | 'profiles' | 'visual'
+type ActiveView = 'devices' | 'simulator' | 'config' | 'macros' | 'profiles' | 'visual' | 'dashboard'
 
 function App() {
   const [activeView, setActiveView] = useState<ActiveView>('devices')
@@ -54,6 +55,12 @@ function App() {
           >
             Visual Builder
           </button>
+          <button
+            className={activeView === 'dashboard' ? 'nav-button active' : 'nav-button'}
+            onClick={() => setActiveView('dashboard')}
+          >
+            Dashboard
+          </button>
         </nav>
       </header>
       <main>
@@ -63,6 +70,7 @@ function App() {
         {activeView === 'macros' && <MacroRecorderPage />}
         {activeView === 'profiles' && <ProfilesPage />}
         {activeView === 'visual' && <VisualBuilderPage />}
+        {activeView === 'dashboard' && <DashboardPage />}
       </main>
     </div>
   )
