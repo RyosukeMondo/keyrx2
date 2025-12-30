@@ -139,7 +139,7 @@ export function MetricsChart() {
               borderRadius: '4px',
               padding: '8px',
             }}
-            formatter={(value: number) => \`\${value.toFixed(2)}ms\`}
+            formatter={(value: number) => `${value.toFixed(2)}ms`}
           />
           <Legend />
 
