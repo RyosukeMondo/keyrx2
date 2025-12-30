@@ -198,7 +198,7 @@
 
 ## Phase 5: Error Handling and Logging
 
-- [ ] 22. Add structured logging to silent catch blocks in DeviceList
+- [x] 22. Add structured logging to silent catch blocks in DeviceList
   - File: keyrx_ui/src/components/DeviceList.tsx
   - Add console.debug or structured logging to catch blocks on lines 77 and 89
   - Purpose: Improve observability of ignored errors
