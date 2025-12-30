@@ -169,7 +169,7 @@
   - _Requirements: 2.6, 2.10, 2.11_
   - _Prompt: Role: Frontend Test Engineer specializing in timeline and event visualization | Task: Implement the task for spec technical-debt-remediation, first run spec-workflow-guide to get the workflow guide then implement the task: Create comprehensive unit tests for EventTimeline component at keyrx_ui/src/components/EventTimeline.test.tsx. Use testUtils. Test scenarios: renders event list chronologically, displays timestamps using formatTime utility (verify integration with timeFormatting module if refactored), displays event metadata (type, key codes, actions), handles empty event list, auto-scrolls to latest events, filtering by event type works correctly, handles large datasets efficiently, real-time event updates via WebSocket if applicable, handles missing or malformed event data gracefully. Mock event data. Aim for ≥80% coverage. | Restrictions: Do not modify component; test user-visible behavior; ensure async handling is tested; avoid flaky tests; use React Testing Library | Success: EventTimeline.test.tsx created with ≥10 test cases; all tests pass; coverage ≥80%; timestamp formatting tested; filtering tested; no flaky tests; TypeScript compilation succeeds | After completing this task: (1) Mark this task as in-progress [-] in tasks.md before starting, (2) Implement the changes, (3) Use log-implementation tool to record detailed artifacts (test file created, test cases count), (4) Mark this task as complete [x] in tasks.md_
 
-- [ ] 19. Create unit tests for MetricsChart component
+- [x] 19. Create unit tests for MetricsChart component
   - File: keyrx_ui/src/components/MetricsChart.test.tsx
   - Test chart rendering, data updates, interaction
   - Achieve ≥80% coverage
