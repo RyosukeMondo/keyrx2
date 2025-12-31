@@ -97,6 +97,8 @@ pub(crate) fn convert_archived_condition(archived: &ArchivedCondition) -> Condit
         ArchivedCondition::LockActive(id) => Condition::LockActive(*id),
         ArchivedCondition::DeviceMatches(id) => {
             use rkyv::Deserialize;
+            // SAFETY: rkyv::Infallible means deserialization cannot fail
+            // The unwrap here is safe because the deserializer is infallible by design
             Condition::DeviceMatches(Deserialize::deserialize(id, &mut rkyv::Infallible).unwrap())
         }
         ArchivedCondition::AllActive(items) => {

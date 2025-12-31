@@ -272,6 +272,11 @@ layer("lower", #{
     /// Activate a profile with hot-reload.
     pub fn activate(&mut self, name: &str) -> Result<ActivationResult, ProfileError> {
         // Acquire activation lock to serialize concurrent activations
+        // SAFETY: This unwrap is acceptable because:
+        // 1. activation_lock is only used within ProfileManager methods
+        // 2. No panic should occur while holding this lock
+        // 3. Mutex poisoning would indicate a critical bug in profile activation
+        // TODO(unwrap-remediation): Consider using recover_lock_with_context for resilience
         let _lock = self.activation_lock.lock().unwrap();
 
         let start = Instant::now();
@@ -332,6 +337,11 @@ layer("lower", #{
         };
 
         // Atomic swap
+        // SAFETY: RwLock write unwrap is acceptable because:
+        // 1. This is a simple state update operation
+        // 2. No panics should occur while holding the write lock
+        // 3. activation_lock prevents concurrent activations
+        // TODO(unwrap-remediation): Use recover_rwlock_write for better resilience
         let reload_start = Instant::now();
         *self.active_profile.write().unwrap() = Some(name.to_string());
         let reload_time = reload_start.elapsed().as_millis() as u64;

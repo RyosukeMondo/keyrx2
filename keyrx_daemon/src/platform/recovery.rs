@@ -25,7 +25,7 @@
 //! ```
 
 use crate::platform::common::PlatformError;
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// Attempts to acquire a mutex lock, recovering from poisoned state.
 ///
@@ -86,6 +86,60 @@ pub fn recover_lock_with_context<'a, T>(
         .lock()
         .or_else(|poison_error: PoisonError<MutexGuard<T>>| {
             log::error!("Mutex poisoned in {}: recovering", context);
+            Ok(poison_error.into_inner())
+        })
+}
+
+/// Attempts to acquire a read lock on an RwLock, recovering from poisoned state.
+///
+/// # Examples
+///
+/// ```
+/// use std::sync::RwLock;
+/// use keyrx_daemon::platform::recovery::recover_rwlock_read;
+///
+/// let rwlock = RwLock::new(vec![1, 2, 3]);
+/// let guard = recover_rwlock_read(&rwlock).unwrap();
+/// assert_eq!(*guard, vec![1, 2, 3]);
+/// ```
+///
+/// # Errors
+///
+/// Returns `PlatformError::Poisoned` if the RwLock cannot be accessed.
+pub fn recover_rwlock_read<'a, T>(
+    rwlock: &'a RwLock<T>,
+) -> Result<RwLockReadGuard<'a, T>, PlatformError> {
+    rwlock
+        .read()
+        .or_else(|poison_error: PoisonError<RwLockReadGuard<T>>| {
+            log::warn!("RwLock poisoned (read), attempting recovery");
+            Ok(poison_error.into_inner())
+        })
+}
+
+/// Attempts to acquire a write lock on an RwLock, recovering from poisoned state.
+///
+/// # Examples
+///
+/// ```
+/// use std::sync::RwLock;
+/// use keyrx_daemon::platform::recovery::recover_rwlock_write;
+///
+/// let rwlock = RwLock::new(String::from("data"));
+/// let mut guard = recover_rwlock_write(&rwlock).unwrap();
+/// *guard = String::from("new data");
+/// ```
+///
+/// # Errors
+///
+/// Returns `PlatformError::Poisoned` if the RwLock cannot be accessed.
+pub fn recover_rwlock_write<'a, T>(
+    rwlock: &'a RwLock<T>,
+) -> Result<RwLockWriteGuard<'a, T>, PlatformError> {
+    rwlock
+        .write()
+        .or_else(|poison_error: PoisonError<RwLockWriteGuard<T>>| {
+            log::warn!("RwLock poisoned (write), attempting recovery");
             Ok(poison_error.into_inner())
         })
 }
