@@ -418,6 +418,16 @@ mod tests {
     }
 
     #[test]
+    fn test_deserialize_rejects_zero_length_file() {
+        let empty_bytes = &[];
+
+        let result = deserialize(empty_bytes);
+        assert!(result.is_err());
+        // Should fail with RkyvError due to file being too small
+        assert!(matches!(result, Err(DeserializeError::RkyvError(_))));
+    }
+
+    #[test]
     fn test_header_constants() {
         assert_eq!(KRX_MAGIC, [0x4B, 0x52, 0x58, 0x0A]);
         assert_eq!(KRX_VERSION, 1);
