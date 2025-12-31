@@ -797,7 +797,6 @@ mod tests {
             // TODO: Update to create platform and pass to Daemon::new(platform, path)
         }
 
-        #[cfg(disabled)] // Temporarily disabled - needs Platform refactoring
         #[test]
         #[ignore = "Requires Platform refactoring"]
         fn test_daemon_reload_preserves_device_count() {
@@ -851,7 +850,6 @@ mod tests {
             );
         }
 
-        #[cfg(disabled)] // Temporarily disabled - needs Platform refactoring
         #[test]
         #[ignore = "Requires Platform refactoring"]
         fn test_daemon_reload_missing_file() {
@@ -915,7 +913,6 @@ mod tests {
             );
         }
 
-        #[cfg(disabled)] // Temporarily disabled - needs Platform refactoring
         #[test]
         #[ignore = "Requires Platform refactoring"]
         fn test_daemon_shutdown_releases_devices() {
@@ -975,7 +972,6 @@ mod tests {
             println!("Shutdown completed successfully - all resources released");
         }
 
-        #[cfg(disabled)] // Temporarily disabled - needs Platform refactoring
         #[test]
         #[ignore = "Requires Platform refactoring"]
         fn test_daemon_shutdown_idempotent() {
@@ -1027,7 +1023,6 @@ mod tests {
             println!("Multiple shutdown calls handled gracefully");
         }
 
-        #[cfg(disabled)] // Temporarily disabled - needs Platform refactoring
         #[test]
         #[ignore = "Requires Platform refactoring"]
         fn test_daemon_drop_calls_shutdown() {
