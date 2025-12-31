@@ -317,7 +317,14 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
 
     // Start web server in background (optional)
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(runtime) => runtime,
+            Err(e) => {
+                log::error!("Failed to create tokio runtime for web server: {}", e);
+                log::error!("Web server will not start. Ensure your system has sufficient resources (threads, memory)");
+                return;
+            }
+        };
         rt.block_on(async {
             let addr: std::net::SocketAddr = ([127, 0, 0, 1], 9867).into();
             log::info!("Starting web server on http://{}", addr);
