@@ -85,7 +85,7 @@ impl Default for WindowsPlatform {
 }
 
 /// Convert Windows-specific DeviceInfo to common platform DeviceInfo.
-fn convert_device_info(device: &device_map::DeviceInfo) -> CommonDeviceInfo {
+pub(crate) fn convert_device_info(device: &device_map::DeviceInfo) -> CommonDeviceInfo {
     // Parse vendor/product IDs from the path if possible
     // Windows device path format: \\?\HID#VID_XXXX&PID_YYYY#...
     let (vendor_id, product_id) = parse_vid_pid(&device.path);
@@ -100,13 +100,14 @@ fn convert_device_info(device: &device_map::DeviceInfo) -> CommonDeviceInfo {
 }
 
 /// Parse VID and PID from Windows device path.
-fn parse_vid_pid(path: &str) -> (u16, u16) {
+pub(crate) fn parse_vid_pid(path: &str) -> (u16, u16) {
     let mut vendor_id = 0;
     let mut product_id = 0;
 
     // Extract VID_XXXX and PID_YYYY from path like:
     // \\?\HID#VID_046D&PID_C52B&MI_00#...
-    for part in path.split('&') {
+    // Split by both # and & to handle all path segments
+    for part in path.split(&['#', '&']) {
         if let Some(vid) = part.strip_prefix("VID_") {
             if let Ok(vid_val) = u16::from_str_radix(&vid[..4.min(vid.len())], 16) {
                 vendor_id = vid_val;

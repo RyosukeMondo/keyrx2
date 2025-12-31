@@ -360,8 +360,16 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
         config_path.display()
     );
 
+    // Create platform instance
+    let platform = keyrx_daemon::platform::create_platform().map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to create platform: {}", e),
+        )
+    })?;
+
     // Create the daemon
-    let mut daemon = Daemon::new(config_path).map_err(daemon_error_to_exit)?;
+    let mut daemon = Daemon::new(platform, config_path).map_err(daemon_error_to_exit)?;
 
     // Create the tray icon
     let tray = TrayIconController::new()
@@ -393,15 +401,10 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                 });
             }
 
-            // WIN-BUG #4: Wrap event processing in catch_unwind.
-            let process_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                daemon.process_pending_events()
-            }));
-
-            if let Ok(Err(e)) = process_result {
-                log::error!("Error processing events: {}", e);
-            } else if process_result.is_err() {
-                log::error!("Panic occurred during event processing");
+            // Check if daemon is still running
+            if !daemon.is_running() {
+                log::info!("Daemon stopped");
+                return Ok(());
             }
 
             // Poll tray events
@@ -410,6 +413,12 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                     TrayControlEvent::Reload => {
                         log::info!("Reloading config...");
                         let _ = daemon.reload();
+                    }
+                    TrayControlEvent::OpenWebUI => {
+                        log::info!("Opening web UI...");
+                        if let Err(e) = open_browser("http://127.0.0.1:9867") {
+                            log::error!("Failed to open web UI: {}", e);
+                        }
                     }
                     TrayControlEvent::Exit => {
                         log::info!("Exiting...");

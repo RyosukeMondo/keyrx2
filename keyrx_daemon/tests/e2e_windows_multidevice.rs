@@ -14,6 +14,7 @@
 use keyrx_core::config::KeyCode;
 use keyrx_daemon::platform::windows::device_map::DeviceMap;
 use keyrx_daemon::platform::windows::rawinput::RawInputManager;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 // B key scancode
@@ -44,7 +45,10 @@ fn test_windows_multidevice_discrimination() {
 
     // 2. Setup RawInputManager
     let (tx, rx) = crossbeam_channel::unbounded();
-    let manager = RawInputManager::new(device_map, tx).expect("Failed to create RawInputManager");
+    let bridge_context = Arc::new(Mutex::new(None));
+    let bridge_hook = Arc::new(Mutex::new(None));
+    let manager = RawInputManager::new(device_map, tx, bridge_context, bridge_hook)
+        .expect("Failed to create RawInputManager");
 
     // 3. Define Test Scenarios
 

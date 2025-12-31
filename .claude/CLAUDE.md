@@ -1,5 +1,41 @@
 # AI Agent Development Guide
 
+## Windows Testing on Linux (Vagrant VM)
+
+**Testing Windows code on Linux is fully supported via Vagrant.**
+
+### Quick Start
+
+```bash
+# From project root - automated testing
+./scripts/windows_test_vm.sh
+
+# Manual control
+cd vagrant/windows
+vagrant up              # Start Windows VM (first time: ~20 min)
+vagrant winrm -c 'cd C:\vagrant_project; cargo test -p keyrx_daemon --features windows'
+vagrant halt            # Stop VM
+
+# Restore to clean state anytime
+vagrant snapshot restore provisioned
+```
+
+### VM Specifications
+
+- **OS**: Windows 10 Enterprise with Visual Studio Build Tools
+- **Tools**: Rust 1.92.0, Git, MSVC compiler (link.exe)
+- **RAM**: 16GB, 4 CPU cores
+- **Access**: SSH, RDP (localhost:13389), GUI (virt-manager)
+- **Sync**: Project root → `C:\vagrant_project` (use `vagrant rsync` after changes)
+
+### Documentation
+
+- Quick guide: `vagrant/windows/README.md`
+- Full guide: `docs/development/windows-vm-setup.md`
+- Helper script: `scripts/windows_test_vm.sh`
+
+**Important**: VM snapshot "provisioned" saves ~15 minutes of setup time. Always restore from snapshot after testing.
+
 ## AI-Agent Quick Start
 
 ### 1. Verify Environment
@@ -613,6 +649,53 @@ cargo test -- --nocapture
 scripts/test.sh --bench
 ```
 
+### How to Test Windows Code on Linux
+
+**Use the Vagrant Windows VM for testing Windows-specific code:**
+
+```bash
+# Automated - runs tests and returns results
+./scripts/windows_test_vm.sh
+
+# Manual - full control over the VM
+cd vagrant/windows
+vagrant up                    # Start VM (first time: ~20 min with provisioning)
+vagrant winrm -c 'cd C:\vagrant_project; cargo test -p keyrx_daemon --features windows'
+vagrant halt                  # Stop VM
+
+# After making changes on Linux
+vagrant rsync                 # Sync files to Windows VM
+vagrant winrm -c 'cd C:\vagrant_project; cargo test -p keyrx_daemon --features windows'
+
+# Restore to clean state
+vagrant snapshot restore provisioned
+
+# Check VM status
+vagrant status
+```
+
+**Important notes:**
+- The VM has all tools pre-installed: Rust, MSVC compiler, Git
+- Project root syncs to `C:\vagrant_project` in the VM
+- Always use `vagrant winrm` (not `vagrant ssh`) for Windows VMs
+- Snapshot "provisioned" saves 15+ minutes of setup time
+- See `vagrant/windows/README.md` for detailed documentation
+
+**Common Windows testing commands:**
+```bash
+# Build Windows daemon
+vagrant winrm -c 'cd C:\vagrant_project; cargo build -p keyrx_daemon --features windows'
+
+# Run specific Windows test
+vagrant winrm -c 'cd C:\vagrant_project; cargo test -p keyrx_daemon --features windows test_name'
+
+# Check Rust installation
+vagrant winrm -c 'rustc --version; cargo --version'
+
+# Clean build
+vagrant winrm -c 'cd C:\vagrant_project; cargo clean; cargo build --features windows'
+```
+
 ### How to Add a Dependency
 
 **Add to Cargo.toml:**
@@ -803,6 +886,91 @@ scripts/build.sh
 # View log file
 cat scripts/logs/build_*.log | tail -50
 ```
+
+### Windows VM Errors
+
+**Error: "vagrant: command not found"**
+- **Cause**: Vagrant not installed
+- **Fix**: `sudo apt install vagrant`
+
+**Error: "No provider available"**
+- **Cause**: vagrant-libvirt plugin not installed
+- **Fix**: `vagrant plugin install vagrant-libvirt`
+
+**Error: "Permission denied" when accessing libvirt**
+- **Cause**: User not in libvirt group
+- **Fix**:
+  ```bash
+  sudo usermod -aG libvirt $USER
+  # Log out and log back in
+  groups | grep libvirt  # Verify
+  ```
+
+**Error: "VM won't start" or hangs**
+- **Cause**: Multiple possible causes
+- **Fix**:
+  ```bash
+  # Check status
+  vagrant status
+  virsh list --all
+
+  # Check libvirt daemon
+  systemctl status libvirtd
+
+  # View detailed logs
+  cd vagrant/windows
+  vagrant up --debug
+  ```
+
+**Error: "Build fails with 'link.exe not found'"**
+- **Cause**: Visual Studio Build Tools not installed in VM
+- **Fix**: Re-provision the VM (this installs MSVC):
+  ```bash
+  cd vagrant/windows
+  vagrant provision --provision-with install-tools
+  ```
+
+**Error: "Files not syncing to VM"**
+- **Cause**: Rsync not run after changes
+- **Fix**:
+  ```bash
+  cd vagrant/windows
+  vagrant rsync
+
+  # Verify sync
+  vagrant winrm -c 'dir C:\vagrant_project\Cargo.toml'
+  ```
+
+**Error: "Tests pass on Linux but fail on Windows"**
+- **Cause**: Platform-specific behavior or test assumptions
+- **Fix**:
+  1. Check if test uses platform-specific features
+  2. Use `#[cfg(target_os = "windows")]` for Windows-only tests
+  3. Verify file paths use correct separators (`\` on Windows)
+  4. Check for timing-dependent tests that may fail on slower VM
+
+**VM is slow or unresponsive**
+- **Cause**: Insufficient resources
+- **Fix**: Edit `vagrant/windows/Vagrantfile`:
+  ```ruby
+  libvirt.cpus = 8        # Increase CPUs
+  libvirt.memory = 32768  # Increase RAM to 32GB
+  ```
+  Then: `vagrant reload`
+
+**Want to start fresh**
+- **Fix**: Destroy and recreate VM:
+  ```bash
+  cd vagrant/windows
+  vagrant destroy
+  vagrant up
+  # Then restore snapshot:
+  vagrant snapshot restore provisioned
+  ```
+
+**For detailed Windows VM troubleshooting**, see:
+- `vagrant/windows/README.md`
+- `docs/development/windows-vm-setup.md`
 
 ## Advanced Usage
 

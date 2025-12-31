@@ -439,6 +439,9 @@ pub enum ProcessResult {
 ///                 TrayControlEvent::Reload => {
 ///                     println!("Reloading configuration...");
 ///                 }
+///                 TrayControlEvent::OpenWebUI => {
+///                     println!("Opening web UI...");
+///                 }
 ///                 TrayControlEvent::Exit => {
 ///                     println!("Shutting down...");
 ///                     tray.shutdown()?;

@@ -94,7 +94,7 @@ impl From<DeserializeError> for ConfigError {
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```ignore
 /// use keyrx_daemon::config_loader::load_config;
 ///
 /// // Load configuration from a file

@@ -39,6 +39,9 @@ use crate::platform::{SystemTray, TrayControlEvent, TrayError};
 ///             TrayControlEvent::Reload => {
 ///                 println!("Reloading configuration...");
 ///             }
+///             TrayControlEvent::OpenWebUI => {
+///                 println!("Opening web UI...");
+///             }
 ///             TrayControlEvent::Exit => {
 ///                 println!("Shutting down...");
 ///                 tray.shutdown()?;

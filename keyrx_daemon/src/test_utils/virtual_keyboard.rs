@@ -83,6 +83,9 @@ pub struct VirtualKeyboard {
     device: Option<UInputDevice>,
     /// Full name of the virtual device (includes unique suffix).
     name: String,
+    /// Track destruction state on Windows (no device handle to check)
+    #[cfg(target_os = "windows")]
+    destroyed: bool,
 }
 
 impl VirtualKeyboard {
@@ -161,7 +164,10 @@ impl VirtualKeyboard {
         {
             // On Windows, we don't need to create a device node,
             // we'll just use SendInput with a special marker.
-            Ok(Self { name: unique_name })
+            Ok(Self {
+                name: unique_name,
+                destroyed: false,
+            })
         }
     }
 
@@ -192,7 +198,7 @@ impl VirtualKeyboard {
         }
         #[cfg(target_os = "windows")]
         {
-            false
+            self.destroyed
         }
     }
 
@@ -214,6 +220,15 @@ impl VirtualKeyboard {
                     "device already destroyed",
                 ));
             }
+        }
+        #[cfg(target_os = "windows")]
+        {
+            if self.destroyed {
+                return Err(VirtualDeviceError::creation_failed(
+                    "device already destroyed",
+                ));
+            }
+            self.destroyed = true;
         }
         Ok(())
     }
@@ -272,6 +287,12 @@ impl VirtualKeyboard {
 
         #[cfg(target_os = "windows")]
         {
+            if self.destroyed {
+                return Err(VirtualDeviceError::creation_failed(
+                    "Cannot inject to destroyed device",
+                ));
+            }
+
             let keycode = event.keycode();
             let is_release = event.is_release();
 

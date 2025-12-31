@@ -1,13 +1,16 @@
 use crossbeam_channel::unbounded;
 use keyrx_daemon::platform::windows::device_map::DeviceMap;
 use keyrx_daemon::platform::windows::rawinput::RawInputManager;
+use std::sync::{Arc, Mutex};
 use windows_sys::Win32::Foundation::HANDLE;
 
 #[test]
 fn test_device_removal_during_events() {
     let map = DeviceMap::new();
     let (tx, _rx) = unbounded();
-    let manager = RawInputManager::new(map.clone(), tx).unwrap();
+    let bridge_context = Arc::new(Mutex::new(None));
+    let bridge_hook = Arc::new(Mutex::new(None));
+    let manager = RawInputManager::new(map.clone(), tx, bridge_context, bridge_hook).unwrap();
 
     let h_device = 0x1234 as HANDLE;
     map.add_synthetic_device(

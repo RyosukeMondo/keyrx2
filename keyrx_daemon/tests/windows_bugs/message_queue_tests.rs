@@ -1,12 +1,15 @@
 use crossbeam_channel::unbounded;
 use keyrx_daemon::platform::windows::device_map::DeviceMap;
 use keyrx_daemon::platform::windows::rawinput::RawInputManager;
+use std::sync::{Arc, Mutex};
 
 #[test]
 fn test_message_queue_flood() {
     let device_map = DeviceMap::new();
     let (tx, _rx) = unbounded();
-    let manager = RawInputManager::new(device_map, tx).unwrap();
+    let bridge_context = Arc::new(Mutex::new(None));
+    let bridge_hook = Arc::new(Mutex::new(None));
+    let manager = RawInputManager::new(device_map, tx, bridge_context, bridge_hook).unwrap();
 
     // We want to test if GetRawInputData handles large buffer requests safely.
     // While we can't easily spoof GetRawInputData's OS-internal state to return

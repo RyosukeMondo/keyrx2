@@ -1,6 +1,7 @@
 use crossbeam_channel::unbounded;
 use keyrx_daemon::platform::windows::device_map::DeviceMap;
 use keyrx_daemon::platform::windows::rawinput::RawInputManager;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -12,7 +13,11 @@ fn test_rawinput_manager_drop_safety() {
     // We want to trigger high-frequency messages or background processing
     // and then drop the manager.
     for _ in 0..10 {
-        let manager = RawInputManager::new(device_map.clone(), tx.clone()).unwrap();
+        let bridge_context = Arc::new(Mutex::new(None));
+        let bridge_hook = Arc::new(Mutex::new(None));
+        let manager =
+            RawInputManager::new(device_map.clone(), tx.clone(), bridge_context, bridge_hook)
+                .unwrap();
 
         // Simulate some activity/messages
         manager.simulate_raw_input(1, 0x1E, 0); // 'A' press

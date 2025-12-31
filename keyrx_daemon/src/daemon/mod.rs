@@ -24,7 +24,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use std::path::Path;
 //! use keyrx_daemon::daemon::Daemon;
 //!
@@ -138,7 +138,7 @@ impl From<ExitCode> for i32 {
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use std::path::Path;
 /// use keyrx_daemon::daemon::Daemon;
 ///

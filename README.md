@@ -168,6 +168,7 @@ Then open http://localhost:5173 and load your `.krx` file.
 - **[DSL Manual](docs/user-guide/dsl-manual.md)** - Complete reference for the KeyRx DSL with syntax, functions, and examples
 - **[Linux Setup Guide](docs/user-guide/linux-setup.md)** - Linux installation, permissions, and systemd integration
 - **[Windows Setup Guide](docs/user-guide/windows-setup.md)** - Windows installation, tray icon usage, and troubleshooting
+- **[Windows VM Setup (Vagrant)](docs/development/windows-vm-setup.md)** - Setting up a Windows development environment on Linux
 - **[Examples](examples/)** - Six example configurations from basic to advanced
 - **[Compiler README](keyrx_compiler/README.md)** - CLI commands and usage
 - **[Core README](keyrx_core/README.md)** - Architecture and library API

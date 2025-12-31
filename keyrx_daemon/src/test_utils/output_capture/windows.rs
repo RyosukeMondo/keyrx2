@@ -15,11 +15,11 @@ use crate::test_utils::VirtualDeviceError;
 /// Marker for events injected by the daemon
 const DAEMON_OUTPUT_MARKER: usize = 0x4441454D; // "DAEM"
 
-/// Thread-local sender for Windows keyboard hook events.
-///
-/// Using thread-local storage instead of a global static allows multiple
-/// OutputCapture instances to coexist safely, each in its own thread.
-/// This prevents conflicts when running tests concurrently.
+// Thread-local sender for Windows keyboard hook events.
+//
+// Using thread-local storage instead of a global static allows multiple
+// OutputCapture instances to coexist safely, each in its own thread.
+// This prevents conflicts when running tests concurrently.
 thread_local! {
     static SENDER_TLS: std::cell::RefCell<Option<crossbeam_channel::Sender<KeyEvent>>> =
         std::cell::RefCell::new(None);

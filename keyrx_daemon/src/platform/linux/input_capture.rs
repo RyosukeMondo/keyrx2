@@ -40,6 +40,7 @@ fn systemtime_to_micros(time: SystemTime) -> u64 {
 /// ```no_run
 /// use std::path::Path;
 /// use keyrx_daemon::platform::linux::EvdevInput;
+/// use keyrx_daemon::platform::InputDevice;
 ///
 /// // Open keyboard device
 /// let mut keyboard = EvdevInput::open(Path::new("/dev/input/event0"))?;

@@ -33,3 +33,6 @@ logs/
 
 # Coverage reports (regenerated)
 coverage/
+
+# Vagrant
+.vagrant/

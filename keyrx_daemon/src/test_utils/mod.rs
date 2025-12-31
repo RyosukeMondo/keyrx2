@@ -170,9 +170,10 @@ pub fn can_access_uinput() -> bool {
 
     #[cfg(target_os = "windows")]
     {
-        // On Windows, we assume SendInput is always available.
-        // In the future, we could check for UIPI or other restrictions.
-        true
+        // On Windows, SendInput requires an active desktop session
+        // In headless/VM/CI environments, it will fail
+        // Only enable if KEYRX_TEST_INTERACTIVE environment variable is set
+        std::env::var("KEYRX_TEST_INTERACTIVE").is_ok()
     }
 }
 
