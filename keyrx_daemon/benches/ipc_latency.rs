@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use keyrx_daemon::ipc::{DaemonIpc, IpcRequest, IpcResponse, UnixSocketIpc};
+use keyrx_daemon::ipc::unix_socket::UnixSocketIpc;
+use keyrx_daemon::ipc::{DaemonIpc, IpcRequest, IpcResponse};
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tempfile::TempDir;
@@ -47,8 +47,7 @@ fn start_mock_ipc_server(socket_path: PathBuf) -> thread::JoinHandle<()> {
                         device_count: 2,
                     },
                     IpcRequest::GetState => IpcResponse::State {
-                        modifiers: vec![false; 255],
-                        active_layers: vec![0],
+                        state: vec![false; 255],
                     },
                     IpcRequest::GetLatencyMetrics => IpcResponse::Latency {
                         min_us: 50,
@@ -56,7 +55,6 @@ fn start_mock_ipc_server(socket_path: PathBuf) -> thread::JoinHandle<()> {
                         max_us: 500,
                         p95_us: 200,
                         p99_us: 300,
-                        sample_count: 10000,
                     },
                     IpcRequest::GetEventsTail { count: _ } => {
                         IpcResponse::Events { events: vec![] }

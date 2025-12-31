@@ -30,7 +30,7 @@ fn benchmark_device_registry_save(c: &mut Criterion) {
             // Benchmark the atomic write operation
             let result = registry.save();
             assert!(result.is_ok(), "Registry save failed");
-            black_box(result);
+            let _ = black_box(result);
         });
     });
 }
@@ -69,7 +69,7 @@ fn benchmark_device_registry_load(c: &mut Criterion) {
             // Benchmark loading from disk
             let loaded = DeviceRegistry::load(black_box(&registry_path));
             assert!(loaded.is_ok(), "Registry load failed");
-            black_box(loaded);
+            let _ = black_box(loaded);
         });
     });
 }
@@ -158,7 +158,7 @@ fn benchmark_device_registry_rename(c: &mut Criterion) {
             let new_name = format!("Keyboard {}", counter);
             let result = registry.rename(black_box("device_test"), black_box(&new_name));
             assert!(result.is_ok(), "Rename failed");
-            black_box(result);
+            let _ = black_box(result);
             counter += 1;
         });
     });

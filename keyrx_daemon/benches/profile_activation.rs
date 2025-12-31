@@ -1,6 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use keyrx_daemon::config::profile_manager::{ProfileManager, ProfileTemplate};
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Benchmark profile activation (hot-reload) excluding compilation time.
@@ -39,7 +38,7 @@ fn benchmark_profile_activation(c: &mut Criterion) {
             if let Ok(activation_result) = result {
                 // The reload_time_ms is what we care about (<100ms target)
                 // Note: This doesn't include compilation since .krx is cached
-                black_box(activation_result);
+                let _ = black_box(activation_result);
             }
         });
     });
@@ -68,7 +67,7 @@ fn benchmark_profile_creation(c: &mut Criterion) {
                     manager.create(black_box("test_profile"), black_box(ProfileTemplate::Blank));
 
                 assert!(result.is_ok(), "Profile creation failed");
-                black_box(result);
+                let _ = black_box(result);
             },
             criterion::BatchSize::SmallInput,
         );
