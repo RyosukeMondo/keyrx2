@@ -43,6 +43,7 @@ use keyrx_core::runtime::event::KeyEvent;
 use thiserror::Error;
 
 pub mod common;
+pub mod recovery;
 pub use common::{DeviceInfo, PlatformError, Result as PlatformResult};
 
 #[cfg(target_os = "linux")]

@@ -93,6 +93,14 @@ pub enum PlatformError {
     #[error("Platform initialization failed: {0}")]
     InitializationFailed(String),
 
+    /// Mutex was poisoned (another thread panicked while holding the lock).
+    ///
+    /// This error indicates that a mutex protecting shared state has been
+    /// poisoned. The recovery utilities in [`crate::platform::recovery`]
+    /// can handle this gracefully by recovering the inner guard.
+    #[error("Mutex poisoned: {0}")]
+    Poisoned(String),
+
     /// Input/output operation failed.
     ///
     /// This error wraps underlying I/O errors from device operations.
