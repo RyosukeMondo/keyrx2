@@ -12,7 +12,7 @@
 //! - Simulator
 
 use axum::{
-    extract::{Path, Query},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
@@ -20,6 +20,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::sync::Arc;
 
 use crate::config::{
     device_registry::{DeviceRegistry, DeviceScope},
@@ -29,6 +30,7 @@ use crate::config::{
     simulation_engine::{BuiltinScenario, EventSequence, SimulatedEvent},
 };
 use crate::ipc::{DaemonIpc, IpcRequest, IpcResponse, DEFAULT_SOCKET_PATH};
+use crate::web::AppState;
 
 // ============================================================================
 // Error Handling
@@ -87,7 +89,7 @@ impl From<Box<dyn std::error::Error>> for ApiError {
 // Router
 // ============================================================================
 
-pub fn create_router() -> Router {
+pub fn create_router(state: Arc<AppState>) -> Router {
     Router::new()
         // Health and status
         .route("/health", get(health_check))
@@ -127,6 +129,7 @@ pub fn create_router() -> Router {
         .route("/macros/stop-recording", post(stop_macro_recording))
         .route("/macros/recorded-events", get(get_recorded_events))
         .route("/macros/clear", post(clear_recorded_events))
+        .with_state(state)
 }
 
 // ============================================================================
@@ -1119,21 +1122,14 @@ fn query_active_profile() -> Option<String> {
 // Macro Recorder
 // ============================================================================
 
-use crate::macro_recorder::MacroRecorder;
-use std::sync::OnceLock;
-
-/// Global macro recorder instance
-static MACRO_RECORDER: OnceLock<MacroRecorder> = OnceLock::new();
-
-/// Get or initialize the global macro recorder
-fn get_macro_recorder() -> &'static MacroRecorder {
-    MACRO_RECORDER.get_or_init(MacroRecorder::new)
-}
-
 /// POST /api/macros/start-recording - Start recording macro
-async fn start_macro_recording() -> Result<Json<Value>, ApiError> {
-    let recorder = get_macro_recorder();
-    recorder.start_recording().map_err(ApiError::BadRequest)?;
+async fn start_macro_recording(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, ApiError> {
+    state
+        .macro_recorder
+        .start_recording()
+        .map_err(ApiError::BadRequest)?;
 
     Ok(Json(json!({
         "success": true,
@@ -1142,11 +1138,13 @@ async fn start_macro_recording() -> Result<Json<Value>, ApiError> {
 }
 
 /// POST /api/macros/stop-recording - Stop recording macro
-async fn stop_macro_recording() -> Result<Json<Value>, ApiError> {
-    let recorder = get_macro_recorder();
-    recorder.stop_recording().map_err(ApiError::BadRequest)?;
+async fn stop_macro_recording(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
+    state
+        .macro_recorder
+        .stop_recording()
+        .map_err(ApiError::BadRequest)?;
 
-    let event_count = recorder.event_count();
+    let event_count = state.macro_recorder.event_count();
 
     Ok(Json(json!({
         "success": true,
@@ -1156,13 +1154,13 @@ async fn stop_macro_recording() -> Result<Json<Value>, ApiError> {
 }
 
 /// GET /api/macros/recorded-events - Get recorded events
-async fn get_recorded_events() -> Result<Json<Value>, ApiError> {
-    let recorder = get_macro_recorder();
-    let events = recorder
+async fn get_recorded_events(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
+    let events = state
+        .macro_recorder
         .get_recorded_events()
         .map_err(ApiError::InternalError)?;
 
-    let recording = recorder.is_recording();
+    let recording = state.macro_recorder.is_recording();
 
     Ok(Json(json!({
         "success": true,
@@ -1173,9 +1171,13 @@ async fn get_recorded_events() -> Result<Json<Value>, ApiError> {
 }
 
 /// POST /api/macros/clear - Clear recorded events
-async fn clear_recorded_events() -> Result<Json<Value>, ApiError> {
-    let recorder = get_macro_recorder();
-    recorder.clear_events().map_err(ApiError::InternalError)?;
+async fn clear_recorded_events(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, ApiError> {
+    state
+        .macro_recorder
+        .clear_events()
+        .map_err(ApiError::InternalError)?;
 
     Ok(Json(json!({
         "success": true,
@@ -1190,6 +1192,7 @@ async fn clear_recorded_events() -> Result<Json<Value>, ApiError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::macro_recorder::MacroRecorder;
 
     #[tokio::test]
     async fn test_health_check() {
@@ -1200,7 +1203,44 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_router() {
-        let router = create_router();
+        let state = Arc::new(AppState::new(Arc::new(MacroRecorder::new())));
+        let router = create_router(state);
         assert!(std::mem::size_of_val(&router) > 0);
+    }
+
+    #[tokio::test]
+    async fn test_macro_recording_with_injected_state() {
+        // Create a fresh MacroRecorder instance for this test
+        let recorder = Arc::new(MacroRecorder::new());
+        let state = Arc::new(AppState::new(recorder.clone()));
+
+        // Verify initial state
+        assert!(!recorder.is_recording());
+        assert_eq!(recorder.event_count(), 0);
+
+        // Start recording via endpoint handler
+        let result = start_macro_recording(State(state.clone())).await;
+        assert!(result.is_ok());
+        assert!(recorder.is_recording());
+
+        // Stop recording via endpoint handler
+        let result = stop_macro_recording(State(state.clone())).await;
+        assert!(result.is_ok());
+        assert!(!recorder.is_recording());
+    }
+
+    #[tokio::test]
+    async fn test_app_state_with_mock_recorder() {
+        // This test demonstrates that we can inject a fresh MacroRecorder
+        // instance for testing, proving dependency injection works
+        let mock_recorder = Arc::new(MacroRecorder::new());
+        let state = Arc::new(AppState::new(mock_recorder.clone()));
+
+        // Verify state is accessible
+        assert_eq!(state.macro_recorder.event_count(), 0);
+
+        // Start recording using the mock
+        mock_recorder.start_recording().unwrap();
+        assert!(state.macro_recorder.is_recording());
     }
 }

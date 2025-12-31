@@ -264,13 +264,17 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
     let (event_tx, _event_rx) = tokio::sync::broadcast::channel(1000);
     let event_tx_clone = event_tx.clone();
 
+    // Create AppState with dependencies for web API
+    let macro_recorder = std::sync::Arc::new(keyrx_daemon::macro_recorder::MacroRecorder::new());
+    let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(macro_recorder));
+
     // Start web server in background (optional)
     std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
         rt.block_on(async {
             let addr: std::net::SocketAddr = ([127, 0, 0, 1], 9867).into();
             log::info!("Starting web server on http://{}", addr);
-            match keyrx_daemon::web::serve(addr, event_tx_clone).await {
+            match keyrx_daemon::web::serve(addr, event_tx_clone, app_state).await {
                 Ok(()) => log::info!("Web server stopped"),
                 Err(e) => log::error!("Web server error: {}", e),
             }

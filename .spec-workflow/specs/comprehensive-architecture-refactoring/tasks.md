@@ -43,7 +43,7 @@
 
 ---
 
-- [ ] 2. Remove MACRO_RECORDER global state and inject via AppState
+- [x] 2. Remove MACRO_RECORDER global state and inject via AppState
   - Files: keyrx_daemon/src/web/api.rs, keyrx_daemon/src/web/mod.rs, keyrx_daemon/src/macro_recorder.rs
   - Purpose: Eliminate global singleton to enable testability and dependency injection
   - Requirements: FR2, FR5, NFR3
