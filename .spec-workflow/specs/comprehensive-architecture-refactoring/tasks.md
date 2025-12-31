@@ -148,7 +148,7 @@
 
 ---
 
-- [ ] 4. Remove test utility global SENDER state
+- [x] 4. Remove test utility global SENDER state
   - Files: keyrx_daemon/src/test_utils/output_capture.rs
   - Purpose: Eliminate global state in test utilities to enable concurrent test execution and prevent test flakiness
   - Requirements: FR2, FR8

@@ -63,10 +63,16 @@ const POLL_INTERVAL: Duration = Duration::from_millis(50);
 #[cfg(target_os = "windows")]
 const DAEMON_OUTPUT_MARKER: usize = 0x4441454D; // "DAEM"
 
-/// Global sender for Windows keyboard hook events.
+/// Thread-local sender for Windows keyboard hook events.
+///
+/// Using thread-local storage instead of a global static allows multiple
+/// OutputCapture instances to coexist safely, each in its own thread.
+/// This prevents conflicts when running tests concurrently.
 #[cfg(target_os = "windows")]
-static SENDER: std::sync::RwLock<Option<crossbeam_channel::Sender<KeyEvent>>> =
-    std::sync::RwLock::new(None);
+thread_local! {
+    static SENDER_TLS: std::cell::RefCell<Option<crossbeam_channel::Sender<KeyEvent>>> =
+        std::cell::RefCell::new(None);
+}
 
 /// Captures output events from the daemon's virtual keyboard.
 ///
@@ -193,10 +199,10 @@ impl OutputCapture {
             let (setup_sender, setup_receiver) = crossbeam_channel::bounded(1);
             let name_clone = name.to_string();
 
-            // Store the sender in a global to be accessed by the hook callback.
-            if let Ok(mut sender_opt) = SENDER.write() {
-                *sender_opt = Some(sender);
-            }
+            // Store the sender in thread-local storage to be accessed by the hook callback.
+            SENDER_TLS.with(|s| {
+                *s.borrow_mut() = Some(sender);
+            });
 
             unsafe extern "system" fn hook_proc(
                 code: i32,
@@ -213,11 +219,11 @@ impl OutputCapture {
                                 _ => None,
                             };
                             if let Some(event) = event {
-                                if let Ok(sender_opt) = SENDER.read() {
-                                    if let Some(sender) = sender_opt.as_ref() {
+                                SENDER_TLS.with(|s| {
+                                    if let Some(sender) = s.borrow().as_ref() {
                                         let _ = sender.try_send(event);
                                     }
-                                }
+                                });
                             }
                         }
                     }
@@ -677,10 +683,10 @@ impl Drop for OutputCapture {
     fn drop(&mut self) {
         #[cfg(target_os = "windows")]
         {
-            // Clear the global sender
-            if let Ok(mut sender_opt) = SENDER.write() {
-                *sender_opt = None;
-            }
+            // Clear the thread-local sender
+            SENDER_TLS.with(|s| {
+                *s.borrow_mut() = None;
+            });
 
             if let Some(msg_thread) = self.msg_thread.take() {
                 unsafe {
