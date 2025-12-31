@@ -200,7 +200,7 @@ mod tests {
         let result = install_signal_handlers(Arc::clone(&running));
         assert!(result.is_ok());
 
-        let handler = result.unwrap();
+        let handler = result.expect("Test signal handlers should install successfully");
 
         // Running should still be true (no signal sent)
         assert!(running.load(Ordering::SeqCst));
@@ -215,7 +215,8 @@ mod tests {
         let running_clone = Arc::clone(&running);
 
         // Install handlers
-        let handler = install_signal_handlers(Arc::clone(&running)).unwrap();
+        let handler = install_signal_handlers(Arc::clone(&running))
+            .expect("Test signal handlers should install successfully");
 
         // Spawn thread that simulates external flag modification
         let handle = thread::spawn(move || {
@@ -224,7 +225,7 @@ mod tests {
         });
 
         // Wait for thread to modify flag
-        handle.join().unwrap();
+        handle.join().expect("Test thread should not panic");
 
         // Flag should be false now
         assert!(!running.load(Ordering::SeqCst));
