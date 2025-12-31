@@ -26,7 +26,7 @@ async fn start_macro_recording(
     state
         .macro_recorder
         .start_recording()
-        .map_err(ApiError::BadRequest)?;
+        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
 
     Ok(Json(json!({
         "success": true,
@@ -39,7 +39,7 @@ async fn stop_macro_recording(State(state): State<Arc<AppState>>) -> Result<Json
     state
         .macro_recorder
         .stop_recording()
-        .map_err(ApiError::BadRequest)?;
+        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
 
     let event_count = state.macro_recorder.event_count();
 
@@ -55,7 +55,7 @@ async fn get_recorded_events(State(state): State<Arc<AppState>>) -> Result<Json<
     let events = state
         .macro_recorder
         .get_recorded_events()
-        .map_err(ApiError::InternalError)?;
+        .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     let recording = state.macro_recorder.is_recording();
 
@@ -74,7 +74,7 @@ async fn clear_recorded_events(
     state
         .macro_recorder
         .clear_events()
-        .map_err(ApiError::InternalError)?;
+        .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     Ok(Json(json!({
         "success": true,

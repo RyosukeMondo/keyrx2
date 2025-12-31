@@ -145,6 +145,14 @@ pub enum RecorderError {
     /// Playback failed at the specified frame.
     #[error("Playback failed at frame {0}")]
     PlaybackFailed(usize),
+
+    /// Recording buffer is full.
+    #[error("Recording buffer full (max {0} events)")]
+    BufferFull(usize),
+
+    /// Mutex poisoned during recorder operation.
+    #[error("Mutex poisoned: {0}")]
+    MutexPoisoned(String),
 }
 
 /// Top-level daemon error type.
@@ -251,6 +259,12 @@ mod tests {
 
         let err = RecorderError::PlaybackFailed(42);
         assert!(matches!(err, RecorderError::PlaybackFailed(42)));
+
+        let err = RecorderError::BufferFull(10000);
+        assert!(matches!(err, RecorderError::BufferFull(10000)));
+
+        let err = RecorderError::MutexPoisoned("state".into());
+        assert!(matches!(err, RecorderError::MutexPoisoned(_)));
     }
 
     // ============================================================================
@@ -310,6 +324,16 @@ mod tests {
         let err = RecorderError::PlaybackFailed(42);
         let msg = err.to_string();
         assert!(msg.contains("frame 42"));
+
+        let err = RecorderError::BufferFull(10000);
+        let msg = err.to_string();
+        assert!(msg.contains("10000"));
+        assert!(msg.contains("buffer full"));
+
+        let err = RecorderError::MutexPoisoned("state".into());
+        let msg = err.to_string();
+        assert!(msg.contains("state"));
+        assert!(msg.contains("poisoned"));
     }
 
     // ============================================================================

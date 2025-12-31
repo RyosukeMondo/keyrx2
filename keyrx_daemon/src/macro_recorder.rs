@@ -6,6 +6,7 @@
 //! - Toggle recording mode on/off
 //! - Export recorded events for macro generation
 
+use crate::error::RecorderError;
 use keyrx_core::runtime::KeyEvent;
 use std::sync::{Arc, Mutex};
 
@@ -54,49 +55,60 @@ impl MacroRecorder {
     /// Starts recording events
     ///
     /// Clears any previously recorded events and begins recording.
-    /// Returns `Ok(())` if recording started, or `Err` if already recording.
-    pub fn start_recording(&self) -> Result<(), String> {
+    ///
+    /// # Errors
+    ///
+    /// Returns `RecorderError::AlreadyRecording` if already recording.
+    /// Returns `RecorderError::MutexPoisoned` if a mutex is poisoned.
+    pub fn start_recording(&self) -> Result<(), RecorderError> {
         let mut state = self
             .state
             .lock()
-            .map_err(|e| format!("Failed to lock state: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("state: {}", e)))?;
 
         if *state == RecordingState::Recording {
-            return Err("Already recording".to_string());
+            return Err(RecorderError::AlreadyRecording);
         }
 
         // Clear previous recording
         let mut events = self
             .events
             .lock()
-            .map_err(|e| format!("Failed to lock events: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("events: {}", e)))?;
         events.clear();
 
         // Reset start timestamp
         let mut start_ts = self
             .start_timestamp
             .lock()
-            .map_err(|e| format!("Failed to lock timestamp: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("timestamp: {}", e)))?;
         *start_ts = None;
 
         *state = RecordingState::Recording;
+        log::info!("Started macro recording");
         Ok(())
     }
 
     /// Stops recording events
     ///
-    /// Returns `Ok(())` if recording stopped, or `Err` if not currently recording.
-    pub fn stop_recording(&self) -> Result<(), String> {
+    /// # Errors
+    ///
+    /// Returns `RecorderError::NotRecording` if not currently recording.
+    /// Returns `RecorderError::MutexPoisoned` if a mutex is poisoned.
+    pub fn stop_recording(&self) -> Result<(), RecorderError> {
         let mut state = self
             .state
             .lock()
-            .map_err(|e| format!("Failed to lock state: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("state: {}", e)))?;
 
         if *state != RecordingState::Recording {
-            return Err("Not recording".to_string());
+            return Err(RecorderError::NotRecording);
         }
 
         *state = RecordingState::Idle;
+
+        let event_count = self.event_count();
+        log::info!("Stopped macro recording, captured {} events", event_count);
         Ok(())
     }
 
@@ -117,35 +129,37 @@ impl MacroRecorder {
     ///
     /// * `event` - The key event to record
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// `Ok(())` if event was recorded, `Err` if not recording or buffer is full.
-    pub fn capture_event(&self, event: KeyEvent) -> Result<(), String> {
+    /// Returns `RecorderError::NotRecording` if not currently recording.
+    /// Returns `RecorderError::BufferFull` if buffer is at maximum capacity.
+    /// Returns `RecorderError::MutexPoisoned` if a mutex is poisoned.
+    pub fn capture_event(&self, event: KeyEvent) -> Result<(), RecorderError> {
         let state = self
             .state
             .lock()
-            .map_err(|e| format!("Failed to lock state: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("state: {}", e)))?;
 
         if *state != RecordingState::Recording {
-            return Err("Not recording".to_string());
+            return Err(RecorderError::NotRecording);
         }
         drop(state);
 
         let mut events = self
             .events
             .lock()
-            .map_err(|e| format!("Failed to lock events: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("events: {}", e)))?;
 
         // Check buffer capacity
         if events.len() >= MAX_EVENTS {
-            return Err(format!("Recording buffer full (max {} events)", MAX_EVENTS));
+            return Err(RecorderError::BufferFull(MAX_EVENTS));
         }
 
         // Set start timestamp on first event
         let mut start_ts = self
             .start_timestamp
             .lock()
-            .map_err(|e| format!("Failed to lock timestamp: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("timestamp: {}", e)))?;
 
         let relative_timestamp = if let Some(start) = *start_ts {
             // Calculate relative timestamp
@@ -168,11 +182,15 @@ impl MacroRecorder {
     /// Gets the currently recorded events
     ///
     /// Returns a copy of all recorded events.
-    pub fn get_recorded_events(&self) -> Result<Vec<MacroEvent>, String> {
+    ///
+    /// # Errors
+    ///
+    /// Returns `RecorderError::MutexPoisoned` if a mutex is poisoned.
+    pub fn get_recorded_events(&self) -> Result<Vec<MacroEvent>, RecorderError> {
         let events = self
             .events
             .lock()
-            .map_err(|e| format!("Failed to lock events: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("events: {}", e)))?;
         Ok(events.clone())
     }
 
@@ -182,17 +200,21 @@ impl MacroRecorder {
     }
 
     /// Clears all recorded events without stopping recording
-    pub fn clear_events(&self) -> Result<(), String> {
+    ///
+    /// # Errors
+    ///
+    /// Returns `RecorderError::MutexPoisoned` if a mutex is poisoned.
+    pub fn clear_events(&self) -> Result<(), RecorderError> {
         let mut events = self
             .events
             .lock()
-            .map_err(|e| format!("Failed to lock events: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("events: {}", e)))?;
         events.clear();
 
         let mut start_ts = self
             .start_timestamp
             .lock()
-            .map_err(|e| format!("Failed to lock timestamp: {}", e))?;
+            .map_err(|e| RecorderError::MutexPoisoned(format!("timestamp: {}", e)))?;
         *start_ts = None;
 
         Ok(())

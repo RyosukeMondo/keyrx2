@@ -78,7 +78,9 @@ mod tests {
         assert_eq!(state.macro_recorder.event_count(), 0);
 
         // Start recording using the mock
-        mock_recorder.start_recording().unwrap();
+        mock_recorder
+            .start_recording()
+            .expect("Test: start_recording should succeed");
         assert!(state.macro_recorder.is_recording());
     }
 }

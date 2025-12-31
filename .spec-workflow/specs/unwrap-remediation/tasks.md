@@ -938,7 +938,7 @@
 
 ### Task 14: Add Macro Recorder Error Handling
 
-- [ ] **14. Add Macro Recorder Error Handling**
+- [x] **14. Add Macro Recorder Error Handling**
   - **File**: `keyrx_daemon/src/macro_recorder.rs`
   - **Purpose**: Isolate test failures by making all recorder methods return Result instead of unwrapping.
   - **Requirements**: FR8, NFR4
