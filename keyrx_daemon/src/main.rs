@@ -218,6 +218,7 @@ fn main() {
 }
 
 /// Opens a URL in the default web browser.
+#[allow(dead_code)]
 fn open_browser(url: &str) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "linux")]
     {
@@ -240,9 +241,6 @@ fn open_browser(url: &str) -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(target_os = "linux")]
 fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, String)> {
     use keyrx_daemon::daemon::Daemon;
-    use keyrx_daemon::platform::linux::tray::LinuxSystemTray;
-    use keyrx_daemon::platform::{SystemTray, TrayControlEvent};
-    use std::time::{Duration, Instant};
 
     // Initialize logging
     init_logging(debug);
@@ -252,8 +250,16 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
         config_path.display()
     );
 
+    // Create platform instance
+    let platform = keyrx_daemon::platform::create_platform().map_err(|e| {
+        (
+            keyrx_daemon::daemon::ExitCode::RuntimeError as i32,
+            format!("Failed to create platform: {}", e),
+        )
+    })?;
+
     // Create the daemon
-    let mut daemon = Daemon::new(config_path).map_err(daemon_error_to_exit)?;
+    let mut daemon = Daemon::new(platform, config_path).map_err(daemon_error_to_exit)?;
 
     log::info!(
         "Daemon initialized with {} device(s)",
@@ -281,114 +287,9 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
         });
     });
 
-    // Try to create system tray (optional - gracefully handle if not available)
-    let mut tray = match LinuxSystemTray::new() {
-        Ok(tray) => {
-            log::info!("System tray initialized successfully");
-            Some(tray)
-        }
-        Err(e) => {
-            log::warn!(
-                "System tray not available: {}. Daemon will run without tray icon.",
-                e
-            );
-            None
-        }
-    };
-
-    // Grab all input devices before starting the loop
-    daemon.grab_all_devices().map_err(daemon_error_to_exit)?;
-
-    log::info!("Starting event processing loop");
-
-    // Track metrics for periodic logging
-    let mut event_count: u64 = 0;
-    let mut last_stats_time = Instant::now();
-    const STATS_INTERVAL: Duration = Duration::from_secs(60);
-
-    // Main event loop (similar to daemon.run() but with tray integration)
-    while daemon.is_running() {
-        // Check for SIGHUP (reload request)
-        if daemon.signal_handler().check_reload() {
-            log::info!("Reload signal received (SIGHUP)");
-            if let Err(e) = daemon.reload() {
-                log::warn!("Configuration reload failed: {}", e);
-            }
-        }
-
-        // Poll devices for available events
-        let ready_devices = match daemon.poll_devices() {
-            Ok(devices) => devices,
-            Err(e) => {
-                // Check if we were interrupted by signal
-                if !daemon.is_running() {
-                    break;
-                }
-                log::warn!("Poll error: {}", e);
-                // Sleep to prevent busy loop on persistent errors
-                std::thread::sleep(Duration::from_millis(100));
-                continue;
-            }
-        };
-
-        // Process events from ready devices
-        for device_idx in ready_devices {
-            match daemon.process_device_events(device_idx) {
-                Ok(count) => {
-                    event_count += count as u64;
-                }
-                Err(e) => {
-                    log::warn!("Error processing device {}: {}", device_idx, e);
-                }
-            }
-        }
-
-        // Check for tap-hold timeouts on all devices
-        if let Err(e) = daemon.check_tap_hold_timeouts() {
-            log::warn!("Error checking tap-hold timeouts: {}", e);
-        }
-
-        // Poll tray events (if tray is available)
-        if let Some(ref mut tray_ref) = tray {
-            if let Some(event) = tray_ref.poll_event() {
-                match event {
-                    TrayControlEvent::Reload => {
-                        log::info!("Reload requested from system tray");
-                        if let Err(e) = daemon.reload() {
-                            log::warn!("Configuration reload failed: {}", e);
-                        }
-                    }
-                    TrayControlEvent::OpenWebUI => {
-                        log::info!("Open Web UI requested from system tray");
-                        if let Err(e) = open_browser("http://localhost:9867") {
-                            log::warn!("Failed to open browser: {}", e);
-                        }
-                    }
-                    TrayControlEvent::Exit => {
-                        log::info!("Exit requested from system tray");
-                        // Shutdown tray to hide icon before exiting
-                        if let Err(e) = tray_ref.shutdown() {
-                            log::warn!("Failed to shutdown tray: {}", e);
-                        }
-                        daemon
-                            .running_flag()
-                            .store(false, std::sync::atomic::Ordering::SeqCst);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Periodic stats logging
-        if last_stats_time.elapsed() >= STATS_INTERVAL {
-            log::info!("Processed {} events in the last 60 seconds", event_count);
-            event_count = 0;
-            last_stats_time = Instant::now();
-        }
-
-        // Small sleep to prevent 100% CPU usage in case poll returns immediately
-        std::thread::sleep(Duration::from_millis(1));
-    }
+    // Run the daemon event loop
+    // Note: Tray support is handled within the platform implementation
+    daemon.run().map_err(daemon_error_to_exit)?;
 
     log::info!("Daemon stopped gracefully");
     Ok(())
@@ -967,17 +868,16 @@ fn daemon_error_to_exit(error: keyrx_daemon::daemon::DaemonError) -> (i32, Strin
     match &error {
         DaemonError::Config(_) => (exit_codes::CONFIG_ERROR, error.to_string()),
         DaemonError::PermissionError(_) => (exit_codes::PERMISSION_ERROR, error.to_string()),
-        DaemonError::Device(dev_err) => {
+        DaemonError::Platform(plat_err) => {
             // Check if it's a permission error
-            if dev_err.to_string().contains("permission")
-                || dev_err.to_string().contains("Permission")
+            if plat_err.to_string().contains("permission")
+                || plat_err.to_string().contains("Permission")
             {
                 (exit_codes::PERMISSION_ERROR, error.to_string())
             } else {
                 (exit_codes::CONFIG_ERROR, error.to_string())
             }
         }
-        DaemonError::DiscoveryError(_) => (exit_codes::CONFIG_ERROR, error.to_string()),
         _ => (exit_codes::RUNTIME_ERROR, error.to_string()),
     }
 }
