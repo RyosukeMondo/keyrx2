@@ -161,12 +161,7 @@ fn main() {
                 Err(code) => Err((code, String::new())), // Error already printed by execute
             }
         }
-        Commands::Profiles(args) => {
-            match keyrx_daemon::cli::profiles::execute(args, None) {
-                Ok(()) => Ok(()),
-                Err(code) => Err((code, String::new())), // Error already printed by execute
-            }
-        }
+        Commands::Profiles(args) => handle_profiles_command(args),
         Commands::Config(args) => {
             match keyrx_daemon::cli::config::execute(args, None) {
                 Ok(()) => Ok(()),
@@ -215,6 +210,52 @@ fn main() {
             process::exit(code);
         }
     }
+}
+
+/// Handles the `profiles` command.
+fn handle_profiles_command(
+    args: keyrx_daemon::cli::profiles::ProfilesArgs,
+) -> Result<(), (i32, String)> {
+    use keyrx_daemon::config::ProfileManager;
+    use keyrx_daemon::services::ProfileService;
+    use std::sync::Arc;
+
+    // Determine config directory (default: ~/.config/keyrx)
+    let config_dir = {
+        let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push("keyrx");
+        path
+    };
+
+    // Initialize ProfileManager
+    let manager = match ProfileManager::new(config_dir) {
+        Ok(mgr) => Arc::new(mgr),
+        Err(e) => {
+            return Err((
+                exit_codes::CONFIG_ERROR,
+                format!("Failed to initialize profile manager: {}", e),
+            ));
+        }
+    };
+
+    // Create ProfileService
+    let service = ProfileService::new(manager);
+
+    // Create async runtime for CLI commands
+    let rt = tokio::runtime::Runtime::new().map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to create async runtime: {}", e),
+        )
+    })?;
+
+    // Execute command
+    rt.block_on(async {
+        match keyrx_daemon::cli::profiles::execute(args, &service).await {
+            Ok(()) => Ok(()),
+            Err(code) => Err((code, String::new())), // Error already printed by execute
+        }
+    })
 }
 
 /// Opens a URL in the default web browser.

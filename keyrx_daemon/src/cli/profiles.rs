@@ -6,9 +6,8 @@
 
 use crate::cli::common::output_error;
 use crate::cli::logging;
-use crate::config::profile_manager::{
-    ProfileError, ProfileManager, ProfileMetadata, ProfileTemplate,
-};
+use crate::config::profile_manager::{ProfileError, ProfileTemplate};
+use crate::services::ProfileService;
 use clap::{Args, Subcommand};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -86,8 +85,16 @@ enum ProfilesCommands {
 /// JSON output structure for profile list.
 #[derive(Serialize)]
 struct ProfileListOutput {
-    profiles: Vec<ProfileMetadata>,
+    profiles: Vec<ProfileInfo>,
     active: Option<String>,
+}
+
+/// Profile info for JSON serialization.
+#[derive(Serialize)]
+struct ProfileInfo {
+    name: String,
+    layer_count: usize,
+    modified_at: std::time::SystemTime,
 }
 
 /// JSON output structure for activation.
@@ -128,56 +135,51 @@ fn parse_template(s: &str) -> Result<ProfileTemplate, String> {
 }
 
 /// Execute the profiles command.
-pub fn execute(args: ProfilesArgs, config_dir: Option<PathBuf>) -> Result<(), i32> {
-    // Determine config directory (default: ~/.config/keyrx)
-    let config_dir = config_dir.unwrap_or_else(|| {
-        let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-        path.push("keyrx");
-        path
-    });
-
-    // Initialize ProfileManager
-    let mut manager = match ProfileManager::new(config_dir) {
-        Ok(mgr) => mgr,
-        Err(e) => {
-            output_error(
-                &format!("Failed to initialize profile manager: {}", e),
-                3001,
-                args.json,
-            );
-            return Err(1);
-        }
-    };
-
+pub async fn execute(args: ProfilesArgs, service: &ProfileService) -> Result<(), i32> {
     match args.command {
-        ProfilesCommands::List => handle_list(&manager, args.json),
+        ProfilesCommands::List => handle_list(service, args.json).await,
         ProfilesCommands::Create { name, template } => {
-            handle_create(&mut manager, &name, template, args.json)
+            handle_create(service, &name, template, args.json).await
         }
-        ProfilesCommands::Activate { name } => handle_activate(&mut manager, &name, args.json),
+        ProfilesCommands::Activate { name } => handle_activate(service, &name, args.json).await,
         ProfilesCommands::Delete { name, confirm } => {
-            handle_delete(&mut manager, &name, confirm, args.json)
+            handle_delete(service, &name, confirm, args.json).await
         }
         ProfilesCommands::Duplicate { src, dest } => {
-            handle_duplicate(&mut manager, &src, &dest, args.json)
+            handle_duplicate(service, &src, &dest, args.json).await
         }
         ProfilesCommands::Export { name, output } => {
-            handle_export(&manager, &name, &output, args.json)
+            handle_export(service, &name, &output, args.json).await
         }
         ProfilesCommands::Import { input, name } => {
-            handle_import(&mut manager, &input, &name, args.json)
+            handle_import(service, &input, &name, args.json).await
         }
     }
 }
 
 /// Handle the `list` subcommand.
-fn handle_list(manager: &ProfileManager, json: bool) -> Result<(), i32> {
-    let profiles = manager.list();
-    let active = manager.get_active();
+async fn handle_list(service: &ProfileService, json: bool) -> Result<(), i32> {
+    let profiles = match service.list_profiles().await {
+        Ok(p) => p,
+        Err(e) => {
+            output_error(&format!("Failed to list profiles: {}", e), 3001, json);
+            return Err(1);
+        }
+    };
+    let active = service.get_active_profile().await;
 
     if json {
+        let profile_infos: Vec<ProfileInfo> = profiles
+            .iter()
+            .map(|p| ProfileInfo {
+                name: p.name.clone(),
+                layer_count: p.layer_count,
+                modified_at: p.modified_at,
+            })
+            .collect();
+
         let output = ProfileListOutput {
-            profiles: profiles.into_iter().cloned().collect(),
+            profiles: profile_infos,
             active,
         };
         println!("{}", serde_json::to_string_pretty(&output).unwrap());
@@ -196,11 +198,7 @@ fn handle_list(manager: &ProfileManager, json: bool) -> Result<(), i32> {
         println!("{}", "-".repeat(80));
 
         for profile in &profiles {
-            let status = if Some(&profile.name) == active.as_ref() {
-                "active"
-            } else {
-                "-"
-            };
+            let status = if profile.active { "active" } else { "-" };
 
             let modified = format_time(&profile.modified_at);
 
@@ -227,34 +225,33 @@ fn handle_list(manager: &ProfileManager, json: bool) -> Result<(), i32> {
 }
 
 /// Handle the `create` subcommand.
-fn handle_create(
-    manager: &mut ProfileManager,
+async fn handle_create(
+    service: &ProfileService,
     name: &str,
     template: ProfileTemplate,
     json: bool,
 ) -> Result<(), i32> {
     logging::log_command_start("profiles create", name);
 
-    match manager.create(name, template) {
-        Ok(metadata) => {
-            logging::log_profile_create(name, metadata.layer_count);
+    match service.create_profile(name, template).await {
+        Ok(profile) => {
+            logging::log_profile_create(name, profile.layer_count);
             logging::log_command_success("profiles create", 0);
 
             if json {
                 let output = ProfileCreatedOutput {
                     success: true,
-                    name: metadata.name.clone(),
-                    rhai_path: metadata.rhai_path.display().to_string(),
-                    layer_count: metadata.layer_count,
+                    name: profile.name.clone(),
+                    rhai_path: format!("{}/{}.rhai", "~/.config/keyrx/profiles", profile.name),
+                    layer_count: profile.layer_count,
                 };
                 println!("{}", serde_json::to_string_pretty(&output).unwrap());
             } else {
                 println!("✓ Profile '{}' created", name);
-                println!("  Path: {}", metadata.rhai_path.display());
-                println!("  Layers: {}", metadata.layer_count);
+                println!("  Layers: {}", profile.layer_count);
                 println!();
                 println!("Edit the profile:");
-                println!("  $EDITOR {}", metadata.rhai_path.display());
+                println!("  $EDITOR ~/.config/keyrx/profiles/{}.rhai", profile.name);
                 println!();
                 println!("Activate the profile:");
                 println!("  keyrx profiles activate {}", name);
@@ -291,10 +288,10 @@ fn handle_create(
 }
 
 /// Handle the `activate` subcommand.
-fn handle_activate(manager: &mut ProfileManager, name: &str, json: bool) -> Result<(), i32> {
+async fn handle_activate(service: &ProfileService, name: &str, json: bool) -> Result<(), i32> {
     logging::log_command_start("profiles activate", name);
 
-    match manager.activate(name) {
+    match service.activate_profile(name).await {
         Ok(result) => {
             logging::log_profile_activate(name, result.success);
             if result.success {
@@ -366,8 +363,8 @@ fn handle_activate(manager: &mut ProfileManager, name: &str, json: bool) -> Resu
 }
 
 /// Handle the `delete` subcommand.
-fn handle_delete(
-    manager: &mut ProfileManager,
+async fn handle_delete(
+    service: &ProfileService,
     name: &str,
     confirm: bool,
     json: bool,
@@ -389,7 +386,7 @@ fn handle_delete(
 
     logging::log_command_start("profiles delete", name);
 
-    match manager.delete(name) {
+    match service.delete_profile(name).await {
         Ok(()) => {
             logging::log_profile_delete(name);
             logging::log_command_success("profiles delete", 0);
@@ -422,25 +419,25 @@ fn handle_delete(
 }
 
 /// Handle the `duplicate` subcommand.
-fn handle_duplicate(
-    manager: &mut ProfileManager,
+async fn handle_duplicate(
+    service: &ProfileService,
     src: &str,
     dest: &str,
     json: bool,
 ) -> Result<(), i32> {
-    match manager.duplicate(src, dest) {
-        Ok(metadata) => {
+    match service.duplicate_profile(src, dest).await {
+        Ok(profile) => {
             if json {
                 let output = ProfileCreatedOutput {
                     success: true,
-                    name: metadata.name.clone(),
-                    rhai_path: metadata.rhai_path.display().to_string(),
-                    layer_count: metadata.layer_count,
+                    name: profile.name.clone(),
+                    rhai_path: format!("~/.config/keyrx/profiles/{}.rhai", profile.name),
+                    layer_count: profile.layer_count,
                 };
                 println!("{}", serde_json::to_string_pretty(&output).unwrap());
             } else {
                 println!("✓ Profile '{}' duplicated to '{}'", src, dest);
-                println!("  Path: {}", metadata.rhai_path.display());
+                println!("  Layers: {}", profile.layer_count);
             }
             Ok(())
         }
@@ -468,13 +465,13 @@ fn handle_duplicate(
 }
 
 /// Handle the `export` subcommand.
-fn handle_export(
-    manager: &ProfileManager,
+async fn handle_export(
+    service: &ProfileService,
     name: &str,
     output: &Path,
     json: bool,
 ) -> Result<(), i32> {
-    match manager.export(name, output) {
+    match service.export_profile(name, output).await {
         Ok(()) => {
             if json {
                 let output_msg = SuccessOutput {
@@ -499,25 +496,25 @@ fn handle_export(
 }
 
 /// Handle the `import` subcommand.
-fn handle_import(
-    manager: &mut ProfileManager,
+async fn handle_import(
+    service: &ProfileService,
     input: &Path,
     name: &str,
     json: bool,
 ) -> Result<(), i32> {
-    match manager.import(input, name) {
-        Ok(metadata) => {
+    match service.import_profile(input, name).await {
+        Ok(profile) => {
             if json {
                 let output = ProfileCreatedOutput {
                     success: true,
-                    name: metadata.name.clone(),
-                    rhai_path: metadata.rhai_path.display().to_string(),
-                    layer_count: metadata.layer_count,
+                    name: profile.name.clone(),
+                    rhai_path: format!("~/.config/keyrx/profiles/{}.rhai", profile.name),
+                    layer_count: profile.layer_count,
                 };
                 println!("{}", serde_json::to_string_pretty(&output).unwrap());
             } else {
                 println!("✓ Profile '{}' imported from {}", name, input.display());
-                println!("  Path: {}", metadata.rhai_path.display());
+                println!("  Layers: {}", profile.layer_count);
             }
             Ok(())
         }

@@ -792,7 +792,7 @@
 
 ---
 
-- [-] 14. Update Daemon to use Platform trait abstraction
+- [x] 14. Update Daemon to use Platform trait abstraction
   - Files: keyrx_daemon/src/daemon/mod.rs (update), keyrx_daemon/src/main.rs (update)
   - Purpose: Decouple daemon from concrete platform types using dependency injection
   - Requirements: FR3, FR5
@@ -895,7 +895,7 @@
 
 ---
 
-- [ ] 15. Wire CLI to use ProfileService
+- [x] 15. Wire CLI to use ProfileService
   - Files: keyrx_daemon/src/cli/profiles.rs (update), keyrx_daemon/src/main.rs (update)
   - Purpose: Deduplicate profile logic by using shared ProfileService instead of direct ProfileManager access
   - Requirements: FR4, FR7
