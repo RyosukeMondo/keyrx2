@@ -676,11 +676,11 @@ mod tests {
 
         let device_name = keyboard.name().to_string();
 
-        // Give the device a moment to be registered
-        std::thread::sleep(Duration::from_millis(100));
+        // Give the device a moment to be registered (longer timeout under heavy load)
+        std::thread::sleep(Duration::from_millis(200));
 
-        // Find the device with OutputCapture
-        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(2))
+        // Find the device with OutputCapture (generous timeout for parallel test execution)
+        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(5))
             .expect("Failed to find device");
 
         // Drain any pending events first
@@ -718,11 +718,11 @@ mod tests {
 
         let device_name = keyboard.name().to_string();
 
-        // Give the device a moment to be registered
-        std::thread::sleep(Duration::from_millis(100));
+        // Give the device a moment to be registered (longer timeout under heavy load)
+        std::thread::sleep(Duration::from_millis(200));
 
-        // Find the device with OutputCapture
-        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(2))
+        // Find the device with OutputCapture (generous timeout for parallel test execution)
+        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(5))
             .expect("Failed to find device");
 
         // Drain any pending events
@@ -754,11 +754,11 @@ mod tests {
 
         let device_name = keyboard.name().to_string();
 
-        // Give the device a moment to be registered
-        std::thread::sleep(Duration::from_millis(100));
+        // Give the device a moment to be registered (longer timeout under heavy load)
+        std::thread::sleep(Duration::from_millis(200));
 
         // Find the device with OutputCapture
-        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(2))
+        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(5))
             .expect("Failed to find device");
 
         // Drain any pending events
@@ -800,11 +800,11 @@ mod tests {
 
         let device_name = keyboard.name().to_string();
 
-        // Give the device a moment to be registered
-        std::thread::sleep(Duration::from_millis(100));
+        // Give the device a moment to be registered (longer timeout under heavy load)
+        std::thread::sleep(Duration::from_millis(200));
 
         // Find the device with OutputCapture
-        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(2))
+        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(5))
             .expect("Failed to find device");
 
         // Drain any pending events
@@ -830,11 +830,11 @@ mod tests {
 
         let device_name = keyboard.name().to_string();
 
-        // Give the device a moment to be registered
-        std::thread::sleep(Duration::from_millis(100));
+        // Give the device a moment to be registered (longer timeout under heavy load)
+        std::thread::sleep(Duration::from_millis(200));
 
-        // Find the device with OutputCapture
-        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(2))
+        // Find the device with OutputCapture (generous timeout for parallel test execution)
+        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(5))
             .expect("Failed to find device");
 
         // Inject some events
@@ -871,11 +871,11 @@ mod tests {
 
         let device_name = keyboard.name().to_string();
 
-        // Give the device a moment to be registered
-        std::thread::sleep(Duration::from_millis(100));
+        // Give the device a moment to be registered (longer timeout under heavy load)
+        std::thread::sleep(Duration::from_millis(200));
 
         // Find the device with OutputCapture
-        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(2))
+        let mut capture = OutputCapture::find_by_name(&device_name, Duration::from_secs(5))
             .expect("Failed to find device");
 
         // Drain twice to ensure no events

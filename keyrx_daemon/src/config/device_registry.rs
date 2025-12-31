@@ -115,12 +115,18 @@ impl DeviceRegistry {
     /// Save registry to disk with atomic write
     ///
     /// Uses write-to-temp-then-rename pattern to prevent corruption.
+    /// Creates parent directory if it doesn't exist.
     ///
     /// # Errors
     ///
     /// Returns `RegistryError::CorruptedRegistry` if serialization fails.
-    /// Returns `RegistryError::IOError` if file write or rename fails.
+    /// Returns `RegistryError::IOError` if parent directory creation, file write, or rename fails.
     pub fn save(&self) -> Result<(), RegistryError> {
+        // Ensure parent directory exists
+        if let Some(parent) = self.path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| RegistryError::IOError(e.kind()))?;
+        }
+
         let tmp_path = self.path.with_extension("tmp");
 
         let json = serde_json::to_string_pretty(&self.devices)
@@ -540,18 +546,48 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)] // Permission-based tests only work on Unix
     fn test_write_protected_directory() {
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
         // Test that save returns proper error when directory is not writable
+        let temp_dir = TempDir::new().unwrap();
+        let protected_dir = temp_dir.path().join("protected");
+        fs::create_dir(&protected_dir).unwrap();
+
+        // Make directory read-only (remove write permission)
+        let mut perms = fs::metadata(&protected_dir).unwrap().permissions();
+        perms.set_mode(0o444); // r--r--r--
+        fs::set_permissions(&protected_dir, perms).unwrap();
+
+        let path = protected_dir.join("registry.json");
+        let registry = DeviceRegistry::new(path);
+        let result = registry.save();
+
+        // Cleanup: restore permissions before TempDir cleanup
+        let mut perms = fs::metadata(&protected_dir).unwrap().permissions();
+        perms.set_mode(0o755);
+        let _ = fs::set_permissions(&protected_dir, perms);
+
+        assert!(matches!(result, Err(RegistryError::IOError(_))));
+    }
+
+    #[test]
+    fn test_creates_parent_directory() {
+        // Test that save creates parent directory if it doesn't exist
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir
             .path()
             .join("nonexistent_dir")
             .join("registry.json");
 
-        let registry = DeviceRegistry::new(path);
+        let registry = DeviceRegistry::new(path.clone());
         let result = registry.save();
 
-        assert!(matches!(result, Err(RegistryError::IOError(_))));
+        assert!(result.is_ok());
+        assert!(path.exists());
+        assert!(path.parent().unwrap().exists());
     }
 
     #[test]

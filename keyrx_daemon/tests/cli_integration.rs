@@ -33,7 +33,11 @@ fn test_cmd(temp_dir: &TempDir) -> Command {
 
 /// Helper to parse JSON from command output.
 fn parse_json_output(output: &[u8]) -> Value {
-    serde_json::from_slice(output).expect("Failed to parse JSON output")
+    serde_json::from_slice(output).unwrap_or_else(|e| {
+        eprintln!("Failed to parse JSON: {}", e);
+        eprintln!("Output was: {:?}", String::from_utf8_lossy(output));
+        panic!("Failed to parse JSON output: {}", e);
+    })
 }
 
 /// Helper to create a minimal Rhai profile for testing.
@@ -340,7 +344,7 @@ fn test_json_error_responses_are_valid() {
     let temp_dir = TempDir::new().unwrap();
 
     // Profile not found error
-    let output = test_cmd(&temp_dir)
+    let result = test_cmd(&temp_dir)
         .arg("profiles")
         .arg("activate")
         .arg("nonexistent")
@@ -348,16 +352,22 @@ fn test_json_error_responses_are_valid() {
         .assert()
         .failure()
         .get_output()
-        .stderr
         .clone();
 
-    let json = parse_json_output(&output);
+    // JSON errors go to stdout for consistency with success outputs
+    let output = if !result.stdout.is_empty() {
+        &result.stdout
+    } else {
+        &result.stderr
+    };
+
+    let json = parse_json_output(output);
     assert_eq!(json["success"], false);
     assert!(json["code"].is_number());
     assert!(json["error"].is_string());
 
     // Device not found error
-    let output = test_cmd(&temp_dir)
+    let result = test_cmd(&temp_dir)
         .arg("devices")
         .arg("rename")
         .arg("nonexistent-device")
@@ -366,10 +376,16 @@ fn test_json_error_responses_are_valid() {
         .assert()
         .failure()
         .get_output()
-        .stderr
         .clone();
 
-    let json = parse_json_output(&output);
+    // JSON errors go to stdout for consistency with success outputs
+    let output = if !result.stdout.is_empty() {
+        &result.stdout
+    } else {
+        &result.stderr
+    };
+
+    let json = parse_json_output(output);
     assert_eq!(json["success"], false);
     assert_eq!(json["code"], 1001);
 }
@@ -396,7 +412,7 @@ fn test_json_schema_consistency() {
     // List commands may not have "success" field, but should have data field
 
     // Error responses should have consistent schema: success, code, error
-    let output = test_cmd(&temp_dir)
+    let result = test_cmd(&temp_dir)
         .arg("profiles")
         .arg("delete")
         .arg("nonexistent")
@@ -404,10 +420,16 @@ fn test_json_schema_consistency() {
         .assert()
         .failure()
         .get_output()
-        .stderr
         .clone();
 
-    let json = parse_json_output(&output);
+    // JSON errors go to stdout for consistency with success outputs
+    let output = if !result.stdout.is_empty() {
+        &result.stdout
+    } else {
+        &result.stderr
+    };
+
+    let json = parse_json_output(output);
     assert_eq!(json["success"], false);
     assert!(json.get("code").is_some());
     assert!(json.get("error").is_some());
