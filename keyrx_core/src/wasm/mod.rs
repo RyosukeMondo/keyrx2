@@ -100,23 +100,51 @@ pub fn wasm_init() {
 // Helper Functions
 // ============================================================================
 
+/// Recovers from a poisoned mutex by returning the inner guard.
+///
+/// This helper enables graceful degradation when a mutex is poisoned,
+/// which can occur if a thread panics while holding the lock.
+///
+/// # Safety
+/// The data protected by a poisoned mutex may be in an inconsistent state.
+/// However, in the WASM single-threaded context, mutex poisoning should not
+/// occur during normal operation. This recovery is defensive programming.
+fn recover_mutex_lock<T>(
+    mutex: &Mutex<T>,
+    context: &str,
+) -> Result<std::sync::MutexGuard<T>, JsValue> {
+    mutex
+        .lock()
+        .or_else(|poison_error| {
+            // Log warning in debug builds
+            #[cfg(debug_assertions)]
+            web_sys::console::warn_1(
+                &format!("WASM mutex poisoned in {}: recovering", context).into(),
+            );
+
+            // Recover by using the poisoned data
+            Ok(poison_error.into_inner())
+        })
+        .map_err(|_| JsValue::from_str(&format!("Failed to acquire lock in {}", context)))
+}
+
 /// Store a configuration in the global CONFIG_STORE and return a handle.
-fn store_config(config: ConfigRoot) -> ConfigHandle {
-    let mut store = CONFIG_STORE.lock().unwrap();
+fn store_config(config: ConfigRoot) -> Result<ConfigHandle, JsValue> {
+    let mut store = recover_mutex_lock(&CONFIG_STORE, "store_config")?;
     let index = store.len();
     store.push(ConfigEntry {
         config,
         state: DeviceState::new(),
         last_sim_state: None,
     });
-    ConfigHandle(index)
+    Ok(ConfigHandle(index))
 }
 
 /// Retrieve a configuration from the CONFIG_STORE by handle.
 ///
 /// Returns an error if the handle is invalid.
 fn get_config(handle: ConfigHandle) -> Result<ConfigRoot, JsValue> {
-    let store = CONFIG_STORE.lock().unwrap();
+    let store = recover_mutex_lock(&CONFIG_STORE, "get_config")?;
     store
         .get(handle.0)
         .map(|entry| entry.config.clone())
@@ -127,7 +155,7 @@ fn get_config(handle: ConfigHandle) -> Result<ConfigRoot, JsValue> {
 ///
 /// Returns an error if the handle is invalid or no simulation has been run.
 fn get_sim_state_from_store(handle: ConfigHandle) -> Result<SimulationState, JsValue> {
-    let store = CONFIG_STORE.lock().unwrap();
+    let store = recover_mutex_lock(&CONFIG_STORE, "get_sim_state_from_store")?;
     store
         .get(handle.0)
         .and_then(|entry| entry.last_sim_state.clone())
@@ -141,7 +169,7 @@ fn update_sim_state_in_store(
     handle: ConfigHandle,
     sim_state: SimulationState,
 ) -> Result<(), JsValue> {
-    let mut store = CONFIG_STORE.lock().unwrap();
+    let mut store = recover_mutex_lock(&CONFIG_STORE, "update_sim_state_in_store")?;
     store
         .get_mut(handle.0)
         .map(|entry| {
@@ -196,7 +224,7 @@ pub fn load_config(rhai_source: &str) -> Result<ConfigHandle, JsValue> {
     let config = parse_rhai_config(rhai_source).map_err(|e| JsValue::from_str(&e))?;
 
     // Store config and return handle
-    Ok(store_config(config))
+    store_config(config)
 }
 
 /// Parse Rhai configuration source into ConfigRoot.
@@ -221,7 +249,9 @@ fn parse_rhai_config(source: &str) -> Result<ConfigRoot, std::string::String> {
 
     // Register device() function
     engine.register_fn("device", move |pattern: &str| {
-        let mut s = state_clone.lock().unwrap();
+        let mut s = state_clone
+            .lock()
+            .expect("Parser state mutex should not be poisoned during Rhai parsing");
         // If there's a current device, save it first
         if let Some(device) = s.current_device.take() {
             s.devices.push(device);
@@ -240,7 +270,9 @@ fn parse_rhai_config(source: &str) -> Result<ConfigRoot, std::string::String> {
     engine.register_fn("map", move |from: &str, to: &str| {
         use crate::config::{BaseKeyMapping, KeyCode, KeyMapping};
 
-        let mut s = state_clone2.lock().unwrap();
+        let mut s = state_clone2
+            .lock()
+            .expect("Parser state mutex should not be poisoned during Rhai parsing");
 
         // Simple key parsing - map common names to KeyCode variants
         // This is a minimal implementation; full parser will be added later
@@ -276,7 +308,9 @@ fn parse_rhai_config(source: &str) -> Result<ConfigRoot, std::string::String> {
         .map_err(|e| format!("Parse error: {}", e))?;
 
     // Finalize: save the last device
-    let mut final_state = state.lock().unwrap();
+    let mut final_state = state
+        .lock()
+        .expect("Parser state mutex should not be poisoned after Rhai execution");
     if let Some(device) = final_state.current_device.take() {
         let mut device_with_mappings = device;
         device_with_mappings.mappings = final_state.current_mappings.clone();
@@ -286,7 +320,7 @@ fn parse_rhai_config(source: &str) -> Result<ConfigRoot, std::string::String> {
     // Generate metadata
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .expect("System time should be after UNIX epoch (1970-01-01)")
         .as_secs();
 
     let mut hasher = Sha256::new();
@@ -368,7 +402,7 @@ pub fn load_krx(binary: &[u8]) -> Result<ConfigHandle, JsValue> {
         .map_err(|_| JsValue::from_str("Deserialization failed: corrupted .krx file"))?;
 
     // Store config and return handle
-    Ok(store_config(config))
+    store_config(config)
 }
 
 // ============================================================================
@@ -590,7 +624,7 @@ mod tests {
         let result = load_krx(&bytes);
         assert!(result.is_ok());
 
-        let handle = result.unwrap();
+        let handle = result.expect("load_krx should succeed with valid config");
         let loaded_config = get_config(handle);
         assert!(loaded_config.is_ok());
     }
