@@ -1,0 +1,84 @@
+//! REST API endpoints for the KeyRx daemon web interface.
+//!
+//! This module provides a complete REST API that exposes all CLI functionality
+//! to the web UI. Endpoints are organized by domain into focused modules:
+//! - `devices` - Device management
+//! - `profiles` - Profile management
+//! - `config` - Configuration and layer management
+//! - `layouts` - Keyboard layout management
+//! - `metrics` - Health checks, metrics, and monitoring
+//! - `simulator` - Event simulation
+//! - `macros` - Macro recorder
+//!
+//! Each module exports a `routes()` function that returns its router fragment.
+//! The main router is assembled in `create_router()`.
+
+use axum::Router;
+use std::sync::Arc;
+
+use crate::web::AppState;
+
+pub mod config;
+pub mod devices;
+pub mod error;
+pub mod layouts;
+pub mod macros;
+pub mod metrics;
+pub mod profiles;
+pub mod simulator;
+
+// Re-export ApiError for convenience
+pub use error::ApiError;
+
+/// Creates the main API router by combining all domain-specific routers.
+///
+/// # Arguments
+///
+/// * `state` - Application state containing shared services
+///
+/// # Returns
+///
+/// Combined router with all API endpoints
+pub fn create_router(state: Arc<AppState>) -> Router {
+    Router::new()
+        .merge(metrics::routes())
+        .merge(devices::routes())
+        .merge(profiles::routes())
+        .merge(config::routes())
+        .merge(layouts::routes())
+        .merge(simulator::routes())
+        .merge(macros::routes())
+        .with_state(state)
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::macro_recorder::MacroRecorder;
+
+    #[tokio::test]
+    async fn test_create_router() {
+        let state = Arc::new(AppState::new(Arc::new(MacroRecorder::new())));
+        let router = create_router(state);
+        assert!(std::mem::size_of_val(&router) > 0);
+    }
+
+    #[tokio::test]
+    async fn test_app_state_with_mock_recorder() {
+        // This test demonstrates that we can inject a fresh MacroRecorder
+        // instance for testing, proving dependency injection works
+        let mock_recorder = Arc::new(MacroRecorder::new());
+        let state = Arc::new(AppState::new(mock_recorder.clone()));
+
+        // Verify state is accessible
+        assert_eq!(state.macro_recorder.event_count(), 0);
+
+        // Start recording using the mock
+        mock_recorder.start_recording().unwrap();
+        assert!(state.macro_recorder.is_recording());
+    }
+}
