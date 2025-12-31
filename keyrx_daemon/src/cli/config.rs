@@ -185,8 +185,10 @@ struct ErrorOutput {
 
 /// Execute the config command.
 pub fn execute(args: ConfigArgs, config_dir: Option<PathBuf>) -> Result<(), i32> {
-    // Determine config directory (default: ~/.config/keyrx)
-    let config_dir = config_dir.unwrap_or_else(|| {
+    // Determine config directory (priority: parameter, env var, default)
+    let config_dir = config_dir.or_else(|| {
+        std::env::var("KEYRX_CONFIG_DIR").ok().map(PathBuf::from)
+    }).unwrap_or_else(|| {
         let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
         path.push("keyrx");
         path
