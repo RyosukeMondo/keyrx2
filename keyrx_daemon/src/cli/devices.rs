@@ -4,7 +4,9 @@
 //! for managing device metadata, including renaming, scope settings, and layout assignment.
 
 use crate::cli::logging;
-use crate::config::device_registry::{DeviceEntry, DeviceRegistry, DeviceScope, RegistryError};
+use crate::config::device_registry::{
+    DeviceEntry, DeviceRegistry, DeviceScope, DeviceValidationError,
+};
 use clap::{Args, Subcommand};
 use serde::Serialize;
 use std::path::PathBuf;
@@ -100,13 +102,9 @@ pub fn execute(args: DevicesArgs, registry_path: Option<PathBuf>) -> Result<(), 
         path
     });
 
-    // Load or create registry
+    // Load or create registry (with automatic recovery from corruption)
     let mut registry = match DeviceRegistry::load(&registry_path) {
         Ok(reg) => reg,
-        Err(RegistryError::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => {
-            // Registry doesn't exist yet, create a new one
-            DeviceRegistry::new(registry_path.clone())
-        }
         Err(e) => {
             output_error(
                 &format!("Failed to load device registry: {}", e),
@@ -219,7 +217,7 @@ fn handle_rename(
             }
             Ok(())
         }
-        Err(RegistryError::DeviceNotFound(id)) => {
+        Err(DeviceValidationError::DeviceNotFound(id)) => {
             logging::log_command_error(
                 "devices rename",
                 &format!("Device '{}' not found in registry", id),
@@ -231,7 +229,7 @@ fn handle_rename(
             );
             Err(1)
         }
-        Err(RegistryError::InvalidName(msg)) => {
+        Err(DeviceValidationError::InvalidName(msg)) => {
             logging::log_command_error("devices rename", &format!("Invalid name: {}", msg));
             output_error(&format!("Invalid name: {}", msg), 1006, json);
             Err(1)
@@ -281,7 +279,7 @@ fn handle_set_scope(
             }
             Ok(())
         }
-        Err(RegistryError::DeviceNotFound(id)) => {
+        Err(DeviceValidationError::DeviceNotFound(id)) => {
             output_error(
                 &format!("Device '{}' not found in registry", id),
                 1001,
@@ -320,7 +318,7 @@ fn handle_forget(registry: &mut DeviceRegistry, device_id: &str, json: bool) -> 
             }
             Ok(())
         }
-        Err(RegistryError::DeviceNotFound(id)) => {
+        Err(DeviceValidationError::DeviceNotFound(id)) => {
             output_error(
                 &format!("Device '{}' not found in registry", id),
                 1001,
@@ -364,7 +362,7 @@ fn handle_set_layout(
             }
             Ok(())
         }
-        Err(RegistryError::DeviceNotFound(id)) => {
+        Err(DeviceValidationError::DeviceNotFound(id)) => {
             output_error(
                 &format!("Device '{}' not found in registry", id),
                 1001,

@@ -3,6 +3,7 @@
 //! This module provides the DeviceRegistry component for managing device metadata
 //! with atomic write operations and comprehensive input validation.
 
+use crate::error::RegistryError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -33,55 +34,28 @@ pub struct DeviceEntry {
     pub last_seen: u64,
 }
 
-/// Registry error types
+/// Validation error types for device registry operations
 #[derive(Debug)]
-pub enum RegistryError {
+pub enum DeviceValidationError {
     /// Device not found in registry
     DeviceNotFound(String),
     /// Invalid device name (too long or invalid characters)
     InvalidName(String),
     /// Invalid device ID (too long)
     InvalidDeviceId(String),
-    /// I/O error during file operations
-    IoError(std::io::Error),
-    /// Serialization/deserialization error
-    SerdeError(serde_json::Error),
-    /// Registry file is corrupted
-    RegistryCorrupted(String),
 }
 
-impl std::fmt::Display for RegistryError {
+impl std::fmt::Display for DeviceValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RegistryError::DeviceNotFound(id) => write!(f, "Device not found: {}", id),
-            RegistryError::InvalidName(msg) => write!(f, "Invalid device name: {}", msg),
-            RegistryError::InvalidDeviceId(msg) => write!(f, "Invalid device ID: {}", msg),
-            RegistryError::IoError(e) => write!(f, "I/O error: {}", e),
-            RegistryError::SerdeError(e) => write!(f, "Serialization error: {}", e),
-            RegistryError::RegistryCorrupted(msg) => {
-                write!(
-                    f,
-                    "Registry corrupted: {}. Hint: Delete the file or restore from backup",
-                    msg
-                )
-            }
+            DeviceValidationError::DeviceNotFound(id) => write!(f, "Device not found: {}", id),
+            DeviceValidationError::InvalidName(msg) => write!(f, "Invalid device name: {}", msg),
+            DeviceValidationError::InvalidDeviceId(msg) => write!(f, "Invalid device ID: {}", msg),
         }
     }
 }
 
-impl std::error::Error for RegistryError {}
-
-impl From<std::io::Error> for RegistryError {
-    fn from(e: std::io::Error) -> Self {
-        RegistryError::IoError(e)
-    }
-}
-
-impl From<serde_json::Error> for RegistryError {
-    fn from(e: serde_json::Error) -> Self {
-        RegistryError::SerdeError(e)
-    }
-}
+impl std::error::Error for DeviceValidationError {}
 
 /// Device registry with persistent storage
 pub struct DeviceRegistry {
@@ -98,60 +72,89 @@ impl DeviceRegistry {
         }
     }
 
-    /// Load registry from disk
+    /// Load registry from disk with automatic recovery from corruption
     ///
-    /// Returns error if file exists but is corrupted or unreadable.
+    /// If the registry file is corrupted, creates an empty registry and saves it.
     /// If file does not exist, returns an empty registry.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RegistryError::FailedToLoad` if the file cannot be read (e.g., permission denied).
+    /// Returns `RegistryError::IOError` if the recovered registry cannot be saved.
     pub fn load(path: &Path) -> Result<Self, RegistryError> {
-        if !path.exists() {
-            return Ok(Self::new(path.to_path_buf()));
+        match std::fs::read_to_string(path) {
+            Ok(contents) => match serde_json::from_str(&contents) {
+                Ok(devices) => {
+                    log::debug!("Loaded device registry from {:?}", path);
+                    Ok(Self {
+                        devices,
+                        path: path.to_path_buf(),
+                    })
+                }
+                Err(e) => {
+                    log::warn!(
+                        "Corrupted registry at {:?}: {}. Creating empty registry.",
+                        path,
+                        e
+                    );
+                    let empty = Self::new(path.to_path_buf());
+                    empty.save()?;
+                    Ok(empty)
+                }
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                log::info!("No registry file found, creating new registry");
+                let empty = Self::new(path.to_path_buf());
+                empty.save()?;
+                Ok(empty)
+            }
+            Err(e) => Err(RegistryError::FailedToLoad(e.kind())),
         }
-
-        let data = std::fs::read_to_string(path)?;
-        let devices: HashMap<String, DeviceEntry> = serde_json::from_str(&data)
-            .map_err(|e| RegistryError::RegistryCorrupted(e.to_string()))?;
-
-        Ok(Self {
-            devices,
-            path: path.to_path_buf(),
-        })
     }
 
     /// Save registry to disk with atomic write
     ///
-    /// Uses write-to-temp-then-rename pattern to prevent corruption
+    /// Uses write-to-temp-then-rename pattern to prevent corruption.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RegistryError::CorruptedRegistry` if serialization fails.
+    /// Returns `RegistryError::IOError` if file write or rename fails.
     pub fn save(&self) -> Result<(), RegistryError> {
         let tmp_path = self.path.with_extension("tmp");
 
-        let json = serde_json::to_string_pretty(&self.devices)?;
-        std::fs::write(&tmp_path, json)?;
+        let json = serde_json::to_string_pretty(&self.devices)
+            .map_err(|e| RegistryError::CorruptedRegistry(e.to_string()))?;
 
-        std::fs::rename(&tmp_path, &self.path)?;
+        std::fs::write(&tmp_path, json).map_err(|e| RegistryError::IOError(e.kind()))?;
 
+        std::fs::rename(&tmp_path, &self.path).map_err(|e| RegistryError::IOError(e.kind()))?;
+
+        log::debug!("Saved device registry to {:?}", self.path);
         Ok(())
     }
 
     /// Rename a device
     ///
     /// Validates that name is ≤64 chars and contains only valid characters
-    pub fn rename(&mut self, id: &str, name: &str) -> Result<(), RegistryError> {
+    pub fn rename(&mut self, id: &str, name: &str) -> Result<(), DeviceValidationError> {
         validate_device_name(name)?;
 
         let device = self
             .devices
             .get_mut(id)
-            .ok_or_else(|| RegistryError::DeviceNotFound(id.to_string()))?;
+            .ok_or_else(|| DeviceValidationError::DeviceNotFound(id.to_string()))?;
 
         device.name = name.to_string();
         Ok(())
     }
 
     /// Set device scope
-    pub fn set_scope(&mut self, id: &str, scope: DeviceScope) -> Result<(), RegistryError> {
+    pub fn set_scope(&mut self, id: &str, scope: DeviceScope) -> Result<(), DeviceValidationError> {
         let device = self
             .devices
             .get_mut(id)
-            .ok_or_else(|| RegistryError::DeviceNotFound(id.to_string()))?;
+            .ok_or_else(|| DeviceValidationError::DeviceNotFound(id.to_string()))?;
 
         device.scope = scope;
         Ok(())
@@ -160,23 +163,23 @@ impl DeviceRegistry {
     /// Set device layout
     ///
     /// Validates that layout name is ≤32 chars
-    pub fn set_layout(&mut self, id: &str, layout: &str) -> Result<(), RegistryError> {
+    pub fn set_layout(&mut self, id: &str, layout: &str) -> Result<(), DeviceValidationError> {
         validate_layout_name(layout)?;
 
         let device = self
             .devices
             .get_mut(id)
-            .ok_or_else(|| RegistryError::DeviceNotFound(id.to_string()))?;
+            .ok_or_else(|| DeviceValidationError::DeviceNotFound(id.to_string()))?;
 
         device.layout = Some(layout.to_string());
         Ok(())
     }
 
     /// Remove device from registry
-    pub fn forget(&mut self, id: &str) -> Result<DeviceEntry, RegistryError> {
+    pub fn forget(&mut self, id: &str) -> Result<DeviceEntry, DeviceValidationError> {
         self.devices
             .remove(id)
-            .ok_or_else(|| RegistryError::DeviceNotFound(id.to_string()))
+            .ok_or_else(|| DeviceValidationError::DeviceNotFound(id.to_string()))
     }
 
     /// List all devices
@@ -190,18 +193,18 @@ impl DeviceRegistry {
     }
 
     /// Update last_seen timestamp for a device
-    pub fn update_last_seen(&mut self, id: &str) -> Result<(), RegistryError> {
+    pub fn update_last_seen(&mut self, id: &str) -> Result<(), DeviceValidationError> {
         let device = self
             .devices
             .get_mut(id)
-            .ok_or_else(|| RegistryError::DeviceNotFound(id.to_string()))?;
+            .ok_or_else(|| DeviceValidationError::DeviceNotFound(id.to_string()))?;
 
         device.last_seen = current_timestamp();
         Ok(())
     }
 
     /// Register a new device or update existing one
-    pub fn register(&mut self, entry: DeviceEntry) -> Result<(), RegistryError> {
+    pub fn register(&mut self, entry: DeviceEntry) -> Result<(), DeviceValidationError> {
         validate_device_id(&entry.id)?;
         validate_device_name(&entry.name)?;
 
@@ -215,15 +218,15 @@ impl DeviceRegistry {
 }
 
 /// Validate device name: ≤64 chars, alphanumeric + space/dash/underscore only
-fn validate_device_name(name: &str) -> Result<(), RegistryError> {
+fn validate_device_name(name: &str) -> Result<(), DeviceValidationError> {
     if name.is_empty() {
-        return Err(RegistryError::InvalidName(
+        return Err(DeviceValidationError::InvalidName(
             "Device name cannot be empty".to_string(),
         ));
     }
 
     if name.len() > 64 {
-        return Err(RegistryError::InvalidName(format!(
+        return Err(DeviceValidationError::InvalidName(format!(
             "Device name too long: {} chars (max 64)",
             name.len()
         )));
@@ -233,7 +236,7 @@ fn validate_device_name(name: &str) -> Result<(), RegistryError> {
         .chars()
         .all(|c| c.is_alphanumeric() || c == ' ' || c == '-' || c == '_')
     {
-        return Err(RegistryError::InvalidName(
+        return Err(DeviceValidationError::InvalidName(
             "Device name contains invalid characters (only alphanumeric, space, dash, underscore allowed)".to_string()
         ));
     }
@@ -242,15 +245,15 @@ fn validate_device_name(name: &str) -> Result<(), RegistryError> {
 }
 
 /// Validate device ID: ≤256 chars
-fn validate_device_id(id: &str) -> Result<(), RegistryError> {
+fn validate_device_id(id: &str) -> Result<(), DeviceValidationError> {
     if id.is_empty() {
-        return Err(RegistryError::InvalidDeviceId(
+        return Err(DeviceValidationError::InvalidDeviceId(
             "Device ID cannot be empty".to_string(),
         ));
     }
 
     if id.len() > 256 {
-        return Err(RegistryError::InvalidDeviceId(format!(
+        return Err(DeviceValidationError::InvalidDeviceId(format!(
             "Device ID too long: {} chars (max 256)",
             id.len()
         )));
@@ -260,9 +263,9 @@ fn validate_device_id(id: &str) -> Result<(), RegistryError> {
 }
 
 /// Validate layout name: ≤32 chars
-fn validate_layout_name(layout: &str) -> Result<(), RegistryError> {
+fn validate_layout_name(layout: &str) -> Result<(), DeviceValidationError> {
     if layout.len() > 32 {
-        return Err(RegistryError::InvalidName(format!(
+        return Err(DeviceValidationError::InvalidName(format!(
             "Layout name too long: {} chars (max 32)",
             layout.len()
         )));
@@ -374,7 +377,10 @@ mod tests {
         let mut registry = DeviceRegistry::new(path);
 
         let result = registry.rename("nonexistent", "New Name");
-        assert!(matches!(result, Err(RegistryError::DeviceNotFound(_))));
+        assert!(matches!(
+            result,
+            Err(DeviceValidationError::DeviceNotFound(_))
+        ));
     }
 
     #[test]
@@ -445,13 +451,13 @@ mod tests {
     fn test_validate_device_name_too_long() {
         let long_name = "a".repeat(65);
         let result = validate_device_name(&long_name);
-        assert!(matches!(result, Err(RegistryError::InvalidName(_))));
+        assert!(matches!(result, Err(DeviceValidationError::InvalidName(_))));
     }
 
     #[test]
     fn test_validate_device_name_invalid_chars() {
         let result = validate_device_name("Device@#$");
-        assert!(matches!(result, Err(RegistryError::InvalidName(_))));
+        assert!(matches!(result, Err(DeviceValidationError::InvalidName(_))));
     }
 
     #[test]
@@ -463,25 +469,33 @@ mod tests {
     fn test_validate_device_id_too_long() {
         let long_id = "a".repeat(257);
         let result = validate_device_id(&long_id);
-        assert!(matches!(result, Err(RegistryError::InvalidDeviceId(_))));
+        assert!(matches!(
+            result,
+            Err(DeviceValidationError::InvalidDeviceId(_))
+        ));
     }
 
     #[test]
     fn test_validate_layout_name_too_long() {
         let long_layout = "a".repeat(33);
         let result = validate_layout_name(&long_layout);
-        assert!(matches!(result, Err(RegistryError::InvalidName(_))));
+        assert!(matches!(result, Err(DeviceValidationError::InvalidName(_))));
     }
 
     #[test]
-    fn test_corrupted_registry_file() {
+    fn test_corrupted_registry_file_recovery() {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().join("registry.json");
 
         fs::write(&path, "{ invalid json ").unwrap();
 
-        let result = DeviceRegistry::load(&path);
-        assert!(matches!(result, Err(RegistryError::RegistryCorrupted(_))));
+        // Load should recover by creating empty registry
+        let registry = DeviceRegistry::load(&path).unwrap();
+        assert_eq!(registry.list().len(), 0);
+
+        // Verify the file was fixed
+        let contents = fs::read_to_string(&path).unwrap();
+        assert!(contents.contains("{}") || contents.contains("{ }"));
     }
 
     #[test]
@@ -513,12 +527,49 @@ mod tests {
     #[test]
     fn test_empty_device_name() {
         let result = validate_device_name("");
-        assert!(matches!(result, Err(RegistryError::InvalidName(_))));
+        assert!(matches!(result, Err(DeviceValidationError::InvalidName(_))));
     }
 
     #[test]
     fn test_empty_device_id() {
         let result = validate_device_id("");
-        assert!(matches!(result, Err(RegistryError::InvalidDeviceId(_))));
+        assert!(matches!(
+            result,
+            Err(DeviceValidationError::InvalidDeviceId(_))
+        ));
+    }
+
+    #[test]
+    fn test_write_protected_directory() {
+        // Test that save returns proper error when directory is not writable
+        let temp_dir = TempDir::new().unwrap();
+        let path = temp_dir
+            .path()
+            .join("nonexistent_dir")
+            .join("registry.json");
+
+        let registry = DeviceRegistry::new(path);
+        let result = registry.save();
+
+        assert!(matches!(result, Err(RegistryError::IOError(_))));
+    }
+
+    #[test]
+    fn test_recovery_creates_valid_empty_registry() {
+        let temp_dir = TempDir::new().unwrap();
+        let path = temp_dir.path().join("registry.json");
+
+        // Write corrupted data
+        fs::write(&path, "[this is not a hashmap]").unwrap();
+
+        // Load should recover and create empty registry
+        let registry = DeviceRegistry::load(&path).unwrap();
+        assert_eq!(registry.list().len(), 0);
+
+        // Verify we can add devices to the recovered registry
+        let mut registry = registry;
+        let device = create_test_device("dev1", "Test Device");
+        registry.register(device).unwrap();
+        assert_eq!(registry.list().len(), 1);
     }
 }
