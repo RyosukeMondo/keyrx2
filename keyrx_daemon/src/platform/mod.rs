@@ -1,8 +1,32 @@
 //! Platform abstraction layer for keyboard input/output.
 //!
-//! This module defines traits for input and output devices, providing a
-//! platform-agnostic interface for event processing. Platform-specific
-//! implementations (Linux, Windows, Mock) implement these traits.
+//! This module provides a trait-based abstraction for platform-specific keyboard
+//! input capture and output injection. The [`Platform`] trait defines the contract
+//! for all platform implementations, enabling dependency injection and testability.
+//!
+//! # Architecture
+//!
+//! The module follows the dependency inversion principle:
+//! - High-level daemon code depends on the [`Platform`] trait abstraction
+//! - Platform-specific code (Linux, Windows) implements the trait
+//! - Factory function [`create_platform()`] creates platform-specific instances
+//!
+//! # Usage
+//!
+//! ```no_run
+//! use keyrx_daemon::platform::create_platform;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut platform = create_platform()?;
+//!     platform.initialize()?;
+//!
+//!     loop {
+//!         let event = platform.capture_input()?;
+//!         // Process event...
+//!         platform.inject_output(event)?;
+//!     }
+//! }
+//! ```
 //!
 //! # System Tray Support
 //!
@@ -17,6 +41,9 @@
 use keyrx_core::config::DeviceConfig;
 use keyrx_core::runtime::event::KeyEvent;
 use thiserror::Error;
+
+pub mod common;
+pub use common::{DeviceInfo, PlatformError, Result as PlatformResult};
 
 #[cfg(target_os = "linux")]
 pub mod linux;
@@ -35,6 +62,280 @@ pub use windows::WindowsPlatform;
 
 #[allow(unused_imports)] // Will be used in tasks #17-20
 pub use mock::{MockInput, MockOutput};
+
+/// Platform abstraction for keyboard input/output operations.
+///
+/// This trait provides a unified interface for platform-specific keyboard event
+/// capture and injection. Implementations exist for Linux (evdev/uinput) and
+/// Windows (Low-Level Hooks/SendInput).
+///
+/// # Thread Safety
+///
+/// All implementations must be `Send + Sync` to support concurrent access from
+/// the daemon event loop and web API handlers.
+///
+/// # Object Safety
+///
+/// This trait is object-safe, meaning it can be used as `Box<dyn Platform>`.
+/// This enables dependency injection and runtime polymorphism.
+///
+/// # Examples
+///
+/// ```no_run
+/// use keyrx_daemon::platform::{create_platform, Platform};
+/// use keyrx_core::runtime::event::KeyEvent;
+///
+/// fn run_event_loop(mut platform: Box<dyn Platform>) -> Result<(), Box<dyn std::error::Error>> {
+///     platform.initialize()?;
+///
+///     loop {
+///         let event = platform.capture_input()?;
+///         // Process event through keyrx_core runtime...
+///         platform.inject_output(event)?;
+///     }
+/// }
+/// ```
+///
+/// # Platform Support
+///
+/// - **Linux**: Uses evdev for input capture, uinput for output injection
+/// - **Windows**: Uses Low-Level Keyboard Hook for input, SendInput API for output
+///
+/// # Lifecycle
+///
+/// 1. Create platform instance via [`create_platform()`]
+/// 2. Call [`initialize()`](Platform::initialize) to set up resources
+/// 3. Call [`capture_input()`](Platform::capture_input) and [`inject_output()`](Platform::inject_output) in event loop
+/// 4. Call [`shutdown()`](Platform::shutdown) to clean up resources
+pub trait Platform: Send + Sync {
+    /// Initializes platform-specific resources.
+    ///
+    /// This method must be called before [`capture_input()`](Platform::capture_input)
+    /// or [`inject_output()`](Platform::inject_output). It performs platform-specific
+    /// setup such as:
+    /// - Opening device handles
+    /// - Installing keyboard hooks
+    /// - Creating virtual output devices
+    ///
+    /// # Errors
+    ///
+    /// - [`PlatformError::PermissionDenied`]: Insufficient privileges to access devices
+    ///   - Linux: User not in `input` group or lacking CAP_SYS_ADMIN
+    ///   - Windows: Process not running as administrator
+    /// - [`PlatformError::InitializationFailed`]: Platform setup failed
+    /// - [`PlatformError::DeviceNotFound`]: No suitable input devices found
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::platform::create_platform;
+    ///
+    /// let mut platform = create_platform()?;
+    /// platform.initialize()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    fn initialize(&mut self) -> PlatformResult<()>;
+
+    /// Captures the next keyboard input event (blocking).
+    ///
+    /// This method blocks until an input event is available from any monitored
+    /// device. The event represents a key press or release from a physical keyboard.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(KeyEvent)`: Successfully captured an input event
+    /// - `Err(PlatformError)`: An error occurred during event capture
+    ///
+    /// # Errors
+    ///
+    /// - [`PlatformError::Io`]: I/O error reading from device
+    /// - [`PlatformError::DeviceNotFound`]: Input device was disconnected
+    ///
+    /// # Performance
+    ///
+    /// This method should complete in <1ms under normal conditions to maintain
+    /// low input latency.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::platform::create_platform;
+    ///
+    /// let mut platform = create_platform()?;
+    /// platform.initialize()?;
+    ///
+    /// loop {
+    ///     let event = platform.capture_input()?;
+    ///     println!("Captured: {:?}", event);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    fn capture_input(&mut self) -> PlatformResult<KeyEvent>;
+
+    /// Injects a keyboard output event to the operating system.
+    ///
+    /// This method sends a synthetic keyboard event that appears to applications
+    /// as if it came from a real keyboard. The event will be delivered to the
+    /// currently focused application.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The keyboard event to inject (press or release)
+    ///
+    /// # Errors
+    ///
+    /// - [`PlatformError::InjectionFailed`]: Failed to inject the event
+    /// - [`PlatformError::Io`]: I/O error during injection
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::platform::create_platform;
+    /// use keyrx_core::runtime::event::KeyEvent;
+    /// use keyrx_core::config::KeyCode;
+    ///
+    /// let mut platform = create_platform()?;
+    /// platform.initialize()?;
+    ///
+    /// // Inject 'A' key press and release
+    /// platform.inject_output(KeyEvent::Press(KeyCode::A))?;
+    /// platform.inject_output(KeyEvent::Release(KeyCode::A))?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    fn inject_output(&mut self, event: KeyEvent) -> PlatformResult<()>;
+
+    /// Lists all available input devices.
+    ///
+    /// Returns information about all keyboard input devices that can be used
+    /// for key remapping. Each device includes metadata such as name, path,
+    /// and USB identifiers.
+    ///
+    /// # Returns
+    ///
+    /// Vector of device information structures, one per detected device.
+    ///
+    /// # Errors
+    ///
+    /// - [`PlatformError::Io`]: Failed to enumerate devices
+    /// - [`PlatformError::PermissionDenied`]: Insufficient privileges
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::platform::create_platform;
+    ///
+    /// let platform = create_platform()?;
+    /// let devices = platform.list_devices()?;
+    ///
+    /// for device in devices {
+    ///     println!("Device: {} at {}", device.name, device.path);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    fn list_devices(&self) -> PlatformResult<Vec<DeviceInfo>>;
+
+    /// Cleans up platform resources and shuts down.
+    ///
+    /// This method should be called when the daemon is exiting to ensure proper
+    /// cleanup of device handles, hooks, and other platform resources. After
+    /// calling this method, the platform should not be used further.
+    ///
+    /// # Errors
+    ///
+    /// - [`PlatformError::Io`]: Failed to release resources
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::platform::create_platform;
+    ///
+    /// let mut platform = create_platform()?;
+    /// platform.initialize()?;
+    ///
+    /// // ... use platform ...
+    ///
+    /// platform.shutdown()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    fn shutdown(&mut self) -> PlatformResult<()>;
+}
+
+/// Creates a platform-specific implementation of the Platform trait.
+///
+/// This factory function returns the appropriate platform implementation based
+/// on the target operating system. The returned instance is heap-allocated and
+/// trait-object-compatible for maximum flexibility.
+///
+/// # Returns
+///
+/// - `Ok(Box<dyn Platform>)`: Platform-specific implementation
+/// - `Err(PlatformError::Unsupported)`: Platform not supported
+///
+/// # Platform Selection
+///
+/// - **Linux**: Returns [`LinuxPlatform`]
+/// - **Windows**: Returns [`WindowsPlatform`]
+/// - **Other**: Returns `PlatformError::Unsupported`
+///
+/// # Examples
+///
+/// ```no_run
+/// use keyrx_daemon::platform::create_platform;
+///
+/// let mut platform = create_platform()?;
+/// platform.initialize()?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+///
+/// # Testing
+///
+/// For testing, you can create a mock implementation instead of using this factory:
+///
+/// ```
+/// use keyrx_daemon::platform::{Platform, DeviceInfo};
+/// use keyrx_core::runtime::event::KeyEvent;
+///
+/// struct MockPlatform;
+///
+/// impl Platform for MockPlatform {
+///     fn initialize(&mut self) -> Result<(), keyrx_daemon::platform::PlatformError> {
+///         Ok(())
+///     }
+///     # fn capture_input(&mut self) -> Result<KeyEvent, keyrx_daemon::platform::PlatformError> {
+///     #     unimplemented!()
+///     # }
+///     # fn inject_output(&mut self, event: KeyEvent) -> Result<(), keyrx_daemon::platform::PlatformError> {
+///     #     Ok(())
+///     # }
+///     # fn list_devices(&self) -> Result<Vec<DeviceInfo>, keyrx_daemon::platform::PlatformError> {
+///     #     Ok(vec![])
+///     # }
+///     # fn shutdown(&mut self) -> Result<(), keyrx_daemon::platform::PlatformError> {
+///     #     Ok(())
+///     # }
+///     // ... implement other methods
+/// }
+/// ```
+pub fn create_platform() -> PlatformResult<Box<dyn Platform>> {
+    #[cfg(target_os = "linux")]
+    {
+        Ok(Box::new(linux::LinuxPlatform::new()))
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // TODO: Uncomment when WindowsPlatform implements Platform trait (task 13)
+        // Ok(Box::new(windows::WindowsPlatform::new()))
+        Err(PlatformError::InitializationFailed(
+            "WindowsPlatform does not implement Platform trait yet".to_string(),
+        ))
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    {
+        Err(PlatformError::Unsupported)
+    }
+}
 
 /// Errors that can occur during device operations.
 #[derive(Debug, Error)]
@@ -306,9 +607,11 @@ pub trait OutputDevice {
     fn inject_event(&mut self, event: KeyEvent) -> Result<(), DeviceError>;
 }
 
+// TODO: This legacy Platform enum will be removed in future tasks
+// once all code is migrated to use the new Platform trait.
 #[allow(dead_code)]
 #[allow(clippy::large_enum_variant)] // LinuxPlatform is large but this enum is a placeholder
-pub enum Platform {
+pub enum LegacyPlatform {
     #[cfg(target_os = "linux")]
     Linux(LinuxPlatform),
     #[cfg(target_os = "windows")]
@@ -317,20 +620,20 @@ pub enum Platform {
     Unsupported,
 }
 
-impl Platform {
+impl LegacyPlatform {
     #[allow(dead_code)]
     pub fn new() -> Self {
         #[cfg(target_os = "linux")]
         {
-            Platform::Linux(LinuxPlatform::new())
+            LegacyPlatform::Linux(LinuxPlatform::new())
         }
         #[cfg(all(target_os = "windows", not(target_os = "linux")))]
         {
-            Platform::Windows(WindowsPlatform::new())
+            LegacyPlatform::Windows(WindowsPlatform::new())
         }
         #[cfg(not(any(target_os = "linux", target_os = "windows")))]
         {
-            Platform::Unsupported
+            LegacyPlatform::Unsupported
         }
     }
 
@@ -347,15 +650,15 @@ impl Platform {
     pub fn init(&mut self, configs: &[DeviceConfig]) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             #[cfg(target_os = "linux")]
-            Platform::Linux(p) => p.init(configs),
+            LegacyPlatform::Linux(p) => p.init(configs),
             #[cfg(target_os = "windows")]
-            Platform::Windows(p) => {
+            LegacyPlatform::Windows(p) => {
                 // Windows platform doesn't use configs yet
                 let _ = configs;
                 p.init()
             }
             #[cfg(not(any(target_os = "linux", target_os = "windows")))]
-            Platform::Unsupported => {
+            LegacyPlatform::Unsupported => {
                 let _ = configs;
                 Ok(())
             }
@@ -374,14 +677,14 @@ impl Platform {
     pub fn process_events(&mut self) -> Result<ProcessResult, Box<dyn std::error::Error>> {
         match self {
             #[cfg(target_os = "linux")]
-            Platform::Linux(p) => p.process_events(),
+            LegacyPlatform::Linux(p) => p.process_events(),
             #[cfg(target_os = "windows")]
-            Platform::Windows(p) => {
+            LegacyPlatform::Windows(p) => {
                 p.process_events()?;
                 Ok(ProcessResult::Continue)
             }
             #[cfg(not(any(target_os = "linux", target_os = "windows")))]
-            Platform::Unsupported => Ok(ProcessResult::Continue),
+            LegacyPlatform::Unsupported => Ok(ProcessResult::Continue),
         }
     }
 
@@ -393,17 +696,216 @@ impl Platform {
     pub fn shutdown(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             #[cfg(target_os = "linux")]
-            Platform::Linux(p) => p.shutdown(),
+            LegacyPlatform::Linux(p) => p.shutdown(),
             #[cfg(target_os = "windows")]
-            Platform::Windows(_p) => Ok(()),
+            LegacyPlatform::Windows(_p) => Ok(()),
             #[cfg(not(any(target_os = "linux", target_os = "windows")))]
-            Platform::Unsupported => Ok(()),
+            LegacyPlatform::Unsupported => Ok(()),
         }
     }
 }
 
-impl Default for Platform {
+impl Default for LegacyPlatform {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use keyrx_core::config::KeyCode;
+
+    /// Mock platform implementation for testing.
+    ///
+    /// This demonstrates that the Platform trait is object-safe and can be
+    /// used for dependency injection in tests.
+    struct MockPlatform {
+        initialized: bool,
+        events: Vec<KeyEvent>,
+        event_index: usize,
+    }
+
+    impl MockPlatform {
+        fn new() -> Self {
+            Self {
+                initialized: false,
+                events: vec![],
+                event_index: 0,
+            }
+        }
+
+        fn with_events(events: Vec<KeyEvent>) -> Self {
+            Self {
+                initialized: false,
+                events,
+                event_index: 0,
+            }
+        }
+    }
+
+    impl super::Platform for MockPlatform {
+        fn initialize(&mut self) -> PlatformResult<()> {
+            self.initialized = true;
+            Ok(())
+        }
+
+        fn capture_input(&mut self) -> PlatformResult<KeyEvent> {
+            if !self.initialized {
+                return Err(PlatformError::InitializationFailed(
+                    "Platform not initialized".to_string(),
+                ));
+            }
+
+            if self.event_index < self.events.len() {
+                let event = self.events[self.event_index].clone();
+                self.event_index += 1;
+                Ok(event)
+            } else {
+                Err(PlatformError::DeviceNotFound("No more events".to_string()))
+            }
+        }
+
+        fn inject_output(&mut self, _event: KeyEvent) -> PlatformResult<()> {
+            if !self.initialized {
+                return Err(PlatformError::InitializationFailed(
+                    "Platform not initialized".to_string(),
+                ));
+            }
+            Ok(())
+        }
+
+        fn list_devices(&self) -> PlatformResult<Vec<DeviceInfo>> {
+            Ok(vec![DeviceInfo {
+                id: "mock-0".to_string(),
+                name: "Mock Keyboard".to_string(),
+                path: "/dev/mock/kbd0".to_string(),
+                vendor_id: 0x1234,
+                product_id: 0x5678,
+            }])
+        }
+
+        fn shutdown(&mut self) -> PlatformResult<()> {
+            self.initialized = false;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_platform_trait_is_object_safe() {
+        // This test verifies that Platform can be used as a trait object (Box<dyn Platform>)
+        let platform: Box<dyn super::Platform> = Box::new(MockPlatform::new());
+        let _ = platform; // Compile-time check that trait object works
+    }
+
+    #[test]
+    fn test_mock_platform_lifecycle() {
+        let mut platform = MockPlatform::new();
+
+        // Should not be initialized yet
+        assert!(!platform.initialized);
+
+        // Initialize the platform
+        platform.initialize().unwrap();
+        assert!(platform.initialized);
+
+        // Can inject output after initialization
+        let event = KeyEvent::press(KeyCode::A);
+        platform.inject_output(event).unwrap();
+
+        // Can list devices
+        let devices = platform.list_devices().unwrap();
+        assert_eq!(devices.len(), 1);
+        assert_eq!(devices[0].name, "Mock Keyboard");
+
+        // Shutdown
+        platform.shutdown().unwrap();
+        assert!(!platform.initialized);
+    }
+
+    #[test]
+    fn test_mock_platform_capture_input() {
+        let events = vec![
+            KeyEvent::press(KeyCode::A),
+            KeyEvent::release(KeyCode::A),
+            KeyEvent::press(KeyCode::B),
+        ];
+
+        let mut platform = MockPlatform::with_events(events);
+        platform.initialize().unwrap();
+
+        // Capture first event
+        let event1 = platform.capture_input().unwrap();
+        assert_eq!(event1.keycode(), KeyCode::A);
+        assert!(event1.is_press());
+
+        // Capture second event
+        let event2 = platform.capture_input().unwrap();
+        assert_eq!(event2.keycode(), KeyCode::A);
+        assert!(event2.is_release());
+
+        // Capture third event
+        let event3 = platform.capture_input().unwrap();
+        assert_eq!(event3.keycode(), KeyCode::B);
+        assert!(event3.is_press());
+
+        // No more events
+        let result = platform.capture_input();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_platform_requires_initialization() {
+        let mut platform = MockPlatform::new();
+
+        // capture_input should fail before initialization
+        let result = platform.capture_input();
+        assert!(matches!(
+            result,
+            Err(PlatformError::InitializationFailed(_))
+        ));
+
+        // inject_output should fail before initialization
+        let result = platform.inject_output(KeyEvent::press(KeyCode::A));
+        assert!(matches!(
+            result,
+            Err(PlatformError::InitializationFailed(_))
+        ));
+    }
+
+    #[test]
+    fn test_platform_as_trait_object() {
+        // Demonstrates dependency injection pattern
+        fn run_with_platform(mut platform: Box<dyn super::Platform>) -> PlatformResult<()> {
+            platform.initialize()?;
+            let devices = platform.list_devices()?;
+            assert!(!devices.is_empty());
+            platform.shutdown()?;
+            Ok(())
+        }
+
+        let platform: Box<dyn super::Platform> = Box::new(MockPlatform::new());
+        run_with_platform(platform).unwrap();
+    }
+
+    #[test]
+    fn test_device_info_equality() {
+        let device1 = DeviceInfo {
+            id: "kbd-0".to_string(),
+            name: "Keyboard".to_string(),
+            path: "/dev/input/event0".to_string(),
+            vendor_id: 0x1234,
+            product_id: 0x5678,
+        };
+
+        let device2 = DeviceInfo {
+            id: "kbd-0".to_string(),
+            name: "Keyboard".to_string(),
+            path: "/dev/input/event0".to_string(),
+            vendor_id: 0x1234,
+            product_id: 0x5678,
+        };
+
+        assert_eq!(device1, device2);
     }
 }

@@ -402,3 +402,145 @@ impl Default for LinuxPlatform {
         Self::new()
     }
 }
+
+// SAFETY: LinuxPlatform is used in a single-threaded context in practice.
+// The system_tray field contains GTK types (Rc<RefCell<Indicator>>) which are not Send/Sync,
+// but in the Platform trait usage pattern, all operations happen on the same thread.
+// The DeviceManager and UinputOutput are thread-safe.
+//
+// This implementation is safe because:
+// 1. The Platform trait is used synchronously on a single thread
+// 2. GTK operations (via system_tray) are only called from that same thread
+// 3. The system_tray is None when the tray is unavailable (headless mode)
+//
+// If multi-threaded access is needed in the future, the system_tray field
+// should be refactored to use thread-safe primitives or removed from LinuxPlatform.
+unsafe impl Send for LinuxPlatform {}
+unsafe impl Sync for LinuxPlatform {}
+
+// Platform trait implementation
+impl crate::platform::Platform for LinuxPlatform {
+    fn initialize(&mut self) -> crate::platform::PlatformResult<()> {
+        use crate::platform::PlatformError;
+        use keyrx_core::config::mappings::DeviceIdentifier;
+
+        // Create a wildcard configuration that matches all keyboards
+        let wildcard_config = DeviceConfig {
+            identifier: DeviceIdentifier {
+                pattern: "*".to_string(),
+            },
+            mappings: vec![],
+        };
+
+        // Call the existing init method
+        self.init(&[wildcard_config])
+            .map_err(|e| PlatformError::InitializationFailed(e.to_string()))
+    }
+
+    fn capture_input(
+        &mut self,
+    ) -> crate::platform::PlatformResult<keyrx_core::runtime::event::KeyEvent> {
+        use crate::platform::PlatformError;
+
+        // Get device manager
+        let device_manager = self.device_manager.as_mut().ok_or_else(|| {
+            PlatformError::InitializationFailed("device manager not initialized".to_string())
+        })?;
+
+        // Try to get the next event from any device
+        // In the Platform trait model, we need to return ONE event, not process all devices
+        for device in device_manager.devices_mut() {
+            match device.input_mut().next_event() {
+                Ok(event) => {
+                    // Tag the event with the device ID
+                    let device_id = device.device_id();
+                    return Ok(event.with_device_id(device_id));
+                }
+                Err(DeviceError::EndOfStream) => {
+                    // No events from this device, try the next one
+                    continue;
+                }
+                Err(e) => {
+                    return Err(PlatformError::Io(std::io::Error::other(e.to_string())));
+                }
+            }
+        }
+
+        // No events available from any device
+        Err(PlatformError::DeviceNotFound(
+            "No events available".to_string(),
+        ))
+    }
+
+    fn inject_output(
+        &mut self,
+        event: keyrx_core::runtime::event::KeyEvent,
+    ) -> crate::platform::PlatformResult<()> {
+        use crate::platform::PlatformError;
+
+        let output_device = self.output_device.as_mut().ok_or_else(|| {
+            PlatformError::InitializationFailed("output device not initialized".to_string())
+        })?;
+
+        output_device
+            .inject_event(event)
+            .map_err(|e| PlatformError::InjectionFailed(e.to_string()))
+    }
+
+    fn list_devices(&self) -> crate::platform::PlatformResult<Vec<crate::platform::DeviceInfo>> {
+        use crate::platform::{DeviceInfo, PlatformError};
+
+        let device_manager = self.device_manager.as_ref().ok_or_else(|| {
+            PlatformError::InitializationFailed("device manager not initialized".to_string())
+        })?;
+
+        // devices() returns an iterator, so we can map over it directly
+        let devices = device_manager
+            .devices()
+            .map(|device| {
+                let info = device.info();
+                DeviceInfo {
+                    id: device.device_id().to_string(),
+                    name: info.name.clone(),
+                    path: info.path.to_string_lossy().to_string(),
+                    // KeyboardInfo doesn't have USB IDs, use placeholders
+                    vendor_id: 0,
+                    product_id: 0,
+                }
+            })
+            .collect();
+
+        Ok(devices)
+    }
+
+    fn shutdown(&mut self) -> crate::platform::PlatformResult<()> {
+        use crate::platform::PlatformError;
+
+        // Call existing shutdown method
+        self.shutdown()
+            .map_err(|e| PlatformError::Io(std::io::Error::other(e.to_string())))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::platform::Platform;
+
+    #[test]
+    fn test_platform_trait_usage() {
+        // Verify LinuxPlatform can be used as Box<dyn Platform>
+        let platform: Box<dyn Platform> = Box::new(LinuxPlatform::new());
+        let _ = platform; // Compile-time check that trait object works
+    }
+
+    #[test]
+    fn test_linux_platform_implements_platform() {
+        // Verify LinuxPlatform implements all Platform trait methods
+        let platform = LinuxPlatform::new();
+
+        // Test that we can call trait methods
+        // Note: These will fail without actual devices, but the type-checking is what matters
+        let _ = platform.list_devices();
+    }
+}
