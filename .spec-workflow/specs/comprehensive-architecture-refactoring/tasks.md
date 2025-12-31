@@ -429,7 +429,7 @@
 
 ---
 
-- [-] 9. Split linux/mod.rs into focused platform modules (1952 → <500 lines)
+- [x] 9. Split linux/mod.rs into focused platform modules (1952 → <500 lines)
   - Files: keyrx_daemon/src/platform/linux/ (restructure), multiple new modules
   - Purpose: Separate input capture, output injection, and device discovery responsibilities
   - Requirements: FR1, FR3, NFR1
