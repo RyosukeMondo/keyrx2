@@ -292,7 +292,7 @@
 
 ---
 
-- [-] 6. Split tap_hold.rs into focused modules (3614 → <500 lines)
+- [x] 6. Split tap_hold.rs into focused modules (3614 → <500 lines)
   - Files: keyrx_core/src/runtime/tap_hold/ (new directory), multiple new modules
   - Purpose: Reduce massive file to manageable size following Single Responsibility Principle
   - Requirements: FR1, FR3, NFR1
