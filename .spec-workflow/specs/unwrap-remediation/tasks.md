@@ -450,7 +450,7 @@
 
 ### Task 6: Replace lock().unwrap() in Windows Platform
 
-- [ ] **6. Replace lock().unwrap() in Windows Platform**
+- [x] **6. Replace lock().unwrap() in Windows Platform**
   - **File**: `keyrx_daemon/src/platform/windows/rawinput.rs`
   - **Purpose**: Eliminate mutex poison panics in Windows message handler hot path by using poison-aware locking.
   - **Requirements**: FR2, NFR2, NFR4

@@ -20,8 +20,10 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
 };
 
+use crate::platform::recovery::recover_lock_with_context;
 use crate::platform::windows::device_map::DeviceMap;
 use crate::platform::windows::keycode::scancode_to_keycode;
+use crate::platform::PlatformError;
 use keyrx_core::runtime::KeyEvent;
 
 static REGISTER_CLASS: Once = Once::new();
@@ -58,7 +60,7 @@ impl RawInputManager {
         global_sender: Sender<KeyEvent>,
         bridge_context: Arc<Mutex<Option<BridgeContextHandle>>>,
         bridge_hook: Arc<Mutex<Option<isize>>>,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, PlatformError> {
         // 1. Create message-only window
         let hwnd = unsafe { Self::create_message_window()? };
 
@@ -88,7 +90,8 @@ impl RawInputManager {
 
         // 4. Install Test Bridge Hook for E2E testing
         {
-            let mut context_guard = bridge_context.lock().unwrap();
+            let mut context_guard =
+                recover_lock_with_context(&bridge_context, "RawInputManager::new bridge_context")?;
             *context_guard = Some(BridgeContextHandle {
                 global_sender: global_sender.clone(),
                 subscribers: subscribers.clone(),
@@ -99,7 +102,8 @@ impl RawInputManager {
                 *tls.borrow_mut() = Some(bridge_context.clone());
             });
 
-            let mut hook_guard = bridge_hook.lock().unwrap();
+            let mut hook_guard =
+                recover_lock_with_context(&bridge_hook, "RawInputManager::new bridge_hook")?;
             unsafe {
                 let hook = SetWindowsHookExW(
                     WH_KEYBOARD_LL,
@@ -168,7 +172,7 @@ impl RawInputManager {
         }
     }
 
-    unsafe fn create_message_window() -> Result<HWND, String> {
+    unsafe fn create_message_window() -> Result<HWND, PlatformError> {
         let h_instance = GetModuleHandleW(ptr::null());
 
         REGISTER_CLASS.call_once(|| {
@@ -211,16 +215,16 @@ impl RawInputManager {
         );
 
         if hwnd == 0 as _ {
-            return Err(format!(
+            return Err(PlatformError::InitializationFailed(format!(
                 "Failed to create message window: {}",
                 std::io::Error::last_os_error()
-            ));
+            )));
         }
 
         Ok(hwnd)
     }
 
-    unsafe fn register_raw_input(hwnd: HWND) -> Result<(), String> {
+    unsafe fn register_raw_input(hwnd: HWND) -> Result<(), PlatformError> {
         let rid = RAWINPUTDEVICE {
             usUsagePage: 1, // Generic Desktop Controls
             usUsage: 6,     // Keyboard
@@ -229,10 +233,10 @@ impl RawInputManager {
         };
 
         if RegisterRawInputDevices(&rid, 1, size_of::<RAWINPUTDEVICE>() as u32) == 0 {
-            return Err(format!(
+            return Err(PlatformError::InitializationFailed(format!(
                 "RegisterRawInputDevices failed: {}",
                 std::io::Error::last_os_error()
-            ));
+            )));
         }
 
         Ok(())
@@ -264,20 +268,39 @@ impl Drop for RawInputManager {
 
         // Uninstall bridge hook
         {
-            let mut context_guard = self.bridge_context.lock().unwrap();
-            *context_guard = None;
+            match recover_lock_with_context(
+                &self.bridge_context,
+                "RawInputManager::drop bridge_context",
+            ) {
+                Ok(mut context_guard) => {
+                    *context_guard = None;
 
-            // Clear thread-local storage
-            BRIDGE_CONTEXT_TLS.with(|tls| {
-                *tls.borrow_mut() = None;
-            });
-
-            let mut hook_guard = self.bridge_hook.lock().unwrap();
-            if let Some(hook) = hook_guard.take() {
-                unsafe {
-                    UnhookWindowsHookEx(hook as HHOOK);
+                    // Clear thread-local storage
+                    BRIDGE_CONTEXT_TLS.with(|tls| {
+                        *tls.borrow_mut() = None;
+                    });
                 }
-                log::info!("E2E Test Bridge Hook uninstalled");
+                Err(e) => {
+                    log::error!(
+                        "Failed to acquire bridge_context lock during cleanup: {}",
+                        e
+                    );
+                }
+            }
+
+            match recover_lock_with_context(&self.bridge_hook, "RawInputManager::drop bridge_hook")
+            {
+                Ok(mut hook_guard) => {
+                    if let Some(hook) = hook_guard.take() {
+                        unsafe {
+                            UnhookWindowsHookEx(hook as HHOOK);
+                        }
+                        log::info!("E2E Test Bridge Hook uninstalled");
+                    }
+                }
+                Err(e) => {
+                    log::error!("Failed to acquire bridge_hook lock during cleanup: {}", e);
+                }
             }
         }
     }
@@ -565,21 +588,45 @@ mod tests {
                 assert_ne!(manager1.hwnd, manager2.hwnd);
 
                 // Verify they have independent bridge contexts
-                assert!(bridge_context1.lock().unwrap().is_some());
-                assert!(bridge_context2.lock().unwrap().is_some());
+                assert!(bridge_context1
+                    .lock()
+                    .expect("Test: bridge_context1 should not be poisoned")
+                    .is_some());
+                assert!(bridge_context2
+                    .lock()
+                    .expect("Test: bridge_context2 should not be poisoned")
+                    .is_some());
 
                 // Verify they have independent hooks
-                assert!(bridge_hook1.lock().unwrap().is_some());
-                assert!(bridge_hook2.lock().unwrap().is_some());
+                assert!(bridge_hook1
+                    .lock()
+                    .expect("Test: bridge_hook1 should not be poisoned")
+                    .is_some());
+                assert!(bridge_hook2
+                    .lock()
+                    .expect("Test: bridge_hook2 should not be poisoned")
+                    .is_some());
 
                 // Drop them to verify cleanup works independently
                 drop(manager1);
-                assert!(bridge_context1.lock().unwrap().is_none());
-                assert!(bridge_hook1.lock().unwrap().is_none());
+                assert!(bridge_context1
+                    .lock()
+                    .expect("Test: bridge_context1 should not be poisoned after drop")
+                    .is_none());
+                assert!(bridge_hook1
+                    .lock()
+                    .expect("Test: bridge_hook1 should not be poisoned after drop")
+                    .is_none());
 
                 // Manager2's context should still be valid
-                assert!(bridge_context2.lock().unwrap().is_some());
-                assert!(bridge_hook2.lock().unwrap().is_some());
+                assert!(bridge_context2
+                    .lock()
+                    .expect("Test: bridge_context2 should still not be poisoned")
+                    .is_some());
+                assert!(bridge_hook2
+                    .lock()
+                    .expect("Test: bridge_hook2 should still not be poisoned")
+                    .is_some());
             }
             _ => {
                 eprintln!("Skipping multiple instances test (no GUI session)");
