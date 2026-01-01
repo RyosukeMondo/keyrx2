@@ -434,7 +434,7 @@
   - _Requirements: REQ-8 (AC1, AC4, AC7)_
   - _Prompt: Role: Build Engineer with expertise in WebAssembly tooling and bash scripting | Task: Create scripts/build_wasm.sh that checks if wasm-pack is installed (error with install instructions if not), cd to keyrx_core, runs "wasm-pack build --target web --out-dir ../keyrx_ui_v2/src/wasm/pkg --release -- --features wasm", verifies output files exist (keyrx_core_bg.wasm, keyrx_core.js, keyrx_core.d.ts), prints build time and wasm file size, exits 1 on failure with clear error message, uses bash set -e for error handling, add header comment explaining script purpose and dependencies | Restrictions: Must check wasm-pack installed, must verify output files, must use --release flag, must exit 1 on any error, script must be executable (chmod +x) | Success: Script checks dependencies, builds WASM successfully, outputs to correct directory, verifies files exist, prints build stats, fails clearly on errors, executable and documented_
 
-- [ ] 42. Create UI Build Script
+- [x] 42. Create UI Build Script
   - File: scripts/build_ui.sh
   - Run WASM build first, then npm install and npm run build
   - Verify dist/index.html exists
