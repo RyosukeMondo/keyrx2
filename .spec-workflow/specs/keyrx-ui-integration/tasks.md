@@ -393,7 +393,7 @@
   - _Requirements: REQ-7 (AC4, AC10)_
   - _Prompt: Role: E2E Testing Engineer with expertise in Playwright and browser automation | Task: Install Playwright (npm install --save-dev @playwright/test), create keyrx_ui_v2/playwright.config.ts with config (baseURL http://localhost:9867, webServer starts daemon before tests, browsers chromium/firefox/webkit, screenshots/videos on failure, retries on failure), create keyrx_ui_v2/e2e/ with test files: profile-crud.spec.ts (tests creating/activating/deleting profiles), config-editor.spec.ts (tests editing and saving config with Monaco), dashboard-monitoring.spec.ts (tests real-time dashboard updates), add package.json scripts ("test:e2e": "playwright test", "test:e2e:ui": "playwright test --ui"), configure CI to run E2E tests | Restrictions: Must test in real browsers not headless only, daemon must start automatically before tests, screenshots/videos on failure required, tests must be reliable (retries allowed) | Success: Playwright configured correctly, all 3 browsers tested (chromium/firefox/webkit), full workflows tested (profile CRUD, config editing, dashboard monitoring), screenshots/videos captured on failure, E2E tests run in CI_
 
-- [ ] 38. Setup Accessibility Tests
+- [x] 38. Setup Accessibility Tests
   - File: keyrx_ui_v2/tests/a11y/, keyrx_ui_v2/package.json
   - Configure jest-axe for accessibility testing
   - Test all pages for WCAG AA compliance

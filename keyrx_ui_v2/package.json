@@ -22,7 +22,8 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration",
     "test:integration:watch": "vitest tests/integration",
-    "test:a11y": "playwright test tests/accessibility.spec.ts",
+    "test:a11y": "vitest run tests/a11y",
+    "test:a11y:watch": "vitest tests/a11y",
     "test:lighthouse": "playwright test tests/lighthouse.spec.ts",
     "test:performance": "playwright test tests/performance",
     "test:visual": "playwright test tests/e2e/visual/responsive.spec.ts",
@@ -73,6 +74,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jest-axe": "^10.0.0",
     "jsdom": "^27.4.0",
     "msw": "^2.12.7",
     "playwright": "^1.40.1",
@@ -85,6 +87,7 @@
     "vite-plugin-compression": "^0.5.1",
     "vite-plugin-top-level-await": "^1.6.0",
     "vite-plugin-wasm": "^3.5.0",
-    "vitest": "^1.0.4"
+    "vitest": "^1.0.4",
+    "vitest-axe": "^0.1.0"
   }
 }
