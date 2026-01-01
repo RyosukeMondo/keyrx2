@@ -84,7 +84,7 @@
   - _Requirements: REQ-1 (AC8)_
   - _Prompt: Role: Systems Integration Developer with expertise in event-driven architecture | Task: Modify keyrx_daemon/src/processor.rs to broadcast daemon state (modifiers, locks, layer) to "daemon-state" channel after each state change, broadcast key events (timestamp, keyCode, eventType, latency, layer) to "events" channel after processing, add 1-second periodic task in main.rs to broadcast latency metrics (min, avg, max, p50, p95, p99, count) to "latency" channel, use SubscriptionManager::broadcast | Restrictions: Broadcasts must not block event processing, use async spawn for non-blocking sends, broadcasts only when subscribers exist (check first) | Success: State changes broadcast immediately, key events broadcast in real-time, latency metrics broadcast every 1 second, broadcasts don't affect processing latency, integration tests verify events are received_
 
-- [ ] 9. Add RPC Integration Tests
+- [x] 9. Add RPC Integration Tests
   - File: keyrx_daemon/tests/integration/rpc_api_test.rs
   - Test all RPC methods with real WebSocket client
   - Test subscription and event broadcasting
@@ -94,7 +94,7 @@
   - _Requirements: REQ-1 (AC1-AC10)_
   - _Prompt: Role: QA Engineer with expertise in integration testing and WebSocket protocols | Task: Create comprehensive integration tests in keyrx_daemon/tests/integration/rpc_api_test.rs using tokio-tungstenite WebSocket client, test scenarios: (1) connection receives Connected handshake, (2) query with ID receives response with matching ID, (3) command executes and returns success, (4) subscribe to channel receives broadcast events, (5) unsubscribe stops events, (6) invalid JSON returns PARSE_ERROR, (7) unknown method returns METHOD_NOT_FOUND, (8) concurrent requests from multiple clients are correlated correctly, (9) request timeout behavior, (10) disconnect cleans up subscriptions | Restrictions: Must use real WebSocket connections not mocks, must test actual daemon not test doubles, all 10 REQ-1 acceptance criteria must be verified | Success: All acceptance criteria verified, tests run reliably, error scenarios handled correctly, concurrent requests work_
 
-- [ ] 10. Define TypeScript RPC Types
+- [x] 10. Define TypeScript RPC Types
   - File: keyrx_ui_v2/src/types/rpc.ts
   - Create RpcMethod type union with all method names
   - Create ClientMessage and ServerMessage interfaces
