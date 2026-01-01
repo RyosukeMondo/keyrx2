@@ -1,7 +1,9 @@
 pub mod api;
 pub mod events;
+pub mod rpc_types;
 pub mod static_files;
 pub mod ws;
+pub mod ws_rpc;
 
 #[cfg(test)]
 mod ws_test;
@@ -38,6 +40,7 @@ pub async fn create_app(event_tx: broadcast::Sender<DaemonEvent>, state: Arc<App
     Router::new()
         .nest("/api", api::create_router(state))
         .nest("/ws", ws::create_router(event_tx))
+        .nest("/ws-rpc", ws_rpc::create_router())
         .fallback_service(static_files::serve_static())
 }
 

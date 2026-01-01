@@ -3,8 +3,10 @@
   "title": "Config Validation & Linting - Tasks",
   "filePath": ".spec-workflow/specs/config-validation-linting/tasks.md",
   "type": "document",
-  "status": "pending",
+  "status": "approved",
   "createdAt": "2025-12-29T15:28:31.393Z",
   "category": "spec",
-  "categoryName": "config-validation-linting"
+  "categoryName": "config-validation-linting",
+  "response": "ダッシュボードから承認",
+  "respondedAt": "2025-12-31T23:35:13.722Z"
 }
