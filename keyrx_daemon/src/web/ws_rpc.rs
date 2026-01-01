@@ -5,7 +5,10 @@
 //! and provides request/response correlation via UUID tracking.
 
 use axum::{
-    extract::ws::{Message, WebSocket, WebSocketUpgrade},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        State,
+    },
     response::IntoResponse,
     routing::get,
     Router,
@@ -16,18 +19,24 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::web::rpc_types::{ClientMessage, RpcError, ServerMessage};
+use crate::web::AppState;
 
-pub fn create_router() -> Router {
-    Router::new().route("/", get(websocket_handler))
+pub fn create_router(state: Arc<AppState>) -> Router {
+    Router::new()
+        .route("/", get(websocket_handler))
+        .with_state(state)
 }
 
 /// WebSocket upgrade handler
-async fn websocket_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
-    ws.on_upgrade(handle_websocket)
+async fn websocket_handler(
+    State(state): State<Arc<AppState>>,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_websocket(socket, state))
 }
 
 /// Handle WebSocket RPC connection
-async fn handle_websocket(mut socket: WebSocket) {
+async fn handle_websocket(mut socket: WebSocket, state: Arc<AppState>) {
     log::info!("WebSocket RPC client connected");
 
     // Send Connected handshake immediately
@@ -101,7 +110,8 @@ async fn handle_websocket(mut socket: WebSocket) {
                 };
 
                 // Process message and queue response
-                process_client_message(client_msg, Arc::clone(&outgoing_queue)).await;
+                process_client_message(client_msg, Arc::clone(&outgoing_queue), Arc::clone(&state))
+                    .await;
             }
             Some(Ok(Message::Close(_))) => {
                 log::info!("WebSocket RPC client closed connection");
@@ -128,10 +138,15 @@ async fn handle_websocket(mut socket: WebSocket) {
 async fn process_client_message(
     msg: ClientMessage,
     outgoing_queue: Arc<Mutex<VecDeque<ServerMessage>>>,
+    state: Arc<AppState>,
 ) {
     let response = match msg {
-        ClientMessage::Query { id, method, params } => handle_query(id, method, params).await,
-        ClientMessage::Command { id, method, params } => handle_command(id, method, params).await,
+        ClientMessage::Query { id, method, params } => {
+            handle_query(id, method, params, &state).await
+        }
+        ClientMessage::Command { id, method, params } => {
+            handle_command(id, method, params, &state).await
+        }
         ClientMessage::Subscribe { id, channel } => handle_subscribe(id, channel).await,
         ClientMessage::Unsubscribe { id, channel } => handle_unsubscribe(id, channel).await,
     };
@@ -142,24 +157,66 @@ async fn process_client_message(
 }
 
 /// Handle query request (read-only operations)
-async fn handle_query(id: String, method: String, _params: Value) -> ServerMessage {
-    // For now, return METHOD_NOT_FOUND for all queries
-    // Actual query handlers will be implemented in later tasks (Phase 1, Tasks 3-6)
-    ServerMessage::Response {
-        id,
-        result: None,
-        error: Some(RpcError::method_not_found(method)),
+async fn handle_query(
+    id: String,
+    method: String,
+    params: Value,
+    state: &AppState,
+) -> ServerMessage {
+    use crate::web::handlers::profile;
+
+    log::debug!("Handling query: {} with params: {}", method, params);
+
+    let result = match method.as_str() {
+        "get_profiles" => profile::get_profiles(&state.profile_service, params).await,
+        _ => Err(RpcError::method_not_found(&method)),
+    };
+
+    match result {
+        Ok(data) => ServerMessage::Response {
+            id,
+            result: Some(data),
+            error: None,
+        },
+        Err(error) => ServerMessage::Response {
+            id,
+            result: None,
+            error: Some(error),
+        },
     }
 }
 
 /// Handle command request (state-modifying operations)
-async fn handle_command(id: String, method: String, _params: Value) -> ServerMessage {
-    // For now, return METHOD_NOT_FOUND for all commands
-    // Actual command handlers will be implemented in later tasks (Phase 1, Tasks 3-6)
-    ServerMessage::Response {
-        id,
-        result: None,
-        error: Some(RpcError::method_not_found(method)),
+async fn handle_command(
+    id: String,
+    method: String,
+    params: Value,
+    state: &AppState,
+) -> ServerMessage {
+    use crate::web::handlers::profile;
+
+    log::debug!("Handling command: {} with params: {}", method, params);
+
+    let result = match method.as_str() {
+        "create_profile" => profile::create_profile(&state.profile_service, params).await,
+        "activate_profile" => profile::activate_profile(&state.profile_service, params).await,
+        "delete_profile" => profile::delete_profile(&state.profile_service, params).await,
+        "duplicate_profile" => profile::duplicate_profile(&state.profile_service, params).await,
+        "rename_profile" => profile::rename_profile(&state.profile_service, params).await,
+        _ => Err(RpcError::method_not_found(&method)),
+    };
+
+    match result {
+        Ok(data) => ServerMessage::Response {
+            id,
+            result: Some(data),
+            error: None,
+        },
+        Err(error) => ServerMessage::Response {
+            id,
+            result: None,
+            error: Some(error),
+        },
     }
 }
 
@@ -198,10 +255,21 @@ async fn handle_unsubscribe(id: String, channel: String) -> ServerMessage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ProfileManager;
+    use crate::macro_recorder::MacroRecorder;
+    use crate::services::ProfileService;
+    use std::path::PathBuf;
 
     #[test]
     fn test_create_router() {
-        let router = create_router();
+        let profile_manager =
+            Arc::new(ProfileManager::new(PathBuf::from("/tmp/keyrx-test")).unwrap());
+        let profile_service = Arc::new(ProfileService::new(profile_manager));
+        let state = Arc::new(AppState::new(
+            Arc::new(MacroRecorder::new()),
+            profile_service,
+        ));
+        let router = create_router(state);
         assert!(std::mem::size_of_val(&router) > 0);
     }
 }

@@ -313,7 +313,32 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
 
     // Create AppState with dependencies for web API
     let macro_recorder = std::sync::Arc::new(keyrx_daemon::macro_recorder::MacroRecorder::new());
-    let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(macro_recorder));
+
+    // Determine config directory from config path parent
+    let config_dir = config_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .to_path_buf();
+
+    // Initialize ProfileManager and ProfileService
+    let profile_manager = match keyrx_daemon::config::ProfileManager::new(config_dir) {
+        Ok(mgr) => std::sync::Arc::new(mgr),
+        Err(e) => {
+            log::warn!("Failed to initialize ProfileManager: {}. Profile operations will not be available.", e);
+            // Continue without profile support - use a dummy
+            return Err((
+                keyrx_daemon::daemon::ExitCode::ConfigError as i32,
+                format!("Failed to initialize ProfileManager: {}", e),
+            ));
+        }
+    };
+    let profile_service =
+        std::sync::Arc::new(keyrx_daemon::services::ProfileService::new(profile_manager));
+
+    let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(
+        macro_recorder,
+        profile_service,
+    ));
 
     // Start web server in background (optional)
     std::thread::spawn(move || {
@@ -377,7 +402,32 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
 
     // Start web server in background
     let macro_recorder = std::sync::Arc::new(keyrx_daemon::macro_recorder::MacroRecorder::new());
-    let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(macro_recorder));
+
+    // Determine config directory from config path parent
+    let config_dir = config_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .to_path_buf();
+
+    // Initialize ProfileManager and ProfileService
+    let profile_manager = match keyrx_daemon::config::ProfileManager::new(config_dir) {
+        Ok(mgr) => std::sync::Arc::new(mgr),
+        Err(e) => {
+            log::warn!("Failed to initialize ProfileManager: {}. Profile operations will not be available.", e);
+            // Continue without profile support - use a dummy
+            return Err((
+                keyrx_daemon::daemon::ExitCode::ConfigError as i32,
+                format!("Failed to initialize ProfileManager: {}", e),
+            ));
+        }
+    };
+    let profile_service =
+        std::sync::Arc::new(keyrx_daemon::services::ProfileService::new(profile_manager));
+
+    let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(
+        macro_recorder,
+        profile_service,
+    ));
 
     std::thread::spawn(move || {
         let rt = match tokio::runtime::Runtime::new() {

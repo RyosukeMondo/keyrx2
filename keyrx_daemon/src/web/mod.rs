@@ -1,5 +1,6 @@
 pub mod api;
 pub mod events;
+pub mod handlers;
 pub mod rpc_types;
 pub mod static_files;
 pub mod ws;
@@ -16,6 +17,7 @@ use tokio::sync::broadcast;
 pub use events::DaemonEvent;
 
 use crate::macro_recorder::MacroRecorder;
+use crate::services::ProfileService;
 
 /// Application state shared across all web handlers
 ///
@@ -26,21 +28,26 @@ use crate::macro_recorder::MacroRecorder;
 pub struct AppState {
     /// Macro recorder for capturing keyboard event sequences
     pub macro_recorder: Arc<MacroRecorder>,
+    /// Profile service for profile management operations
+    pub profile_service: Arc<ProfileService>,
 }
 
 impl AppState {
     /// Creates a new AppState with the given dependencies
-    pub fn new(macro_recorder: Arc<MacroRecorder>) -> Self {
-        Self { macro_recorder }
+    pub fn new(macro_recorder: Arc<MacroRecorder>, profile_service: Arc<ProfileService>) -> Self {
+        Self {
+            macro_recorder,
+            profile_service,
+        }
     }
 }
 
 #[allow(dead_code)]
 pub async fn create_app(event_tx: broadcast::Sender<DaemonEvent>, state: Arc<AppState>) -> Router {
     Router::new()
-        .nest("/api", api::create_router(state))
+        .nest("/api", api::create_router(Arc::clone(&state)))
         .nest("/ws", ws::create_router(event_tx))
-        .nest("/ws-rpc", ws_rpc::create_router())
+        .nest("/ws-rpc", ws_rpc::create_router(Arc::clone(&state)))
         .fallback_service(static_files::serve_static())
 }
 

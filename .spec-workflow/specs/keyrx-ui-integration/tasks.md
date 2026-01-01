@@ -24,7 +24,7 @@
   - _Requirements: REQ-1 (AC1, AC2, AC3, AC6, AC7)_
   - _Prompt: Role: Rust WebSocket Developer with expertise in Axum and async programming | Task: Implement WebSocket RPC handler in keyrx_daemon/src/web/ws_rpc.rs that accepts Axum WebSocket upgrade, sends Connected handshake with version and timestamp, splits socket into sender/receiver, loops on incoming messages deserializing to ClientMessage, routes to handler functions (handle_query, handle_command, handle_subscribe, handle_unsubscribe), correlates responses via UUID tracking in HashMap, handles parse errors with PARSE_ERROR code, unknown methods with METHOD_NOT_FOUND code, cleans up on disconnect | Restrictions: Must use split socket pattern, must not block on message send, UUID correlation is required for all requests, cleanup all pending requests on disconnect | Success: Handshake sent immediately on connect, messages routed correctly to handlers, invalid JSON returns PARSE_ERROR, unknown methods return METHOD_NOT_FOUND, concurrent requests correlated by UUID, disconnect cleans up resources_
 
-- [ ] 3. Implement Profile RPC Methods
+- [x] 3. Implement Profile RPC Methods
   - File: keyrx_daemon/src/web/handlers/profile.rs, keyrx_daemon/src/web/handlers/mod.rs
   - Implement get_profiles, create_profile, activate_profile, delete_profile, duplicate_profile, rename_profile
   - Add parameter validation and error handling

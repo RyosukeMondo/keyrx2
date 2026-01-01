@@ -58,11 +58,20 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ProfileManager;
     use crate::macro_recorder::MacroRecorder;
+    use crate::services::ProfileService;
+    use std::path::PathBuf;
 
     #[tokio::test]
     async fn test_create_router() {
-        let state = Arc::new(AppState::new(Arc::new(MacroRecorder::new())));
+        let profile_manager =
+            Arc::new(ProfileManager::new(PathBuf::from("/tmp/keyrx-test")).unwrap());
+        let profile_service = Arc::new(ProfileService::new(profile_manager));
+        let state = Arc::new(AppState::new(
+            Arc::new(MacroRecorder::new()),
+            profile_service,
+        ));
         let router = create_router(state);
         assert!(std::mem::size_of_val(&router) > 0);
     }
@@ -72,7 +81,10 @@ mod tests {
         // This test demonstrates that we can inject a fresh MacroRecorder
         // instance for testing, proving dependency injection works
         let mock_recorder = Arc::new(MacroRecorder::new());
-        let state = Arc::new(AppState::new(mock_recorder.clone()));
+        let profile_manager =
+            Arc::new(ProfileManager::new(PathBuf::from("/tmp/keyrx-test")).unwrap());
+        let profile_service = Arc::new(ProfileService::new(profile_manager));
+        let state = Arc::new(AppState::new(mock_recorder.clone(), profile_service));
 
         // Verify state is accessible
         assert_eq!(state.macro_recorder.event_count(), 0);

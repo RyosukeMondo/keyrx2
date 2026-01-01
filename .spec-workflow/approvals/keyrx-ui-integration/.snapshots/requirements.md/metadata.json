@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/keyrx-ui-integration/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-31T23:24:02.697Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767223442671_kq5q1wqly",
+      "approvalTitle": "keyrx-ui-integration Requirements Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-12-31T23:48:36.379Z",
+      "trigger": "approved",
+      "approvalId": "approval_1767223442671_kq5q1wqly",
+      "approvalTitle": "keyrx-ui-integration Requirements Document"
+    }
+  ]
+}
