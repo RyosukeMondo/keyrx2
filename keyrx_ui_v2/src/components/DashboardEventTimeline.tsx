@@ -1,24 +1,126 @@
 /**
- * DashboardEventTimeline - Real-time event log
+ * DashboardEventTimeline - Virtualized real-time event log component.
  *
- * This component displays a virtualized list of key events with pause/resume
- * and clear functionality. Will be fully implemented in Task 21.
- *
- * @placeholder This is a temporary stub for Task 18 integration
+ * Displays a scrollable list of key events using react-window for performance
+ * with large event lists. Supports pause/resume and clearing of events.
  */
 
-import type { KeyEvent } from '../types/rpc';
+import { useState } from "react";
+import { FixedSizeList } from "react-window";
+import type { KeyEvent } from "../types/rpc";
+import { formatKeyCode } from "../utils/keyCodeMapping";
+import { formatTimestampRelative } from "../utils/timeFormatting";
 
-interface DashboardEventTimelineProps {
+/**
+ * Props for the DashboardEventTimeline component.
+ */
+export interface DashboardEventTimelineProps {
+  /** Array of key events to display (newest first) */
   events: KeyEvent[];
+  /** Whether event updates are paused */
   isPaused: boolean;
+  /** Callback to toggle pause state */
   onTogglePause: () => void;
+  /** Callback to clear all events */
   onClear: () => void;
 }
 
 /**
- * DashboardEventTimeline component - Displays real-time event stream
- * @placeholder Full implementation in Task 21
+ * Props for individual event row.
+ */
+interface EventRowProps {
+  /** Event data to display */
+  event: KeyEvent;
+  /** Row style from react-window */
+  style: React.CSSProperties;
+}
+
+/**
+ * Individual event row component with tooltip.
+ */
+function EventRow({ event, style }: EventRowProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  // Convert timestamp from microseconds to milliseconds for relative time
+  const timestampMs = Math.floor(event.timestamp / 1000);
+  const relativeTime = formatTimestampRelative(timestampMs);
+  const keyLabel = formatKeyCode(event.keyCode);
+
+  return (
+    <div
+      style={style}
+      className="relative flex items-center gap-4 px-4 py-2 border-b border-slate-700 hover:bg-slate-800 transition-colors"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {/* Key code */}
+      <div className="w-20 font-mono text-sm text-blue-400 font-semibold">
+        {keyLabel}
+      </div>
+
+      {/* Event type */}
+      <div className="w-20 text-sm">
+        <span
+          className={`px-2 py-1 rounded text-xs font-medium ${
+            event.eventType === "press"
+              ? "bg-green-900 text-green-200"
+              : "bg-red-900 text-red-200"
+          }`}
+        >
+          {event.eventType}
+        </span>
+      </div>
+
+      {/* Input -> Output */}
+      <div className="flex-1 text-sm text-slate-400 font-mono">
+        {formatKeyCode(event.input)} → {formatKeyCode(event.output)}
+      </div>
+
+      {/* Relative timestamp */}
+      <div className="w-24 text-right text-xs text-slate-500">
+        {relativeTime}
+      </div>
+
+      {/* Tooltip with full details */}
+      {showTooltip && (
+        <div className="absolute left-0 top-full z-50 mt-1 p-3 bg-slate-900 border border-slate-700 rounded shadow-lg text-xs font-mono whitespace-nowrap">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <span className="text-slate-500">Timestamp:</span>
+            <span className="text-slate-200">{event.timestamp}μs</span>
+
+            <span className="text-slate-500">Input:</span>
+            <span className="text-slate-200">{event.input}</span>
+
+            <span className="text-slate-500">Output:</span>
+            <span className="text-slate-200">{event.output}</span>
+
+            <span className="text-slate-500">Latency:</span>
+            <span className="text-slate-200">{event.latency}μs</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * DashboardEventTimeline component.
+ *
+ * Renders a virtualized list of key events with pause/resume and clear controls.
+ * Uses react-window's FixedSizeList for efficient rendering of large event lists.
+ *
+ * @example
+ * ```tsx
+ * const [events, setEvents] = useState<KeyEvent[]>([]);
+ * const [isPaused, setIsPaused] = useState(false);
+ *
+ * <DashboardEventTimeline
+ *   events={events}
+ *   isPaused={isPaused}
+ *   onTogglePause={() => setIsPaused(!isPaused)}
+ *   onClear={() => setEvents([])}
+ * />
+ * ```
  */
 export function DashboardEventTimeline({
   events,
@@ -27,61 +129,44 @@ export function DashboardEventTimeline({
   onClear,
 }: DashboardEventTimelineProps) {
   return (
-    <div className="bg-slate-800 rounded-lg p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-        <h2 className="text-lg font-semibold">Event Timeline</h2>
-        <div className="flex flex-col sm:flex-row gap-2">
+    <div className="flex flex-col h-full">
+      {/* Header with controls */}
+      <div className="flex items-center justify-between gap-2 p-4 border-b border-slate-700 bg-slate-900">
+        <h2 className="text-lg font-semibold text-slate-200">Event Timeline</h2>
+        <div className="flex gap-2">
           <button
             onClick={onTogglePause}
-            className="min-h-[44px] md:min-h-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
+            className="min-h-[44px] px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors text-sm font-medium"
+            aria-label={isPaused ? "Resume event updates" : "Pause event updates"}
           >
-            {isPaused ? 'Resume' : 'Pause'}
+            {isPaused ? "Resume" : "Pause"}
           </button>
           <button
             onClick={onClear}
-            className="min-h-[44px] md:min-h-0 px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-white text-sm"
+            className="min-h-[44px] px-4 py-2 bg-red-900 hover:bg-red-800 text-red-200 rounded transition-colors text-sm font-medium"
+            aria-label="Clear all events"
           >
             Clear
           </button>
         </div>
       </div>
 
-      <div className="text-sm text-slate-400">
-        {events.length === 0 ? (
-          <p>No events yet...</p>
-        ) : (
-          <>
-            <p className="mb-2">
-              {events.length} event{events.length !== 1 ? 's' : ''}{' '}
-              {isPaused && '(Paused)'}
-            </p>
-            <div className="max-h-96 overflow-y-auto space-y-1">
-              {events.slice(0, 10).map((event, index) => (
-                <div
-                  key={`${event.timestamp}-${index}`}
-                  className="p-2 bg-slate-700 rounded"
-                >
-                  <span className="font-mono">{event.keyCode}</span>
-                  <span className="mx-2 text-slate-500">→</span>
-                  <span className="text-slate-300">{event.eventType}</span>
-                  <span className="mx-2 text-slate-500">|</span>
-                  <span className="text-slate-400">
-                    {(event.latency / 1000).toFixed(2)} ms
-                  </span>
-                </div>
-              ))}
-              {events.length > 10 && (
-                <p className="text-slate-500 text-center pt-2">
-                  ...and {events.length - 10} more events
-                </p>
-              )}
-            </div>
-            <p className="text-slate-500 mt-4">
-              Virtualized list will be implemented in Task 21
-            </p>
-          </>
-        )}
-      </div>
+      {/* Event list or empty state */}
+      {events.length === 0 ? (
+        <div className="flex items-center justify-center h-96 text-slate-500">
+          No events yet. Start typing to see events appear.
+        </div>
+      ) : (
+        <FixedSizeList
+          height={400}
+          itemCount={events.length}
+          itemSize={50}
+          width="100%"
+          className="bg-slate-950"
+        >
+          {({ index, style }) => <EventRow event={events[index]} style={style} />}
+        </FixedSizeList>
+      )}
     </div>
   );
 }

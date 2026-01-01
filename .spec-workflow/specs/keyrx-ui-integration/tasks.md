@@ -211,7 +211,7 @@
   - _Requirements: REQ-3 (AC5, AC9)_
   - _Prompt: Role: Data Visualization Developer with expertise in Recharts and performance metrics | Task: Create keyrx_ui_v2/src/components/MetricsChart.tsx accepting data: LatencyMetrics[] prop, transform data by converting microseconds to milliseconds (divide by 1000) and mapping to {index, avg, p95, p99}, render Recharts LineChart with ResponsiveContainer width 100% height 300px, add three lines (avg in blue, p95 in orange, p99 in red), add ReferenceLine at y=5 in red with label "Target (5ms)", configure dark theme colors matching TailwindCSS slate palette, add CartesianGrid, XAxis (index), YAxis (ms label), Tooltip, Legend | Restrictions: Must convert microseconds to milliseconds, reference line must be at exactly 5ms, chart must be responsive, dark theme colors required, height 300px fixed | Success: Chart renders three lines correctly, reference line at 5ms, values in milliseconds, responsive width, dark theme applied, tooltip shows values on hover, legend identifies lines_
 
-- [ ] 21. Create Event Timeline Component
+- [x] 21. Create Event Timeline Component
   - File: keyrx_ui_v2/src/components/DashboardEventTimeline.tsx
   - Render virtualized list of events (react-window)
   - Support pause/resume and clear
