@@ -269,7 +269,7 @@
   - _Requirements: REQ-5 (AC1, AC2, AC9, AC10)_
   - _Prompt: Role: Rust WebAssembly Developer with expertise in wasm-bindgen and optimization | Task: Modify keyrx_core/Cargo.toml to add crate-type = ["cdylib", "rlib"], add wasm feature that enables wasm-bindgen and serde-wasm-bindgen dependencies, configure [profile.release] with opt-level="z" lto=true codegen-units=1 strip=true for size optimization, modify keyrx_core/src/lib.rs to add #[wasm_bindgen] pub fn validate_config(code: &str) -> JsValue and pub fn simulate(code: &str, input: JsValue) -> JsValue when wasm feature enabled, use serde-wasm-bindgen for Rust<->JS conversion | Restrictions: Must use cdylib for WASM, release profile must optimize for size not speed, WASM functions must use JsValue for JS interop, feature gating required (only export when wasm feature enabled) | Success: Builds with wasm-pack successfully, output in pkg/ directory, WASM file size < 1MB, functions callable from JavaScript, type conversions work correctly_
 
-- [ ] 26. Configure Vite for WASM
+- [x] 26. Configure Vite for WASM
   - File: keyrx_ui_v2/vite.config.ts, keyrx_ui_v2/package.json
   - Install and configure vite-plugin-wasm and vite-plugin-top-level-await
   - Configure code splitting for Monaco and WASM
@@ -279,7 +279,7 @@
   - _Requirements: REQ-5 (AC9, AC10)_
   - _Prompt: Role: Frontend Build Engineer with expertise in Vite and module bundling | Task: Install vite-plugin-wasm and vite-plugin-top-level-await via npm, modify keyrx_ui_v2/vite.config.ts to add both plugins, set build.target to 'esnext', configure build.rollupOptions.output.manualChunks for 'vendor' (react/react-dom/react-router-dom), 'monaco' (@monaco-editor/react), 'charts' (recharts), add optimizeDeps.exclude for '@/wasm/keyrx_core', update package.json with build:wasm script: "cd ../keyrx_core && wasm-pack build --target web --out-dir ../keyrx_ui_v2/src/wasm/pkg --release", update build script to run build:wasm first | Restrictions: Must use esnext target for top-level await, WASM module must be excluded from Vite optimization, code splitting configuration is mandatory | Success: WASM builds and bundles correctly, separate chunks for vendor/monaco/charts, WASM loads in browser, top-level await works, hot reload rebuilds WASM on source changes_
 
-- [ ] 27. Implement WASM Validation
+- [x] 27. Implement WASM Validation
   - File: keyrx_core/src/lib.rs, keyrx_core/src/wasm/validation.rs
   - Implement validate_config using keyrx_compiler
   - Return JSON array of errors with line/column/message

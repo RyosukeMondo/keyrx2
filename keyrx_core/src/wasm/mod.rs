@@ -17,6 +17,7 @@
 #![cfg(feature = "wasm")]
 
 pub mod simulation;
+pub mod validation;
 
 extern crate std;
 
@@ -415,8 +416,11 @@ pub fn load_krx(binary: &[u8]) -> Result<ConfigHandle, JsValue> {
 
 /// Validate a Rhai configuration source.
 ///
-/// Parses the Rhai source and returns validation errors as a JSON array.
+/// Parses the Rhai source using keyrx_compiler and returns validation errors as a JSON array.
 /// Returns an empty array if the configuration is valid.
+///
+/// This function uses the same parser as the daemon to ensure validation results are
+/// deterministic and match the daemon's behavior exactly.
 ///
 /// # Arguments
 /// * `rhai_source` - Rhai DSL source code as a string
@@ -433,100 +437,20 @@ pub fn load_krx(binary: &[u8]) -> Result<ConfigHandle, JsValue> {
 /// ```javascript
 /// const errors = validate_config(`
 ///   device("*") {
-///     map("VK_A", "VK_B");
+///     map("A", "B");
 ///   }
 /// `);
 /// console.log(errors); // [] for valid config
 /// ```
 #[wasm_bindgen]
 pub fn validate_config(rhai_source: &str) -> Result<JsValue, JsValue> {
-    #[derive(Serialize)]
-    struct ValidationError {
-        line: usize,
-        column: usize,
-        length: usize,
-        message: String,
-    }
+    // Use keyrx_compiler for deterministic validation
+    let errors = validation::validate_rhai_config(rhai_source)
+        .map_err(|e| JsValue::from_str(&format!("Validation error: {}", e)))?;
 
-    // Validate input size (1MB limit)
-    const MAX_CONFIG_SIZE: usize = 1024 * 1024;
-    if rhai_source.len() > MAX_CONFIG_SIZE {
-        let error = ValidationError {
-            line: 1,
-            column: 1,
-            length: 0,
-            message: format!(
-                "Configuration too large: {} bytes (max {})",
-                rhai_source.len(),
-                MAX_CONFIG_SIZE
-            ),
-        };
-        return serde_wasm_bindgen::to_value(&vec![error])
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize error: {}", e)));
-    }
-
-    // Try to parse the configuration
-    match parse_rhai_config(rhai_source) {
-        Ok(_) => {
-            // Valid configuration - return empty array
-            serde_wasm_bindgen::to_value(&Vec::<ValidationError>::new())
-                .map_err(|e| JsValue::from_str(&format!("Failed to serialize result: {}", e)))
-        }
-        Err(error_msg) => {
-            // Parse error occurred - extract line/column from Rhai error
-            // Rhai error format is typically "... (line X, column Y)"
-            let (line, column) = extract_line_column(&error_msg);
-
-            let error = ValidationError {
-                line,
-                column,
-                length: 1, // Default length for now
-                message: error_msg,
-            };
-
-            serde_wasm_bindgen::to_value(&vec![error])
-                .map_err(|e| JsValue::from_str(&format!("Failed to serialize error: {}", e)))
-        }
-    }
-}
-
-/// Extract line and column numbers from Rhai error message.
-///
-/// Rhai error messages typically contain position information like:
-/// "Parse error: ... (line 5, column 10)"
-fn extract_line_column(error_msg: &str) -> (usize, usize) {
-    // Look for pattern "(line X, column Y)" or "(line X, position Y)"
-    if let Some(start) = error_msg.find("(line ") {
-        let after_line = &error_msg[start + 6..];
-        if let Some(comma) = after_line.find(',') {
-            let line_str = &after_line[..comma];
-            if let Ok(line) = line_str.trim().parse::<usize>() {
-                let after_comma = &after_line[comma + 1..];
-
-                // Try "column" or "position"
-                let col_prefix = if after_comma.contains("column") {
-                    "column "
-                } else if after_comma.contains("position") {
-                    "position "
-                } else {
-                    return (line, 1);
-                };
-
-                if let Some(col_start) = after_comma.find(col_prefix) {
-                    let after_col = &after_comma[col_start + col_prefix.len()..];
-                    if let Some(end) = after_col.find(')') {
-                        let col_str = &after_col[..end];
-                        if let Ok(col) = col_str.trim().parse::<usize>() {
-                            return (line, col);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Default to line 1, column 1 if parsing fails
-    (1, 1)
+    // Serialize to JSON
+    serde_wasm_bindgen::to_value(&errors)
+        .map_err(|e| JsValue::from_str(&format!("Failed to serialize errors: {}", e)))
 }
 
 // ============================================================================
