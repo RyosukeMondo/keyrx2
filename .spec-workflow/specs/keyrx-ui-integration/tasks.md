@@ -413,7 +413,7 @@
   - _Requirements: REQ-7 (AC6, AC10)_
   - _Prompt: Role: Performance Engineer with expertise in bundle optimization and Lighthouse | Task: Create keyrx_ui_v2/tests/performance/bundle-size.test.ts that uses fs and zlib to measure gzipped bundle sizes after build, verify main bundle < 500KB, Monaco chunk < 2MB, WASM module < 1MB, install Lighthouse CI (npm install --save-dev @lhci/cli), create .lighthouserc.js config with budgets and assertions (performance >= 90, accessibility >= 90, best-practices >= 90), configure URLs to test (/, /config/Default, /dashboard, /devices), add package.json scripts ("test:perf": "vitest run tests/performance", "test:lighthouse": "lhci autorun"), configure CI to run performance tests after build | Restrictions: Bundle size limits are hard requirements (500KB/2MB/1MB gzipped), Lighthouse scores >= 90 mandatory, tests must run after production build, CI must fail if budgets exceeded | Success: Bundle size tests verify limits, Lighthouse CI configured with budgets, all scores >= 90, performance tests run in CI, build fails if budgets exceeded or scores too low_
 
-- [ ] 40. Configure Pre-Commit Hooks
+- [x] 40. Configure Pre-Commit Hooks
   - File: .husky/pre-commit, package.json, .git/hooks/pre-commit
   - Install Husky and lint-staged
   - Configure hooks for Rust (clippy, fmt, test) and TypeScript (prettier, eslint, vitest)
