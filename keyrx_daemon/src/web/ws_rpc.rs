@@ -163,7 +163,7 @@ async fn handle_query(
     params: Value,
     state: &AppState,
 ) -> ServerMessage {
-    use crate::web::handlers::{config, device, profile};
+    use crate::web::handlers::{config, device, metrics, profile};
 
     log::debug!("Handling query: {} with params: {}", method, params);
 
@@ -172,6 +172,8 @@ async fn handle_query(
         "get_devices" => device::get_devices(&state.device_service, params).await,
         "get_config" => config::get_config(&state.config_service, params).await,
         "get_layers" => config::get_layers(&state.config_service, params).await,
+        "get_latency" => metrics::get_latency(&state.macro_recorder, params).await,
+        "get_events" => metrics::get_events(&state.macro_recorder, params).await,
         _ => Err(RpcError::method_not_found(&method)),
     };
 
@@ -196,7 +198,7 @@ async fn handle_command(
     params: Value,
     state: &AppState,
 ) -> ServerMessage {
-    use crate::web::handlers::{config, device, profile};
+    use crate::web::handlers::{config, device, metrics, profile};
 
     log::debug!("Handling command: {} with params: {}", method, params);
 
@@ -212,6 +214,9 @@ async fn handle_command(
         "update_config" => config::update_config(&state.config_service, params).await,
         "set_key_mapping" => config::set_key_mapping(&state.config_service, params).await,
         "delete_key_mapping" => config::delete_key_mapping(&state.config_service, params).await,
+        "clear_events" => metrics::clear_events(&state.macro_recorder, params).await,
+        "simulate" => metrics::simulate(&state.macro_recorder, params).await,
+        "reset_simulator" => metrics::reset_simulator(&state.macro_recorder, params).await,
         _ => Err(RpcError::method_not_found(&method)),
     };
 

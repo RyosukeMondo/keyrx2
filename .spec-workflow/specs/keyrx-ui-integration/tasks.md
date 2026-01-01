@@ -54,7 +54,7 @@
   - _Requirements: REQ-1 (AC2, AC3)_
   - _Prompt: Role: Backend Developer with expertise in configuration management and validation | Task: Create keyrx_daemon/src/web/handlers/config.rs with 5 RPC methods (get_config returns code+hash, update_config validates with keyrx_compiler::parse and enforces 1MB limit, set_key_mapping updates single key, delete_key_mapping removes key, get_layers returns layer list), all methods validate inputs and use config manager | Restrictions: update_config MUST validate with keyrx_compiler before saving, 1MB size limit is mandatory, configuration validation must match daemon behavior exactly | Success: All 5 methods work correctly, invalid configs rejected before save, size limit enforced, validation matches compiler behavior, hash verification works_
 
-- [ ] 6. Implement Metrics and Simulator RPC Methods
+- [x] 6. Implement Metrics and Simulator RPC Methods
   - File: keyrx_daemon/src/web/handlers/metrics.rs
   - Implement get_latency, get_events (with pagination), clear_events, simulate, reset_simulator
   - Add pagination support for get_events (default limit 100, max 1000)

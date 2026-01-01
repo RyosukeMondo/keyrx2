@@ -6,4 +6,5 @@
 
 pub mod config;
 pub mod device;
+pub mod metrics;
 pub mod profile;
