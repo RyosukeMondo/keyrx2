@@ -131,19 +131,19 @@ export function DashboardEventTimeline({
   return (
     <div className="flex flex-col h-full">
       {/* Header with controls */}
-      <div className="flex items-center justify-between gap-2 p-4 border-b border-slate-700 bg-slate-900">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border-b border-slate-700 bg-slate-900">
         <h2 className="text-lg font-semibold text-slate-200">Event Timeline</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={onTogglePause}
-            className="min-h-[44px] px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors text-sm font-medium"
+            className="min-h-[44px] md:min-h-0 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors text-sm font-medium"
             aria-label={isPaused ? "Resume event updates" : "Pause event updates"}
           >
             {isPaused ? "Resume" : "Pause"}
           </button>
           <button
             onClick={onClear}
-            className="min-h-[44px] px-4 py-2 bg-red-900 hover:bg-red-800 text-red-200 rounded transition-colors text-sm font-medium"
+            className="min-h-[44px] md:min-h-0 px-4 py-2 bg-red-900 hover:bg-red-800 text-red-200 rounded transition-colors text-sm font-medium"
             aria-label="Clear all events"
           >
             Clear
