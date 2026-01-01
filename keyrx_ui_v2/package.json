@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:production": "tsc -b && vite build --mode production",
+    "build:wasm": "cd ../keyrx_core && wasm-pack build --target web --out-dir ../keyrx_ui_v2/src/wasm/pkg --release -- --features wasm",
+    "build": "npm run build:wasm && tsc -b && vite build",
+    "build:production": "npm run build:wasm && tsc -b && vite build --mode production",
     "build:analyze": "npm run build && node scripts/analyze-bundle.js",
     "build:production:analyze": "npm run build:production && node scripts/analyze-bundle.js",
     "lint": "eslint .",
@@ -73,6 +74,8 @@
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0",
     "vitest": "^1.0.4"
   }
 }

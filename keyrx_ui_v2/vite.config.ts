@@ -3,10 +3,14 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import compression from 'vite-plugin-compression';
 import { visualizer } from 'rollup-plugin-visualizer';
+import wasm from 'vite-plugin-wasm';
+import topLevelAwait from 'vite-plugin-top-level-await';
 import path from 'path';
 
 export default defineConfig({
   plugins: [
+    wasm(),
+    topLevelAwait(),
     react(),
     compression({
       algorithm: 'gzip',
@@ -28,8 +32,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    exclude: ['@/wasm/pkg/keyrx_core'],
+  },
   build: {
-    target: 'es2020',
+    target: 'esnext',
     minify: 'terser',
     sourcemap: true, // Generate source maps for debugging production issues
     terserOptions: {
@@ -48,12 +55,23 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // React core and router in one chunk
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'react-core';
+          // Vendor chunk: React core libraries
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react-router-dom')
+          ) {
+            return 'vendor';
           }
-          if (id.includes('node_modules/react-router-dom')) {
-            return 'react-router';
+
+          // Monaco chunk: Monaco editor
+          if (id.includes('node_modules/@monaco-editor/react') || id.includes('node_modules/monaco-editor')) {
+            return 'monaco';
+          }
+
+          // Charts chunk: Recharts
+          if (id.includes('node_modules/recharts')) {
+            return 'charts';
           }
 
           // State management
@@ -71,11 +89,6 @@ export default defineConfig({
             return 'framer-motion';
           }
 
-          // Charts
-          if (id.includes('node_modules/recharts')) {
-            return 'recharts';
-          }
-
           // Query library
           if (id.includes('node_modules/@tanstack/react-query')) {
             return 'react-query';
@@ -91,9 +104,9 @@ export default defineConfig({
             return 'react-window';
           }
 
-          // Other node_modules as vendor
+          // Other node_modules as other
           if (id.includes('node_modules')) {
-            return 'vendor';
+            return 'other';
           }
         },
       },
