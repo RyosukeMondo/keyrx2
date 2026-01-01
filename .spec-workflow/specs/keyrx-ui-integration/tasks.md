@@ -332,7 +332,7 @@
   - _Requirements: REQ-6 (AC3, AC4)_
   - _Prompt: Role: Responsive UI Developer with expertise in TailwindCSS and mobile-first design | Task: Modify keyrx_ui_v2/src/pages/ConfigPage.tsx to add responsive classes: main container flex-col gap-4 md:gap-6, tab buttons grid grid-cols-2 sm:flex sm:gap-2 (stack 2-per-row on mobile, inline on tablet+), save button w-full md:w-auto (full-width mobile), KeyboardVisualizer wrapper overflow-x-auto md:overflow-x-visible (horizontal scroll mobile), validation status text-sm md:text-base, all buttons min-h-[44px] md:min-h-0 for touch targets | Restrictions: Mobile-first approach required, 44px tap targets mandatory on mobile, horizontal scroll must work smoothly, test at 3 breakpoints (375px, 768px, 1024px) | Success: Single-column layout on mobile, multi-column on desktop, tab buttons stack on mobile, save button full-width on mobile, KeyboardVisualizer scrolls horizontally on mobile, all tap targets >= 44px on mobile, responsive at all breakpoints_
 
-- [ ] 32. Make DashboardPage Responsive
+- [x] 32. Make DashboardPage Responsive
   - File: keyrx_ui_v2/src/pages/DashboardPage.tsx
   - Stack components vertically on mobile
   - Use 2-column grid on desktop for state indicators and chart
