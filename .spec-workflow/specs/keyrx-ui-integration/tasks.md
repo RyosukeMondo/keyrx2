@@ -444,7 +444,7 @@
   - _Requirements: REQ-8 (AC2, AC5, AC7)_
   - _Prompt: Role: Frontend Build Engineer with expertise in npm and build automation | Task: Create scripts/build_ui.sh that calls scripts/build_wasm.sh first (exit if fails), cd to keyrx_ui_v2, checks if node_modules exists (run npm install if not), removes previous dist/ directory (rm -rf dist), runs npm run build, verifies dist/index.html exists, prints bundle size summary (total size, gzipped size using du and gzip), exits 1 on failure, uses bash set -e and set -o pipefail for error handling, make executable | Restrictions: WASM must build before UI, WASM failure must prevent UI build, dist/ must be cleared before build, dist/index.html verification mandatory, bundle size reporting required | Success: Script builds WASM then UI, clears old dist/, installs dependencies if needed, verifies output, prints bundle stats, fails clearly on errors, WASM failures prevent UI build_
 
-- [ ] 43. Integrate UI into Daemon Build
+- [x] 43. Integrate UI into Daemon Build
   - File: keyrx_daemon/build.rs, keyrx_daemon/src/web/static_files.rs, keyrx_daemon/Cargo.toml
   - Verify ../keyrx_ui_v2/dist exists in build.rs
   - Embed UI with include_dir macro
