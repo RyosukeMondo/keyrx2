@@ -384,7 +384,7 @@
   - _Requirements: REQ-7 (AC3, AC10)_
   - _Prompt: Role: Integration Testing Specialist with expertise in test harnesses and workflows | Task: Create keyrx_ui_v2/tests/integration/ directory with test harness that starts daemon in test mode (headless, test port) before tests and stops after, create test files: config-editor.test.tsx (tests tab switching and validation flow), dashboard-updates.test.tsx (tests WebSocket subscription and state updates), profile-workflow.test.tsx (tests create/activate/delete profile), for daemon expand keyrx_daemon/tests/integration/ with WebSocket RPC tests and event broadcasting tests, configure CI to run integration tests after unit tests | Restrictions: Test harness must start real daemon not mock, daemon must run on different port for tests, cleanup required after each test, integration tests must not interfere with each other | Success: Test harness starts/stops daemon correctly, all workflow tests pass (tab switching, validation, WebSocket updates, profile CRUD), daemon integration tests verify RPC and broadcasting, tests run reliably in CI_
 
-- [-] 37. Setup E2E Tests with Playwright
+- [x] 37. Setup E2E Tests with Playwright
   - File: keyrx_ui_v2/playwright.config.ts, keyrx_ui_v2/e2e/, keyrx_ui_v2/package.json
   - Configure Playwright for Chromium, Firefox, WebKit
   - Write E2E tests for full user workflows
