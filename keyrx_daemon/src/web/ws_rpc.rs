@@ -44,7 +44,7 @@ async fn handle_websocket(mut socket: WebSocket, state: Arc<AppState>) {
         version: env!("CARGO_PKG_VERSION").to_string(),
         timestamp: std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_micros() as u64,
     };
 
@@ -163,13 +163,15 @@ async fn handle_query(
     params: Value,
     state: &AppState,
 ) -> ServerMessage {
-    use crate::web::handlers::{device, profile};
+    use crate::web::handlers::{config, device, profile};
 
     log::debug!("Handling query: {} with params: {}", method, params);
 
     let result = match method.as_str() {
         "get_profiles" => profile::get_profiles(&state.profile_service, params).await,
         "get_devices" => device::get_devices(&state.device_service, params).await,
+        "get_config" => config::get_config(&state.config_service, params).await,
+        "get_layers" => config::get_layers(&state.config_service, params).await,
         _ => Err(RpcError::method_not_found(&method)),
     };
 
@@ -194,7 +196,7 @@ async fn handle_command(
     params: Value,
     state: &AppState,
 ) -> ServerMessage {
-    use crate::web::handlers::{device, profile};
+    use crate::web::handlers::{config, device, profile};
 
     log::debug!("Handling command: {} with params: {}", method, params);
 
@@ -207,6 +209,9 @@ async fn handle_command(
         "rename_device" => device::rename_device(&state.device_service, params).await,
         "set_scope_device" => device::set_scope_device(&state.device_service, params).await,
         "forget_device" => device::forget_device(&state.device_service, params).await,
+        "update_config" => config::update_config(&state.config_service, params).await,
+        "set_key_mapping" => config::set_key_mapping(&state.config_service, params).await,
+        "delete_key_mapping" => config::delete_key_mapping(&state.config_service, params).await,
         _ => Err(RpcError::method_not_found(&method)),
     };
 
@@ -261,19 +266,21 @@ mod tests {
     use super::*;
     use crate::config::ProfileManager;
     use crate::macro_recorder::MacroRecorder;
-    use crate::services::ProfileService;
+    use crate::services::{ConfigService, ProfileService};
     use std::path::PathBuf;
 
     #[test]
     fn test_create_router() {
         let config_dir = PathBuf::from("/tmp/keyrx-test");
         let profile_manager = Arc::new(ProfileManager::new(config_dir.clone()).unwrap());
-        let profile_service = Arc::new(ProfileService::new(profile_manager));
+        let profile_service = Arc::new(ProfileService::new(Arc::clone(&profile_manager)));
         let device_service = Arc::new(crate::services::DeviceService::new(config_dir));
+        let config_service = Arc::new(ConfigService::new(profile_manager));
         let state = Arc::new(AppState::new(
             Arc::new(MacroRecorder::new()),
             profile_service,
             device_service,
+            config_service,
         ));
         let router = create_router(state);
         assert!(std::mem::size_of_val(&router) > 0);

@@ -17,7 +17,7 @@ use tokio::sync::broadcast;
 pub use events::DaemonEvent;
 
 use crate::macro_recorder::MacroRecorder;
-use crate::services::{DeviceService, ProfileService};
+use crate::services::{ConfigService, DeviceService, ProfileService};
 
 /// Application state shared across all web handlers
 ///
@@ -32,6 +32,8 @@ pub struct AppState {
     pub profile_service: Arc<ProfileService>,
     /// Device service for device management operations
     pub device_service: Arc<DeviceService>,
+    /// Config service for configuration management operations
+    pub config_service: Arc<ConfigService>,
 }
 
 impl AppState {
@@ -40,11 +42,13 @@ impl AppState {
         macro_recorder: Arc<MacroRecorder>,
         profile_service: Arc<ProfileService>,
         device_service: Arc<DeviceService>,
+        config_service: Arc<ConfigService>,
     ) -> Self {
         Self {
             macro_recorder,
             profile_service,
             device_service,
+            config_service,
         }
     }
 }

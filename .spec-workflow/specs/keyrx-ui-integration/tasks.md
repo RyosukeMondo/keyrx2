@@ -44,7 +44,7 @@
   - _Requirements: REQ-1 (AC2, AC3)_
   - _Prompt: Role: Backend Developer with expertise in device management and security | Task: Create keyrx_daemon/src/web/handlers/device.rs with 4 RPC method implementations (get_devices, rename_device, set_scope_device, forget_device), validate serial numbers to prevent path traversal or injection attacks, call device manager methods, return typed results | Restrictions: Serial number validation is mandatory, must not allow special characters that could cause injection, use existing device manager interface | Success: All 4 methods implemented and tested, serial number validation prevents attacks, device manager integration works correctly_
 
-- [ ] 5. Implement Config RPC Methods
+- [x] 5. Implement Config RPC Methods
   - File: keyrx_daemon/src/web/handlers/config.rs
   - Implement get_config, update_config, set_key_mapping, delete_key_mapping, get_layers
   - Validate configurations with keyrx_compiler

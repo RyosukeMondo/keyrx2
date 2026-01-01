@@ -332,15 +332,20 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
             ));
         }
     };
-    let profile_service =
-        std::sync::Arc::new(keyrx_daemon::services::ProfileService::new(profile_manager));
-    let device_service =
-        std::sync::Arc::new(keyrx_daemon::services::DeviceService::new(config_dir));
+    let profile_service = std::sync::Arc::new(keyrx_daemon::services::ProfileService::new(
+        std::sync::Arc::clone(&profile_manager),
+    ));
+    let device_service = std::sync::Arc::new(keyrx_daemon::services::DeviceService::new(
+        config_dir.clone(),
+    ));
+    let config_service =
+        std::sync::Arc::new(keyrx_daemon::services::ConfigService::new(profile_manager));
 
     let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(
         macro_recorder,
         profile_service,
         device_service,
+        config_service,
     ));
 
     // Start web server in background (optional)
@@ -424,15 +429,20 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
             ));
         }
     };
-    let profile_service =
-        std::sync::Arc::new(keyrx_daemon::services::ProfileService::new(profile_manager));
-    let device_service =
-        std::sync::Arc::new(keyrx_daemon::services::DeviceService::new(config_dir));
+    let profile_service = std::sync::Arc::new(keyrx_daemon::services::ProfileService::new(
+        std::sync::Arc::clone(&profile_manager),
+    ));
+    let device_service = std::sync::Arc::new(keyrx_daemon::services::DeviceService::new(
+        config_dir.clone(),
+    ));
+    let config_service =
+        std::sync::Arc::new(keyrx_daemon::services::ConfigService::new(profile_manager));
 
     let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(
         macro_recorder,
         profile_service,
         device_service,
+        config_service,
     ));
 
     std::thread::spawn(move || {

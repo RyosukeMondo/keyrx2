@@ -4,5 +4,6 @@
 //! Each handler module provides methods that accept parameters as serde_json::Value,
 //! validate inputs, and delegate to service layer for business logic.
 
+pub mod config;
 pub mod device;
 pub mod profile;
