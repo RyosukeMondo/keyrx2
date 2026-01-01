@@ -104,7 +104,7 @@
   - _Requirements: REQ-1 (AC1, AC2, AC3, AC4)_
   - _Prompt: Role: TypeScript Developer specializing in type systems and API contracts | Task: Create keyrx_ui_v2/src/types/rpc.ts with TypeScript types matching Rust RPC types exactly, define RpcMethod as string union of all 20+ method names, SubscriptionChannel as "daemon-state" | "events" | "latency", ClientMessage and ServerMessage as discriminated unions using type field, data structure interfaces (DaemonState with modifiers/locks/layer, KeyEvent with timestamp/keyCode/eventType/latency/layer, LatencyMetrics with min/avg/max/p50/p95/p99/count), RpcError interface with code/message/data | Restrictions: Field names must match Rust types exactly (camelCase in TS, snake_case in Rust conversions handled by serde), all types must be exported, use discriminated unions for type safety | Success: All types compile, field names match Rust types, discriminated unions provide type narrowing, no 'any' types used_
 
-- [ ] 11. Implement useUnifiedApi Hook
+- [x] 11. Implement useUnifiedApi Hook
   - File: keyrx_ui_v2/src/hooks/useUnifiedApi.ts
   - Create hook with query, command, subscribe, unsubscribe methods
   - Implement request/response correlation via UUID

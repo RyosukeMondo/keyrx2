@@ -34,3 +34,6 @@ export {
   useWebSocketMetrics,
   useDaemonState,
 } from './useMetrics';
+
+// WebSocket RPC hooks
+export { useUnifiedApi, type UseUnifiedApiReturn } from './useUnifiedApi';
