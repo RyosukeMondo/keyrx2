@@ -20,6 +20,8 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run tests/integration",
+    "test:integration:watch": "vitest tests/integration",
     "test:a11y": "playwright test tests/accessibility.spec.ts",
     "test:lighthouse": "playwright test tests/lighthouse.spec.ts",
     "test:performance": "playwright test tests/performance",

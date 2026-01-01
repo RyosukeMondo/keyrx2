@@ -375,7 +375,7 @@
   - _Requirements: REQ-7 (AC1, AC2, AC10)_
   - _Prompt: Role: Test Infrastructure Engineer with expertise in Vitest and Jest testing frameworks | Task: Create keyrx_ui_v2/vitest.config.ts with Vitest configuration (jsdom environment for React, setup files for @testing-library/jest-dom, coverage with v8 provider, thresholds lines/functions/branches 80%, exclude node_modules/dist from coverage), add package.json scripts ("test": "vitest run", "test:watch": "vitest", "test:coverage": "vitest run --coverage"), ensure all existing components (Card, Dropdown, KeyboardVisualizer, etc.) have .test.tsx files with > 80% coverage, for Rust configure cargo test --workspace and cargo tarpaulin with > 90% threshold for keyrx_core | Restrictions: Coverage thresholds are mandatory (80% overall, 90% keyrx_core), all existing components must have tests before merge, tests must use @testing-library/react best practices | Success: Vitest configured correctly, test scripts in package.json work, all components have unit tests, coverage >= 80% overall and >= 90% for keyrx_core, tests run in CI_
 
-- [ ] 36. Setup Integration Test Infrastructure
+- [x] 36. Setup Integration Test Infrastructure
   - File: keyrx_ui_v2/tests/integration/, keyrx_daemon/tests/integration/
   - Create test harness to start/stop daemon
   - Write integration tests for key workflows
@@ -384,7 +384,7 @@
   - _Requirements: REQ-7 (AC3, AC10)_
   - _Prompt: Role: Integration Testing Specialist with expertise in test harnesses and workflows | Task: Create keyrx_ui_v2/tests/integration/ directory with test harness that starts daemon in test mode (headless, test port) before tests and stops after, create test files: config-editor.test.tsx (tests tab switching and validation flow), dashboard-updates.test.tsx (tests WebSocket subscription and state updates), profile-workflow.test.tsx (tests create/activate/delete profile), for daemon expand keyrx_daemon/tests/integration/ with WebSocket RPC tests and event broadcasting tests, configure CI to run integration tests after unit tests | Restrictions: Test harness must start real daemon not mock, daemon must run on different port for tests, cleanup required after each test, integration tests must not interfere with each other | Success: Test harness starts/stops daemon correctly, all workflow tests pass (tab switching, validation, WebSocket updates, profile CRUD), daemon integration tests verify RPC and broadcasting, tests run reliably in CI_
 
-- [ ] 37. Setup E2E Tests with Playwright
+- [-] 37. Setup E2E Tests with Playwright
   - File: keyrx_ui_v2/playwright.config.ts, keyrx_ui_v2/e2e/, keyrx_ui_v2/package.json
   - Configure Playwright for Chromium, Firefox, WebKit
   - Write E2E tests for full user workflows
