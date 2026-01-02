@@ -1,7 +1,7 @@
 //! Profile management endpoints.
 
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     routing::{delete, get, post, put},
     Json, Router,
 };
@@ -16,7 +16,12 @@ use crate::web::AppState;
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/profiles", get(list_profiles).post(create_profile))
+        .route("/profiles/active", get(get_active_profile))
         .route("/profiles/:name/activate", post(activate_profile))
+        .route(
+            "/profiles/:name/config",
+            get(get_profile_config).put(set_profile_config),
+        )
         .route("/profiles/:name", delete(delete_profile))
         .route("/profiles/:name/duplicate", post(duplicate_profile))
         .route("/profiles/:name/rename", put(rename_profile))
@@ -198,6 +203,64 @@ async fn rename_profile(
             "rhai_path": metadata.rhai_path.display().to_string(),
             "krx_path": metadata.krx_path.display().to_string(),
         }
+    })))
+}
+
+/// GET /api/profiles/active - Get active profile
+async fn get_active_profile(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
+    let active_profile = state.profile_service.get_active_profile().await;
+
+    Ok(Json(json!({
+        "active_profile": active_profile,
+    })))
+}
+
+/// GET /api/profiles/:name/config - Get profile configuration
+async fn get_profile_config(
+    State(state): State<Arc<AppState>>,
+    Path(name): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let config = state
+        .profile_service
+        .get_profile_config(&name)
+        .await
+        .map_err(|e| match e {
+            ProfileError::NotFound(_) => {
+                ApiError::NotFound(format!("Profile '{}' not found", name))
+            }
+            _ => ApiError::InternalError(e.to_string()),
+        })?;
+
+    Ok(Json(json!({
+        "name": name,
+        "config": config,
+    })))
+}
+
+/// PUT /api/profiles/:name/config - Set profile configuration
+#[derive(Deserialize)]
+struct SetProfileConfigRequest {
+    config: String,
+}
+
+async fn set_profile_config(
+    State(state): State<Arc<AppState>>,
+    Path(name): Path<String>,
+    Json(payload): Json<SetProfileConfigRequest>,
+) -> Result<Json<Value>, ApiError> {
+    state
+        .profile_service
+        .set_profile_config(&name, &payload.config)
+        .await
+        .map_err(|e| match e {
+            ProfileError::NotFound(_) => {
+                ApiError::NotFound(format!("Profile '{}' not found", name))
+            }
+            _ => ApiError::InternalError(e.to_string()),
+        })?;
+
+    Ok(Json(json!({
+        "success": true,
     })))
 }
 

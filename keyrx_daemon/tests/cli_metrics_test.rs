@@ -6,6 +6,7 @@ use tempfile::TempDir;
 
 /// Helper to create a test command.
 fn metrics_cmd() -> Command {
+    #[allow(deprecated)]
     Command::cargo_bin("keyrx_daemon").unwrap()
 }
 

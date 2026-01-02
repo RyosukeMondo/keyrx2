@@ -239,7 +239,7 @@ fn test_workflow_layers_management() {
 
     let list_json = parse_json_output(&list_output);
     let layers = list_json["layers"].as_array().unwrap();
-    assert!(layers.len() > 0);
+    assert!(!layers.is_empty());
 
     // Create a new layer
     test_cmd(&temp_dir)
@@ -926,7 +926,7 @@ fn test_concurrent_profile_operations() {
     let profiles = list_json["profiles"].as_array().unwrap();
 
     // At least some profiles should have been created
-    assert!(profiles.len() > 0);
+    assert!(!profiles.is_empty());
 }
 
 #[test]

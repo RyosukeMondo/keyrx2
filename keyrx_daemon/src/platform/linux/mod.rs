@@ -26,9 +26,7 @@ pub use keycode_map::{evdev_to_keycode, keycode_to_evdev, keycode_to_uinput_key}
 use keyrx_core::config::DeviceConfig;
 
 use crate::device_manager::DeviceManager;
-use crate::platform::{
-    DeviceError, InputDevice, OutputDevice, ProcessResult, SystemTray, TrayControlEvent,
-};
+use crate::platform::{DeviceError, InputDevice, OutputDevice, ProcessResult};
 
 /// Linux platform structure for keyboard input/output operations.
 ///

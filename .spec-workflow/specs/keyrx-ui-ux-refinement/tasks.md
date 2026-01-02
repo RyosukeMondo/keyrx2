@@ -12,7 +12,7 @@
   - _Requirements: R4 (Profile-to-Configuration File Mapping)_
   - _Prompt: Implement the task for spec keyrx-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Backend Rust Developer with expertise in async I/O and system integration | Task: Create ProfileManager service implementing profile lifecycle (create → compile → activate → delete) with integration to keyrx_compiler for .rhai → .krx compilation and daemon reload signaling, following requirement R4. Use existing compiler from keyrx_compiler crate and daemon control patterns from keyrx_daemon/src/daemon/mod.rs | Restrictions: Must handle all file I/O errors gracefully, ensure atomic operations (rollback on failure), do not block async runtime, follow Rust error handling best practices (Result types), maintain SSOT principle | Success: ProfileManager can create .rhai files from templates, compile to .krx successfully, activate profiles with daemon reload, delete profiles atomically, all operations tested with unit tests covering success and failure scenarios | Instructions: After completing the task, run spec-workflow-guide to get the workflow guide, then update tasks.md to mark this task as in-progress [-], log the implementation with log-implementation tool including detailed artifacts (classes, methods, integrations), and mark as complete [x] when done_
 
-- [ ] 2. Extend profiles API in keyrx_daemon/src/web/api/profiles.rs
+- [x] 2. Extend profiles API in keyrx_daemon/src/web/api/profiles.rs
   - File: keyrx_daemon/src/web/api/profiles.rs
   - Add endpoints: GET /api/profiles/:name/config, PUT /api/profiles/:name/config
   - Add endpoint: POST /api/profiles/:name/activate (calls ProfileManager)

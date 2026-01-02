@@ -228,7 +228,7 @@ async fn test_high_frequency_batching() {
 
     // Verify we can receive all events
     let mut received_count = 0;
-    while let Ok(_) = event_rx.try_recv() {
+    while event_rx.try_recv().is_ok() {
         received_count += 1;
     }
 

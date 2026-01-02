@@ -389,7 +389,7 @@ mod tests {
         // is_keyboard function exists and filters by key capability
         // This is a documentation test - the function is tested implicitly
         // through enumerate_keyboards() which uses it
-        assert!(MIN_REQUIRED_KEYS > 0);
+        const _: () = assert!(MIN_REQUIRED_KEYS > 0);
     }
 
     #[test]

@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_compiler_default() {
-        let compiler = ProfileCompiler::default();
+        let compiler = ProfileCompiler;
         assert!(std::mem::size_of_val(&compiler) == 0);
     }
 
