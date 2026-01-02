@@ -118,6 +118,7 @@ impl EventLoopStats {
 ///         running,
 ///         signal_handler,
 ///         || Err(DaemonError::RuntimeError("Reload not supported".to_string())),
+///         None, // No event broadcaster in this example
 ///     )
 /// }
 /// ```
