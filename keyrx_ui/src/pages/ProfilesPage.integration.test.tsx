@@ -4,7 +4,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { ProfilesPage } from './ProfilesPage';
 import { useProfileStore } from '../stores/profileStore';
@@ -26,7 +27,7 @@ describe('ProfilesPage - Integration Tests', () => {
   describe('Profile activation flow', () => {
     it('successfully activates a profile', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       // Wait for profiles to load
       await waitFor(() => {
@@ -63,7 +64,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('shows loading state during activation', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Gaming Profile')).toBeInTheDocument();
@@ -84,7 +85,7 @@ describe('ProfilesPage - Integration Tests', () => {
   describe('Create profile flow', () => {
     it('opens create modal when Create Profile button is clicked', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       const createButton = screen.getByRole('button', {
         name: /Create Profile/i,
@@ -101,7 +102,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('successfully creates a new profile', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Default Profile')).toBeInTheDocument();
@@ -132,7 +133,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('validates profile name format', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       const createButton = screen.getByRole('button', {
         name: /Create Profile/i,
@@ -154,7 +155,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('validates required fields', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       const createButton = screen.getByRole('button', {
         name: /Create Profile/i,
@@ -173,7 +174,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('cancels profile creation on Cancel button', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       const createButton = screen.getByRole('button', {
         name: /Create Profile/i,
@@ -198,7 +199,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('closes modal on Escape key', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       const createButton = screen.getByRole('button', {
         name: /Create Profile/i,
@@ -218,7 +219,7 @@ describe('ProfilesPage - Integration Tests', () => {
   describe('Edit profile flow', () => {
     it('opens edit modal for non-active profile', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Gaming Profile')).toBeInTheDocument();
@@ -242,7 +243,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('successfully updates profile display name', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Gaming Profile')).toBeInTheDocument();
@@ -272,7 +273,7 @@ describe('ProfilesPage - Integration Tests', () => {
   describe('Delete profile flow', () => {
     it('shows confirmation modal before deleting profile', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Gaming Profile')).toBeInTheDocument();
@@ -295,7 +296,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('successfully deletes profile on confirmation', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Gaming Profile')).toBeInTheDocument();
@@ -327,7 +328,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('cancels delete on Cancel button', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Gaming Profile')).toBeInTheDocument();
@@ -359,7 +360,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
     it('prevents deleting active profile', async () => {
       const user = userEvent.setup();
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Default Profile')).toBeInTheDocument();
@@ -381,7 +382,7 @@ describe('ProfilesPage - Integration Tests', () => {
       const store = useProfileStore.getState();
       store.loading = true;
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       // Should show loading skeleton
       expect(screen.getByRole('status', { name: /Loading/i })).toBeInTheDocument();
@@ -391,7 +392,7 @@ describe('ProfilesPage - Integration Tests', () => {
       const store = useProfileStore.getState();
       store.error = 'Failed to fetch profiles';
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       expect(screen.getByText(/Failed to fetch profiles/i)).toBeInTheDocument();
     });
@@ -404,7 +405,7 @@ describe('ProfilesPage - Integration Tests', () => {
       const store = useProfileStore.getState();
       store.error = 'Failed to activate profile';
 
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       expect(screen.getByText(/Failed to activate profile/i)).toBeInTheDocument();
     });
@@ -412,7 +413,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
   describe('Grid layout responsiveness', () => {
     it('displays profiles in grid layout', async () => {
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Default Profile')).toBeInTheDocument();
@@ -427,7 +428,7 @@ describe('ProfilesPage - Integration Tests', () => {
 
   describe('Active profile visual indication', () => {
     it('shows green checkmark badge on active profile', async () => {
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Default Profile')).toBeInTheDocument();
@@ -440,7 +441,7 @@ describe('ProfilesPage - Integration Tests', () => {
     });
 
     it('does not show active badge on inactive profiles', async () => {
-      render(<ProfilesPage />);
+      renderWithProviders(<ProfilesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Gaming Profile')).toBeInTheDocument();

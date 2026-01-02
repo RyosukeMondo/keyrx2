@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -23,7 +24,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('renders children when there is no error', () => {
-    render(
+    renderWithProviders(
       <ErrorBoundary>
         <div>Child component</div>
       </ErrorBoundary>
@@ -33,7 +34,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('catches errors and displays default fallback UI', () => {
-    render(
+    renderWithProviders(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
@@ -44,7 +45,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('displays error message in details', () => {
-    render(
+    renderWithProviders(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
@@ -58,7 +59,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('renders Try Again button', () => {
-    render(
+    renderWithProviders(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
@@ -68,7 +69,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('renders Reload Page button', () => {
-    render(
+    renderWithProviders(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
@@ -81,7 +82,7 @@ describe('ErrorBoundary', () => {
     const user = userEvent.setup();
     let shouldThrow = true;
 
-    const { rerender } = render(
+    const { rerender } = renderWithProviders(
       <ErrorBoundary>
         <ThrowError shouldThrow={shouldThrow} />
       </ErrorBoundary>
@@ -115,7 +116,7 @@ describe('ErrorBoundary', () => {
       </div>
     );
 
-    render(
+    renderWithProviders(
       <ErrorBoundary fallback={customFallback}>
         <ThrowError />
       </ErrorBoundary>
@@ -129,7 +130,7 @@ describe('ErrorBoundary', () => {
   it('calls console.error when error is caught', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    render(
+    renderWithProviders(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
@@ -147,7 +148,7 @@ describe('ErrorBoundary', () => {
       writable: true,
     });
 
-    render(
+    renderWithProviders(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>

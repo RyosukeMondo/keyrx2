@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { ErrorTest } from './ErrorTest';
 
@@ -15,28 +16,28 @@ describe('ErrorTest', () => {
   });
 
   it('renders test page title', () => {
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
     expect(screen.getByText('Error Handling Test')).toBeInTheDocument();
   });
 
   it('renders ErrorState demo section', () => {
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
     expect(screen.getByText('ErrorState Component (API Errors)')).toBeInTheDocument();
   });
 
   it('renders ErrorBoundary demo section', () => {
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
     expect(screen.getByText('ErrorBoundary Component (React Errors)')).toBeInTheDocument();
   });
 
   it('initially shows success state for API', () => {
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
     expect(screen.getByText('API request successful. Click below to simulate a failure.')).toBeInTheDocument();
   });
 
   it('shows ErrorState when API error button is clicked', async () => {
     const user = userEvent.setup();
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
 
     const button = screen.getByLabelText('Simulate API error');
     await user.click(button);
@@ -49,7 +50,7 @@ describe('ErrorTest', () => {
 
   it('shows retry button in error state', async () => {
     const user = userEvent.setup();
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
 
     await user.click(screen.getByLabelText('Simulate API error'));
 
@@ -58,7 +59,7 @@ describe('ErrorTest', () => {
 
   it('returns to success state when retry is clicked', async () => {
     const user = userEvent.setup();
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
 
     // Trigger error
     await user.click(screen.getByLabelText('Simulate API error'));
@@ -72,7 +73,7 @@ describe('ErrorTest', () => {
   });
 
   it('renders warning about ErrorBoundary test', () => {
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
     expect(screen.getByText(/Warning:/)).toBeInTheDocument();
     expect(
       screen.getByText(/Clicking this button will throw an error and trigger the ErrorBoundary/)
@@ -80,12 +81,12 @@ describe('ErrorTest', () => {
   });
 
   it('renders throw error button', () => {
-    render(<ErrorTest />);
+    renderWithProviders(<ErrorTest />);
     expect(screen.getByLabelText('Throw error to test ErrorBoundary')).toBeInTheDocument();
   });
 
   it('has proper structure and styling classes', () => {
-    const { container } = render(<ErrorTest />);
+    const { container } = renderWithProviders(<ErrorTest />);
     const wrapper = container.querySelector('.min-h-screen');
     expect(wrapper).toBeInTheDocument();
     expect(wrapper).toHaveClass('bg-slate-900');

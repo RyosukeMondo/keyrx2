@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { DashboardEventTimeline } from './DashboardEventTimeline';
 import type { KeyEvent } from '../types/rpc';
 
@@ -73,7 +74,7 @@ describe('DashboardEventTimeline', () => {
   ];
 
   it('renders title', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={false}
@@ -86,7 +87,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('renders pause button with correct text when not paused', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={false}
@@ -99,7 +100,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('renders resume button with correct text when paused', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={true}
@@ -114,7 +115,7 @@ describe('DashboardEventTimeline', () => {
   it('calls onTogglePause when pause button is clicked', () => {
     const handleTogglePause = vi.fn();
 
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={false}
@@ -130,7 +131,7 @@ describe('DashboardEventTimeline', () => {
   it('calls onClear when clear button is clicked', () => {
     const handleClear = vi.fn();
 
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={mockEvents}
         isPaused={false}
@@ -144,7 +145,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('shows empty state when events array is empty', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={false}
@@ -159,7 +160,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('renders virtualized list when events are present', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={mockEvents}
         isPaused={false}
@@ -176,7 +177,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('displays key codes using formatKeyCode', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={mockEvents}
         isPaused={false}
@@ -191,7 +192,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('displays event types with correct styling', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={mockEvents}
         isPaused={false}
@@ -213,7 +214,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('shows tooltip on hover', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <DashboardEventTimeline
         events={mockEvents}
         isPaused={false}
@@ -234,7 +235,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('hides tooltip on mouse leave', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <DashboardEventTimeline
         events={mockEvents}
         isPaused={false}
@@ -255,7 +256,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('tooltip displays full event details', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <DashboardEventTimeline
         events={mockEvents}
         isPaused={false}
@@ -279,7 +280,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('pause button has minimum 44px tap target', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={false}
@@ -293,7 +294,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('clear button has minimum 44px tap target', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={false}
@@ -307,7 +308,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('has proper ARIA labels on buttons', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={false}
@@ -321,7 +322,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('ARIA label changes based on paused state', () => {
-    const { rerender } = render(
+    const { rerender } = renderWithProviders(
       <DashboardEventTimeline
         events={[]}
         isPaused={false}
@@ -354,7 +355,7 @@ describe('DashboardEventTimeline', () => {
       latency: 100 + i,
     })) as KeyEvent[];
 
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={manyEvents}
         isPaused={false}
@@ -372,7 +373,7 @@ describe('DashboardEventTimeline', () => {
   });
 
   it('displays input -> output mapping', () => {
-    render(
+    renderWithProviders(
       <DashboardEventTimeline
         events={mockEvents}
         isPaused={false}

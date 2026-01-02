@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { StateIndicatorPanel } from './StateIndicatorPanel';
 import type { DaemonState } from '../types/rpc';
 
 describe('StateIndicatorPanel', () => {
   it('renders loading message when state is null', () => {
-    render(<StateIndicatorPanel state={null} />);
+    renderWithProviders(<StateIndicatorPanel state={null} />);
     expect(screen.getByText('Loading daemon state...')).toBeInTheDocument();
   });
 
@@ -16,7 +17,7 @@ describe('StateIndicatorPanel', () => {
       layer: 0,
     };
 
-    render(<StateIndicatorPanel state={state} />);
+    renderWithProviders(<StateIndicatorPanel state={state} />);
 
     const mod1 = screen.getByText('MOD_1');
     const mod2 = screen.getByText('MOD_2');
@@ -34,7 +35,7 @@ describe('StateIndicatorPanel', () => {
       layer: 0,
     };
 
-    render(<StateIndicatorPanel state={state} />);
+    renderWithProviders(<StateIndicatorPanel state={state} />);
 
     const lock3 = screen.getByText('LOCK_3');
     const lock4 = screen.getByText('LOCK_4');
@@ -52,7 +53,7 @@ describe('StateIndicatorPanel', () => {
       layer: 2,
     };
 
-    render(<StateIndicatorPanel state={state} />);
+    renderWithProviders(<StateIndicatorPanel state={state} />);
 
     const layer = screen.getByText('Layer 2');
     expect(layer).toBeInTheDocument();
@@ -66,7 +67,7 @@ describe('StateIndicatorPanel', () => {
       layer: 0,
     };
 
-    render(<StateIndicatorPanel state={state} />);
+    renderWithProviders(<StateIndicatorPanel state={state} />);
 
     const noneElements = screen.getAllByText('None');
     // Should have "None" for modifiers
@@ -81,7 +82,7 @@ describe('StateIndicatorPanel', () => {
       layer: 0,
     };
 
-    render(<StateIndicatorPanel state={state} />);
+    renderWithProviders(<StateIndicatorPanel state={state} />);
 
     const noneElements = screen.getAllByText('None');
     // Should have "None" for locks
@@ -96,7 +97,7 @@ describe('StateIndicatorPanel', () => {
       layer: 1,
     };
 
-    render(<StateIndicatorPanel state={state} />);
+    renderWithProviders(<StateIndicatorPanel state={state} />);
 
     // Check modifiers
     expect(screen.getByText('MOD_1')).toBeInTheDocument();
@@ -116,7 +117,7 @@ describe('StateIndicatorPanel', () => {
       layer: 0,
     };
 
-    render(<StateIndicatorPanel state={state} />);
+    renderWithProviders(<StateIndicatorPanel state={state} />);
 
     expect(screen.getByLabelText('Active Modifiers')).toBeInTheDocument();
     expect(screen.getByLabelText('Active Locks')).toBeInTheDocument();
@@ -130,7 +131,7 @@ describe('StateIndicatorPanel', () => {
       layer: 3,
     };
 
-    render(<StateIndicatorPanel state={state} />);
+    renderWithProviders(<StateIndicatorPanel state={state} />);
 
     expect(screen.getByLabelText('Modifier 5 active')).toBeInTheDocument();
     expect(screen.getByLabelText('Lock 7 active')).toBeInTheDocument();
@@ -144,7 +145,7 @@ describe('StateIndicatorPanel', () => {
       layer: 0,
     };
 
-    const { container } = render(<StateIndicatorPanel state={state} />);
+    const { container } = renderWithProviders(<StateIndicatorPanel state={state} />);
     const grid = container.querySelector('.grid');
 
     expect(grid).toHaveClass('grid-cols-1');

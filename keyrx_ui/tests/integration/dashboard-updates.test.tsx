@@ -26,7 +26,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../testUtils';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import DashboardPage from '../../src/pages/DashboardPage';
@@ -43,7 +44,7 @@ describe('Dashboard Real-Time Updates Integration', () => {
   });
 
   it('should connect to WebSocket and show connection banner (AC1, AC2)', async () => {
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -68,7 +69,7 @@ describe('Dashboard Real-Time Updates Integration', () => {
   });
 
   it('should subscribe to all channels and receive updates (AC3, AC4, AC5, AC6)', async () => {
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -115,7 +116,7 @@ describe('Dashboard Real-Time Updates Integration', () => {
   it('should support pause/resume functionality (AC7)', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -159,7 +160,7 @@ describe('Dashboard Real-Time Updates Integration', () => {
   it('should support clear functionality (AC8)', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -202,7 +203,7 @@ describe('Dashboard Real-Time Updates Integration', () => {
     // 3. Generate more latency updates
     // 4. Verify only last 60 are shown
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -224,7 +225,7 @@ describe('Dashboard Real-Time Updates Integration', () => {
   });
 
   it('should cleanup subscriptions on unmount (AC10)', async () => {
-    const { unmount } = render(
+    const { unmount } = renderWithProviders(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />

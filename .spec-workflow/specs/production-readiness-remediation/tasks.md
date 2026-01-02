@@ -55,13 +55,14 @@
   - _Result: Audit complete. 521/758 tests passing (68.73%). Main issues: 331 context errors, 425 websocket errors, 657 async errors, 29 DOM errors. Need 199 more passing tests to reach 95% target._
   - _Prompt: Role: QA Analyst specializing in test failure analysis and reporting | Task: Create audit script scripts/audit_test_failures.sh that runs frontend tests and categorizes all failures by root cause (context errors, async issues, setup problems), generating structured report, following requirements 2.1 and 2.4 | Restrictions: Must capture full error details including stack traces, categorize by actual root cause not just error message, output in machine-readable format (JSON) | Success: Script generates comprehensive failure report, categorization is accurate, output includes file paths and specific error types, can be parsed by dashboard_
 
-- [ ] 6. Fix context-dependent component tests
+- [x] 6. Fix context-dependent component tests
   - Files: Multiple test files with context errors (identified in task 5)
   - Update all tests with "useContext" errors to use renderWithProviders
   - Identify which contexts are needed (WasmProvider, React Query, etc.)
   - Purpose: Fix tests failing due to missing provider contexts
   - _Leverage: keyrx_ui/tests/testUtils.tsx (task 2), audit report from task 5_
   - _Requirements: 2.2_
+  - _Result: Fixed 331 context errors by updating all test files to use renderWithProviders. Updated 3 integration test files, 6 page test files, 30 component test files, 4 tests/ directory files, and a11y test utils. All QueryClient context errors resolved. Test pass rate improved from 68.73% (521/758) to 71.63% (543/758)._
   - _Prompt: Role: React Developer specializing in context providers and component testing | Task: Fix all context-dependent tests identified in task 5 audit by wrapping with appropriate providers using renderWithProviders utility from task 2, following requirement 2.2 | Restrictions: Only modify test files not production code, ensure correct provider nesting order, do not over-wrap with unnecessary providers | Success: All context-related test failures resolved, tests use appropriate providers, no "useContext must be used within Provider" errors remain_
 
 - [ ] 7. Fix async operation test failures

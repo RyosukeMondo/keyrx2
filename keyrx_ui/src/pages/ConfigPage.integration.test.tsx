@@ -4,7 +4,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { ConfigPage } from './ConfigPage';
 import { useConfigStore } from '../stores/configStore';
@@ -26,7 +27,7 @@ describe('ConfigPage - Integration Tests', () => {
 
   describe('Layer selector flow', () => {
     it('displays layer selector with available layers', async () => {
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -41,7 +42,7 @@ describe('ConfigPage - Integration Tests', () => {
 
     it('switches between layers', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         const layerSelector = screen.queryByRole('combobox', {
@@ -71,7 +72,7 @@ describe('ConfigPage - Integration Tests', () => {
   describe('Layout preset selector flow', () => {
     it('changes keyboard layout preset', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -91,7 +92,7 @@ describe('ConfigPage - Integration Tests', () => {
     });
 
     it('displays all available layout options', async () => {
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -113,7 +114,7 @@ describe('ConfigPage - Integration Tests', () => {
   describe('Key click and configuration flow', () => {
     it('opens KeyConfigDialog when key is clicked', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -136,7 +137,7 @@ describe('ConfigPage - Integration Tests', () => {
 
     it('displays current key mapping in tooltip on hover', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -164,7 +165,7 @@ describe('ConfigPage - Integration Tests', () => {
   describe('Simple remap configuration', () => {
     it('configures simple key remap', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -208,7 +209,7 @@ describe('ConfigPage - Integration Tests', () => {
   describe('Tap-Hold configuration', () => {
     it('configures tap-hold action', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -262,7 +263,7 @@ describe('ConfigPage - Integration Tests', () => {
 
     it('validates threshold value', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -305,7 +306,7 @@ describe('ConfigPage - Integration Tests', () => {
   describe('Layer switch configuration', () => {
     it('configures layer switch action', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -348,7 +349,7 @@ describe('ConfigPage - Integration Tests', () => {
   describe('Macro configuration', () => {
     it('configures macro with multiple steps', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -404,7 +405,7 @@ describe('ConfigPage - Integration Tests', () => {
   describe('Configuration preview', () => {
     it('shows preview of key mapping in dialog', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -430,7 +431,7 @@ describe('ConfigPage - Integration Tests', () => {
   describe('Cancel and close flows', () => {
     it('cancels configuration on Cancel button', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -466,7 +467,7 @@ describe('ConfigPage - Integration Tests', () => {
 
     it('closes dialog on Escape key', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
@@ -498,7 +499,7 @@ describe('ConfigPage - Integration Tests', () => {
       const store = useConfigStore.getState();
       store.loading = true;
 
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       expect(screen.getByRole('status', { name: /Loading/i })).toBeInTheDocument();
     });
@@ -507,7 +508,7 @@ describe('ConfigPage - Integration Tests', () => {
       const store = useConfigStore.getState();
       store.error = 'Failed to load configuration';
 
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       expect(
         screen.getByText(/Failed to load configuration/i)

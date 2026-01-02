@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/production-readiness-remediation/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-02T14:52:56.105Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767365576078_9v7pgzys1",
+      "approvalTitle": "Requirements Document - Production Readiness Remediation"
+    }
+  ]
+}

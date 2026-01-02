@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { PageTransition } from './PageTransition';
 
 describe('PageTransition', () => {
   it('renders children', () => {
-    render(
+    renderWithProviders(
       <PageTransition>
         <div>Page content</div>
       </PageTransition>
@@ -13,7 +14,7 @@ describe('PageTransition', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <PageTransition className="custom-class">
         <div>Page content</div>
       </PageTransition>
@@ -23,7 +24,7 @@ describe('PageTransition', () => {
   });
 
   it('has aria-live attribute for accessibility', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <PageTransition>
         <div>Page content</div>
       </PageTransition>
@@ -33,7 +34,7 @@ describe('PageTransition', () => {
   });
 
   it('wraps content in motion.div for animation', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <PageTransition>
         <div>Page content</div>
       </PageTransition>
@@ -43,7 +44,7 @@ describe('PageTransition', () => {
   });
 
   it('renders multiple children', () => {
-    render(
+    renderWithProviders(
       <PageTransition>
         <div>First child</div>
         <div>Second child</div>
@@ -54,7 +55,7 @@ describe('PageTransition', () => {
   });
 
   it('renders without className when not provided', () => {
-    render(
+    renderWithProviders(
       <PageTransition>
         <div>Page content</div>
       </PageTransition>

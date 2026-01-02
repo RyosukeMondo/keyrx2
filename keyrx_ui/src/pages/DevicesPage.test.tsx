@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { DevicesPage } from './DevicesPage';
 
@@ -10,7 +11,7 @@ vi.mock('react-router-dom', () => ({
 
 describe('DevicesPage', () => {
   it('renders devices page with device list', () => {
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     expect(screen.getByText('Devices')).toBeInTheDocument();
     expect(screen.getByText(/Device List \(2 connected\)/)).toBeInTheDocument();
@@ -19,14 +20,14 @@ describe('DevicesPage', () => {
   });
 
   it('shows connected status for active device', () => {
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const connectedLabels = screen.getAllByText('✓ Connected');
     expect(connectedLabels.length).toBeGreaterThan(0);
   });
 
   it('displays device details', () => {
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     expect(screen.getByText(/USB\\VID_1234&PID_5678\\ABC123/)).toBeInTheDocument();
     expect(screen.getByText(/Serial: ABC123/)).toBeInTheDocument();
@@ -36,7 +37,7 @@ describe('DevicesPage', () => {
 
   it('enters rename mode when Rename button is clicked', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const renameButton = screen.getByLabelText('Rename device Main Keyboard');
     await user.click(renameButton);
@@ -53,7 +54,7 @@ describe('DevicesPage', () => {
 
   it('saves new name when Save button is clicked', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const renameButton = screen.getByLabelText('Rename device Main Keyboard');
     await user.click(renameButton);
@@ -74,7 +75,7 @@ describe('DevicesPage', () => {
 
   it('saves new name when Enter key is pressed', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const renameButton = screen.getByLabelText('Rename device Main Keyboard');
     await user.click(renameButton);
@@ -92,7 +93,7 @@ describe('DevicesPage', () => {
 
   it('cancels rename when Cancel button is clicked', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const renameButton = screen.getByLabelText('Rename device Main Keyboard');
     await user.click(renameButton);
@@ -114,7 +115,7 @@ describe('DevicesPage', () => {
 
   it('cancels rename when Escape key is pressed', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const renameButton = screen.getByLabelText('Rename device Main Keyboard');
     await user.click(renameButton);
@@ -132,7 +133,7 @@ describe('DevicesPage', () => {
 
   it('shows error when trying to save empty name', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const renameButton = screen.getByLabelText('Rename device Main Keyboard');
     await user.click(renameButton);
@@ -152,7 +153,7 @@ describe('DevicesPage', () => {
 
   it('shows character counter when maxLength is set', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const renameButton = screen.getByLabelText('Rename device Main Keyboard');
     await user.click(renameButton);
@@ -167,7 +168,7 @@ describe('DevicesPage', () => {
 
   it('toggles scope from global to device-specific', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const deviceSpecificButton = screen.getAllByLabelText('Set scope to device-specific')[0];
     await user.click(deviceSpecificButton);
@@ -179,7 +180,7 @@ describe('DevicesPage', () => {
 
   it('toggles scope from device-specific to global', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     // Find the second device (Left Numpad) which has device-specific scope
     const globalButtons = screen.getAllByLabelText('Set scope to global');
@@ -191,7 +192,7 @@ describe('DevicesPage', () => {
 
   it('changes layout via dropdown', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     // Find the first layout dropdown
     const layoutDropdowns = screen.getAllByLabelText('Select keyboard layout');
@@ -210,7 +211,7 @@ describe('DevicesPage', () => {
 
   it('opens forget device confirmation modal', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const forgetButton = screen.getByLabelText('Forget device Main Keyboard');
     await user.click(forgetButton);
@@ -222,7 +223,7 @@ describe('DevicesPage', () => {
 
   it('cancels forget device when Cancel is clicked in modal', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const forgetButton = screen.getByLabelText('Forget device Main Keyboard');
     await user.click(forgetButton);
@@ -241,7 +242,7 @@ describe('DevicesPage', () => {
 
   it('removes device when Forget Device is confirmed', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     const forgetButton = screen.getByLabelText('Forget device Main Keyboard');
     await user.click(forgetButton);
@@ -265,7 +266,7 @@ describe('DevicesPage', () => {
 
   it('shows empty state when no devices are connected', async () => {
     const user = userEvent.setup();
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     // Remove first device
     const forgetButton1 = screen.getByLabelText('Forget device Main Keyboard');
@@ -292,7 +293,7 @@ describe('DevicesPage', () => {
   });
 
   it('has accessible labels for all interactive elements', () => {
-    render(<DevicesPage />);
+    renderWithProviders(<DevicesPage />);
 
     // Rename buttons
     expect(screen.getByLabelText('Rename device Main Keyboard')).toBeInTheDocument();

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { ConfigPage } from './ConfigPage';
 import * as useUnifiedApiModule from '@/hooks/useUnifiedApi';
@@ -92,7 +93,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
   describe('Tab Rendering and Switching', () => {
     it('renders both tab buttons', async () => {
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       // Wait for initial load
       await waitFor(() => {
@@ -107,7 +108,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
     });
 
     it('visual tab is active by default (AC1)', async () => {
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -121,7 +122,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('clicking Code tab renders Monaco editor (AC2)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -136,7 +137,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('clicking Visual tab renders KeyboardVisualizer (AC3)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -156,7 +157,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('active tab has bg-primary-500 class (AC4)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -182,7 +183,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
   describe('State Persistence Across Tabs', () => {
     it('typing in Code editor then switching to Visual preserves changes (AC5)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -210,7 +211,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('switching tabs does not lose unsaved changes (AC10)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -241,7 +242,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
   describe('Validation Integration', () => {
     it('validation status panel appears in both tabs (AC6)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -270,7 +271,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('validation errors disable save button (AC9)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -295,7 +296,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('clearing validation errors enables save button', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -326,7 +327,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
   describe('Save Functionality', () => {
     it('save button calls updateConfig RPC method (AC7)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -353,7 +354,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('Ctrl+S keyboard event triggers save (AC8)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -373,7 +374,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('save works from Visual tab', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -390,7 +391,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('save works from Code tab', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -410,7 +411,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('shows success message after successful save', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -428,7 +429,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
       mockCommand.mockRejectedValueOnce(new Error('Network error'));
 
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -444,7 +445,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('shows error message when trying to save with validation errors', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -471,7 +472,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('save button shows correct states (idle, saving, success, error)', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -519,14 +520,14 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
         readyState: 0,
       });
 
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       // Should show loading state
       expect(screen.queryByText('Configuration Editor')).not.toBeInTheDocument();
     });
 
     it('loads configuration on mount when connected', async () => {
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(mockQuery).toHaveBeenCalledWith('get_config');
@@ -540,7 +541,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
         hash: 'xyz789',
       });
 
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -557,7 +558,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
   describe('Accessibility', () => {
     it('tab buttons have proper ARIA attributes', async () => {
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -575,7 +576,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
 
     it('tabpanels have proper ARIA attributes', async () => {
       const user = userEvent.setup();
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();
@@ -595,7 +596,7 @@ describe('ConfigPage - Tab Switching and Save Functionality', () => {
     });
 
     it('save button has accessible label', async () => {
-      render(<ConfigPage />);
+      renderWithProviders(<ConfigPage />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading configuration/)).not.toBeInTheDocument();

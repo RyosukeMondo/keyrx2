@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { QuickStatsCard } from './QuickStatsCard';
 
 describe('QuickStatsCard', () => {
@@ -10,7 +11,7 @@ describe('QuickStatsCard', () => {
   };
 
   it('renders loading state', () => {
-    render(<QuickStatsCard loading={true} />);
+    renderWithProviders(<QuickStatsCard loading={true} />);
     const loadingElements = screen.getAllByRole('generic');
     const hasAnimatePulse = loadingElements.some((el) =>
       el.classList.contains('animate-pulse')
@@ -19,7 +20,7 @@ describe('QuickStatsCard', () => {
   });
 
   it('renders empty state when no stats', () => {
-    render(<QuickStatsCard />);
+    renderWithProviders(<QuickStatsCard />);
     expect(screen.getByText('Quick Stats')).toBeInTheDocument();
     expect(
       screen.getByText(/Statistics unavailable/)
@@ -27,17 +28,17 @@ describe('QuickStatsCard', () => {
   });
 
   it('renders stats heading', () => {
-    render(<QuickStatsCard stats={mockStats} />);
+    renderWithProviders(<QuickStatsCard stats={mockStats} />);
     expect(screen.getByText('Quick Stats')).toBeInTheDocument();
   });
 
   it('renders latency with correct precision', () => {
-    render(<QuickStatsCard stats={mockStats} />);
+    renderWithProviders(<QuickStatsCard stats={mockStats} />);
     expect(screen.getByText(/2.3ms avg/)).toBeInTheDocument();
   });
 
   it('formats event count with thousands separator', () => {
-    render(<QuickStatsCard stats={mockStats} />);
+    renderWithProviders(<QuickStatsCard stats={mockStats} />);
     expect(screen.getByText(/1,247 today/)).toBeInTheDocument();
   });
 
@@ -46,12 +47,12 @@ describe('QuickStatsCard', () => {
       ...mockStats,
       eventsToday: 123456,
     };
-    render(<QuickStatsCard stats={largeStats} />);
+    renderWithProviders(<QuickStatsCard stats={largeStats} />);
     expect(screen.getByText(/123,456 today/)).toBeInTheDocument();
   });
 
   it('formats uptime correctly in hours and minutes', () => {
-    render(<QuickStatsCard stats={mockStats} />);
+    renderWithProviders(<QuickStatsCard stats={mockStats} />);
     expect(screen.getByText(/5h 23m/)).toBeInTheDocument();
   });
 
@@ -60,7 +61,7 @@ describe('QuickStatsCard', () => {
       ...mockStats,
       uptimeSeconds: 1800, // 30 minutes
     };
-    render(<QuickStatsCard stats={shortUptime} />);
+    renderWithProviders(<QuickStatsCard stats={shortUptime} />);
     expect(screen.getByText(/0h 30m/)).toBeInTheDocument();
   });
 
@@ -69,36 +70,36 @@ describe('QuickStatsCard', () => {
       ...mockStats,
       uptimeSeconds: 7200, // 2 hours exactly
     };
-    render(<QuickStatsCard stats={exactHours} />);
+    renderWithProviders(<QuickStatsCard stats={exactHours} />);
     expect(screen.getByText(/2h 0m/)).toBeInTheDocument();
   });
 
   it('renders latency label with correct styling', () => {
-    render(<QuickStatsCard stats={mockStats} />);
+    renderWithProviders(<QuickStatsCard stats={mockStats} />);
     const latencyLabel = screen.getByText('Latency:');
     expect(latencyLabel).toHaveClass('font-medium', 'text-slate-100');
   });
 
   it('renders events label with correct styling', () => {
-    render(<QuickStatsCard stats={mockStats} />);
+    renderWithProviders(<QuickStatsCard stats={mockStats} />);
     const eventsLabel = screen.getByText('Events:');
     expect(eventsLabel).toHaveClass('font-medium', 'text-slate-100');
   });
 
   it('renders uptime label with correct styling', () => {
-    render(<QuickStatsCard stats={mockStats} />);
+    renderWithProviders(<QuickStatsCard stats={mockStats} />);
     const uptimeLabel = screen.getByText('Uptime:');
     expect(uptimeLabel).toHaveClass('font-medium', 'text-slate-100');
   });
 
   it('uses bullet separators between stats', () => {
-    render(<QuickStatsCard stats={mockStats} />);
+    renderWithProviders(<QuickStatsCard stats={mockStats} />);
     const bullets = screen.getAllByText('•');
     expect(bullets).toHaveLength(2);
   });
 
   it('applies custom className', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <QuickStatsCard stats={mockStats} className="custom-class" />
     );
     expect(container.querySelector('.custom-class')).toBeInTheDocument();
@@ -109,7 +110,7 @@ describe('QuickStatsCard', () => {
       ...mockStats,
       latencyAvg: 0,
     };
-    render(<QuickStatsCard stats={zeroLatency} />);
+    renderWithProviders(<QuickStatsCard stats={zeroLatency} />);
     expect(screen.getByText(/0.0ms avg/)).toBeInTheDocument();
   });
 
@@ -118,7 +119,7 @@ describe('QuickStatsCard', () => {
       ...mockStats,
       latencyAvg: 15.7,
     };
-    render(<QuickStatsCard stats={highLatency} />);
+    renderWithProviders(<QuickStatsCard stats={highLatency} />);
     expect(screen.getByText(/15.7ms avg/)).toBeInTheDocument();
   });
 });

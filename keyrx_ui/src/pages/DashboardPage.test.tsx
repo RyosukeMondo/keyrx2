@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { DashboardPage } from './DashboardPage';
 import type { DaemonState, KeyEvent, LatencyMetrics } from '../types/rpc';
 
@@ -68,19 +69,19 @@ describe('DashboardPage', () => {
   });
 
   it('renders connection banner with "Connected" when connected', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
     expect(screen.getByText('Connected')).toBeInTheDocument();
   });
 
   it('renders connection banner with "Disconnected" when not connected', async () => {
     mockApi.isConnected = false;
 
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
   });
 
   it('connection banner has green background when connected', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const banner = screen.getByText('Connected');
     expect(banner).toHaveClass('bg-green-600');
@@ -90,7 +91,7 @@ describe('DashboardPage', () => {
   it('connection banner has red background when disconnected', () => {
     mockApi.isConnected = false;
 
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const banner = screen.getByText('Disconnected');
     expect(banner).toHaveClass('bg-red-600');
@@ -98,7 +99,7 @@ describe('DashboardPage', () => {
   });
 
   it('subscribes to daemon-state channel on mount', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     expect(mockApi.subscribe).toHaveBeenCalledWith(
       'daemon-state',
@@ -107,7 +108,7 @@ describe('DashboardPage', () => {
   });
 
   it('subscribes to events channel on mount', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     expect(mockApi.subscribe).toHaveBeenCalledWith(
       'events',
@@ -116,7 +117,7 @@ describe('DashboardPage', () => {
   });
 
   it('subscribes to latency channel on mount', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     expect(mockApi.subscribe).toHaveBeenCalledWith(
       'latency',
@@ -130,7 +131,7 @@ describe('DashboardPage', () => {
 
     mockApi.subscribe = vi.fn(() => unsubscribeFns[callIndex++]);
 
-    const { unmount } = render(<DashboardPage />);
+    const { unmount } = renderWithProviders(<DashboardPage />);
 
     unmount();
 
@@ -140,7 +141,7 @@ describe('DashboardPage', () => {
   });
 
   it('updates daemon state when daemon-state event is received', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const newState: DaemonState = {
       modifiers: [1, 2],
@@ -159,7 +160,7 @@ describe('DashboardPage', () => {
   });
 
   it('adds events to timeline when events are received', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const event1: KeyEvent = {
       timestamp: 1000000,
@@ -190,7 +191,7 @@ describe('DashboardPage', () => {
   });
 
   it('enforces 100 event FIFO limit', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     // Add 101 events
     for (let i = 0; i < 101; i++) {
@@ -212,7 +213,7 @@ describe('DashboardPage', () => {
   });
 
   it('adds latency metrics to history', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const metrics1: LatencyMetrics = {
       min: 100,
@@ -245,7 +246,7 @@ describe('DashboardPage', () => {
   });
 
   it('enforces 60 latency metrics FIFO limit', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     // Add 61 metrics
     for (let i = 0; i < 61; i++) {
@@ -268,7 +269,7 @@ describe('DashboardPage', () => {
   });
 
   it('renders StateIndicatorPanel with null initially', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const panel = screen.getByTestId('state-indicator-panel');
     const stateData = panel.getAttribute('data-state');
@@ -276,21 +277,21 @@ describe('DashboardPage', () => {
   });
 
   it('renders MetricsChart with empty array initially', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const chart = screen.getByTestId('metrics-chart');
     expect(chart.getAttribute('data-length')).toBe('0');
   });
 
   it('renders DashboardEventTimeline with empty array initially', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const timeline = screen.getByTestId('event-timeline');
     expect(timeline.getAttribute('data-event-count')).toBe('0');
   });
 
   it('renders all three child components', () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     expect(screen.getByTestId('state-indicator-panel')).toBeInTheDocument();
     expect(screen.getByTestId('metrics-chart')).toBeInTheDocument();
@@ -298,7 +299,7 @@ describe('DashboardPage', () => {
   });
 
   it('uses responsive grid layout for state and metrics', () => {
-    const { container } = render(<DashboardPage />);
+    const { container } = renderWithProviders(<DashboardPage />);
 
     const grid = container.querySelector('.grid');
     expect(grid).toHaveClass('grid-cols-1');
@@ -306,7 +307,7 @@ describe('DashboardPage', () => {
   });
 
   it('pauses event updates when pause is toggled', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     // Toggle pause
     const toggleButton = screen.getByText('Toggle Pause');
@@ -333,7 +334,7 @@ describe('DashboardPage', () => {
   });
 
   it('resumes event updates when pause is toggled again', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     // Toggle pause twice
     const toggleButton = screen.getByText('Toggle Pause');
@@ -362,7 +363,7 @@ describe('DashboardPage', () => {
   });
 
   it('clears events when clear is clicked', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     // Add some events
     eventsHandler?.({
@@ -390,7 +391,7 @@ describe('DashboardPage', () => {
   });
 
   it('events are added newest first (FIFO)', async () => {
-    render(<DashboardPage />);
+    renderWithProviders(<DashboardPage />);
 
     const event1: KeyEvent = {
       timestamp: 1000000,

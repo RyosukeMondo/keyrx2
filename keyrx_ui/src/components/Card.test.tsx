@@ -1,45 +1,46 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { Card } from './Card';
 
 describe('Card', () => {
   it('renders children', () => {
-    render(<Card>Test content</Card>);
+    renderWithProviders(<Card>Test content</Card>);
     expect(screen.getByText('Test content')).toBeInTheDocument();
   });
 
   it('applies default variant styles', () => {
-    const { container } = render(<Card>Content</Card>);
+    const { container } = renderWithProviders(<Card>Content</Card>);
     const card = container.firstChild as HTMLElement;
     expect(card.className).toContain('shadow-md');
   });
 
   it('applies elevated variant styles', () => {
-    const { container } = render(<Card variant="elevated">Content</Card>);
+    const { container } = renderWithProviders(<Card variant="elevated">Content</Card>);
     const card = container.firstChild as HTMLElement;
     expect(card.className).toContain('shadow-xl');
   });
 
   it('applies sm padding', () => {
-    const { container } = render(<Card padding="sm">Content</Card>);
+    const { container } = renderWithProviders(<Card padding="sm">Content</Card>);
     const contentDiv = container.querySelector('.p-sm');
     expect(contentDiv).toBeInTheDocument();
   });
 
   it('applies md padding by default', () => {
-    const { container } = render(<Card>Content</Card>);
+    const { container } = renderWithProviders(<Card>Content</Card>);
     const contentDiv = container.querySelector('.p-md');
     expect(contentDiv).toBeInTheDocument();
   });
 
   it('applies lg padding', () => {
-    const { container } = render(<Card padding="lg">Content</Card>);
+    const { container } = renderWithProviders(<Card padding="lg">Content</Card>);
     const contentDiv = container.querySelector('.p-lg');
     expect(contentDiv).toBeInTheDocument();
   });
 
   it('renders header slot', () => {
-    render(
+    renderWithProviders(
       <Card header={<div>Card Header</div>}>
         <div>Card Content</div>
       </Card>
@@ -49,7 +50,7 @@ describe('Card', () => {
   });
 
   it('renders footer slot', () => {
-    render(
+    renderWithProviders(
       <Card footer={<div>Card Footer</div>}>
         <div>Card Content</div>
       </Card>
@@ -59,7 +60,7 @@ describe('Card', () => {
   });
 
   it('renders both header and footer', () => {
-    render(
+    renderWithProviders(
       <Card
         header={<div>Header</div>}
         footer={<div>Footer</div>}
@@ -73,7 +74,7 @@ describe('Card', () => {
   });
 
   it('merges custom className', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <Card className="custom-class">Content</Card>
     );
     const card = container.firstChild as HTMLElement;
@@ -82,7 +83,7 @@ describe('Card', () => {
   });
 
   it('has proper styling structure', () => {
-    const { container } = render(<Card>Content</Card>);
+    const { container } = renderWithProviders(<Card>Content</Card>);
     const card = container.firstChild as HTMLElement;
 
     expect(card.className).toContain('bg-slate-800');
@@ -92,7 +93,7 @@ describe('Card', () => {
   });
 
   it('header has border and background', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <Card header={<div>Header</div>}>Content</Card>
     );
     const header = container.querySelector('.border-b');
@@ -102,7 +103,7 @@ describe('Card', () => {
   });
 
   it('footer has border and background', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <Card footer={<div>Footer</div>}>Content</Card>
     );
     const footer = container.querySelector('.border-t');

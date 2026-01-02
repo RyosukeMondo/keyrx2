@@ -22,7 +22,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../testUtils';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ConfigPage from '../../src/pages/ConfigPage';
@@ -51,7 +52,7 @@ describe('Config Editor Integration', () => {
   });
 
   it('should render with Visual tab active by default (AC1)', async () => {
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={[`/config/${testProfileName}`]}>
         <Routes>
           <Route path="/config/:profileName" element={<ConfigPage />} />
@@ -74,7 +75,7 @@ describe('Config Editor Integration', () => {
   it('should switch to Code tab and render Monaco editor (AC2)', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={[`/config/${testProfileName}`]}>
         <Routes>
           <Route path="/config/:profileName" element={<ConfigPage />} />
@@ -108,7 +109,7 @@ describe('Config Editor Integration', () => {
   it('should preserve changes when switching between tabs (AC3, AC4)', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={[`/config/${testProfileName}`]}>
         <Routes>
           <Route path="/config/:profileName" element={<ConfigPage />} />
@@ -159,7 +160,7 @@ describe('Config Editor Integration', () => {
   it('should display validation status in both tabs (AC5)', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={[`/config/${testProfileName}`]}>
         <Routes>
           <Route path="/config/:profileName" element={<ConfigPage />} />
@@ -196,7 +197,7 @@ describe('Config Editor Integration', () => {
   it('should save configuration via button (AC7)', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={[`/config/${testProfileName}`]}>
         <Routes>
           <Route path="/config/:profileName" element={<ConfigPage />} />
@@ -232,7 +233,7 @@ describe('Config Editor Integration', () => {
   it('should prevent save when validation errors exist (AC9)', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={[`/config/${testProfileName}`]}>
         <Routes>
           <Route path="/config/:profileName" element={<ConfigPage />} />

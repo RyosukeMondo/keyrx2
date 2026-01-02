@@ -1,12 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { Input } from './Input';
 
 describe('Input', () => {
   describe('Rendering', () => {
     it('renders with required props', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input value="" onChange={handleChange} aria-label="Test input" />
       );
 
@@ -16,7 +17,7 @@ describe('Input', () => {
 
     it('renders with text type by default', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input value="" onChange={handleChange} aria-label="Test input" />
       );
 
@@ -26,7 +27,7 @@ describe('Input', () => {
 
     it('renders with number type when specified', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           type="number"
           value=""
@@ -41,7 +42,7 @@ describe('Input', () => {
 
     it('renders with placeholder', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -58,7 +59,7 @@ describe('Input', () => {
   describe('Value and onChange', () => {
     it('displays the current value', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value="test value"
           onChange={handleChange}
@@ -72,7 +73,7 @@ describe('Input', () => {
 
     it('calls onChange when value changes', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input value="" onChange={handleChange} aria-label="Test input" />
       );
 
@@ -86,7 +87,7 @@ describe('Input', () => {
   describe('Error state', () => {
     it('displays error message when error prop is provided', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -103,7 +104,7 @@ describe('Input', () => {
 
     it('sets aria-invalid when error is present', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -118,7 +119,7 @@ describe('Input', () => {
 
     it('applies error border styling', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -133,7 +134,7 @@ describe('Input', () => {
 
     it('does not display error message when no error', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input value="" onChange={handleChange} aria-label="Test input" />
       );
 
@@ -145,7 +146,7 @@ describe('Input', () => {
   describe('Disabled state', () => {
     it('disables input when disabled prop is true', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -160,7 +161,7 @@ describe('Input', () => {
 
     it('applies disabled styling', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -176,7 +177,7 @@ describe('Input', () => {
 
     it('does not call onChange when disabled', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -197,7 +198,7 @@ describe('Input', () => {
   describe('maxLength and character counter', () => {
     it('enforces maxLength constraint', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -212,7 +213,7 @@ describe('Input', () => {
 
     it('displays character counter when maxLength is set', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value="hello"
           onChange={handleChange}
@@ -227,7 +228,7 @@ describe('Input', () => {
 
     it('does not display character counter when maxLength is not set', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input value="hello" onChange={handleChange} aria-label="Test input" />
       );
 
@@ -237,7 +238,7 @@ describe('Input', () => {
 
     it('highlights counter in amber when near limit (90%)', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value="123456789"
           onChange={handleChange}
@@ -252,7 +253,7 @@ describe('Input', () => {
 
     it('displays counter in normal color when below 90%', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value="12345"
           onChange={handleChange}
@@ -269,7 +270,7 @@ describe('Input', () => {
   describe('Focus state', () => {
     it('applies focus styling when focused', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input value="" onChange={handleChange} aria-label="Test input" />
       );
 
@@ -281,7 +282,7 @@ describe('Input', () => {
 
     it('removes focus styling when blurred', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input value="" onChange={handleChange} aria-label="Test input" />
       );
 
@@ -297,7 +298,7 @@ describe('Input', () => {
   describe('Accessibility', () => {
     it('has required aria-label', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -311,7 +312,7 @@ describe('Input', () => {
 
     it('sets aria-describedby when error is present', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -327,7 +328,7 @@ describe('Input', () => {
 
     it('error message has role alert and aria-live assertive', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -345,7 +346,7 @@ describe('Input', () => {
   describe('Custom className', () => {
     it('applies custom className', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}
@@ -360,7 +361,7 @@ describe('Input', () => {
 
     it('preserves base classes when custom className is provided', () => {
       const handleChange = vi.fn();
-      render(
+      renderWithProviders(
         <Input
           value=""
           onChange={handleChange}

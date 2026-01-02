@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { Modal } from './Modal';
 
@@ -30,24 +31,24 @@ describe('Modal', () => {
   });
 
   it('renders modal when open is true', () => {
-    render(<Modal {...defaultProps} />);
+    renderWithProviders(<Modal {...defaultProps} />);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Test Modal')).toBeInTheDocument();
     expect(screen.getByText('Modal content')).toBeInTheDocument();
   });
 
   it('does not render when open is false', () => {
-    render(<Modal {...defaultProps} open={false} />);
+    renderWithProviders(<Modal {...defaultProps} open={false} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('displays the correct title', () => {
-    render(<Modal {...defaultProps} title="Custom Title" />);
+    renderWithProviders(<Modal {...defaultProps} title="Custom Title" />);
     expect(screen.getByText('Custom Title')).toBeInTheDocument();
   });
 
   it('renders children correctly', () => {
-    render(
+    renderWithProviders(
       <Modal {...defaultProps}>
         <p>Custom content</p>
         <button>Action</button>
@@ -59,7 +60,7 @@ describe('Modal', () => {
 
   it('calls onClose when close button is clicked', async () => {
     const user = userEvent.setup();
-    render(<Modal {...defaultProps} />);
+    renderWithProviders(<Modal {...defaultProps} />);
 
     const closeButton = screen.getByRole('button', { name: 'Close modal' });
     await user.click(closeButton);
@@ -68,7 +69,7 @@ describe('Modal', () => {
   });
 
   it('calls onClose when Escape key is pressed', async () => {
-    render(<Modal {...defaultProps} />);
+    renderWithProviders(<Modal {...defaultProps} />);
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
@@ -77,7 +78,7 @@ describe('Modal', () => {
 
   it('calls onClose when backdrop is clicked', async () => {
     const user = userEvent.setup();
-    render(<Modal {...defaultProps} />);
+    renderWithProviders(<Modal {...defaultProps} />);
 
     // Click the backdrop (not the modal content)
     const backdrop = screen.getByRole('dialog').parentElement;
@@ -89,7 +90,7 @@ describe('Modal', () => {
 
   it('does not call onClose when modal content is clicked', async () => {
     const user = userEvent.setup();
-    render(<Modal {...defaultProps} />);
+    renderWithProviders(<Modal {...defaultProps} />);
 
     const modalContent = screen.getByRole('dialog');
     await user.click(modalContent);
@@ -98,7 +99,7 @@ describe('Modal', () => {
   });
 
   it('has correct ARIA attributes', () => {
-    render(<Modal {...defaultProps} />);
+    renderWithProviders(<Modal {...defaultProps} />);
     const modal = screen.getByRole('dialog');
 
     expect(modal).toHaveAttribute('aria-modal', 'true');
@@ -106,7 +107,7 @@ describe('Modal', () => {
   });
 
   it('focuses first focusable element when opened', async () => {
-    render(
+    renderWithProviders(
       <Modal {...defaultProps}>
         <button>First</button>
         <button>Second</button>
@@ -120,7 +121,7 @@ describe('Modal', () => {
 
   it('traps focus within modal (Tab forward)', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Modal {...defaultProps}>
         <button>First</button>
         <button>Second</button>
@@ -147,7 +148,7 @@ describe('Modal', () => {
 
   it('traps focus within modal (Shift+Tab backward)', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Modal {...defaultProps}>
         <button>First</button>
         <button>Second</button>
@@ -165,7 +166,7 @@ describe('Modal', () => {
   });
 
   it('returns focus to previous element when closed', async () => {
-    const { rerender } = render(<Modal {...defaultProps} />);
+    const { rerender } = renderWithProviders(<Modal {...defaultProps} />);
 
     // Verify modal is open and has focus
     await waitFor(() => {
@@ -183,7 +184,7 @@ describe('Modal', () => {
   });
 
   it('prevents body scroll when open', () => {
-    const { rerender } = render(<Modal {...defaultProps} />);
+    const { rerender } = renderWithProviders(<Modal {...defaultProps} />);
     expect(document.body.style.overflow).toBe('hidden');
 
     rerender(<Modal {...defaultProps} open={false} />);
@@ -191,7 +192,7 @@ describe('Modal', () => {
   });
 
   it('restores body scroll on unmount', () => {
-    const { unmount } = render(<Modal {...defaultProps} />);
+    const { unmount } = renderWithProviders(<Modal {...defaultProps} />);
     expect(document.body.style.overflow).toBe('hidden');
 
     unmount();
@@ -199,13 +200,13 @@ describe('Modal', () => {
   });
 
   it('applies custom className', () => {
-    render(<Modal {...defaultProps} className="custom-class" />);
+    renderWithProviders(<Modal {...defaultProps} className="custom-class" />);
     const modal = screen.getByRole('dialog');
     expect(modal).toHaveClass('custom-class');
   });
 
   it('renders with Portal', () => {
-    render(<Modal {...defaultProps} />);
+    renderWithProviders(<Modal {...defaultProps} />);
 
     // Modal should be rendered directly in body, not in the component tree
     const modal = screen.getByRole('dialog');
@@ -213,7 +214,7 @@ describe('Modal', () => {
   });
 
   it('does not close on Escape when already closed', () => {
-    render(<Modal {...defaultProps} open={false} />);
+    renderWithProviders(<Modal {...defaultProps} open={false} />);
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
@@ -221,7 +222,7 @@ describe('Modal', () => {
   });
 
   it('handles rapid open/close transitions', async () => {
-    const { rerender } = render(<Modal {...defaultProps} open={false} />);
+    const { rerender } = renderWithProviders(<Modal {...defaultProps} open={false} />);
 
     // Rapidly toggle open state
     rerender(<Modal {...defaultProps} open={true} />);

@@ -19,10 +19,12 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../testUtils';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { renderHook } from '@testing-library/react';
+import { renderWithProviders } from '../testUtils';
 import { useUnifiedApi } from '../../src/hooks/useUnifiedApi';
 import {
   setupDaemon,

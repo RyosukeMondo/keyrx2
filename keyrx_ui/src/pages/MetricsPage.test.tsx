@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { MetricsPage } from './MetricsPage';
 
 // Mock recharts to avoid rendering issues in tests
@@ -45,7 +46,7 @@ describe('MetricsPage', () => {
   });
 
   it('renders the page header', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     expect(screen.getByText('Performance Metrics')).toBeInTheDocument();
     expect(
@@ -54,7 +55,7 @@ describe('MetricsPage', () => {
   });
 
   it('renders latency statistics cards', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     expect(screen.getByText('Current')).toBeInTheDocument();
     expect(screen.getByText('Average')).toBeInTheDocument();
@@ -63,7 +64,7 @@ describe('MetricsPage', () => {
   });
 
   it('displays latency values in milliseconds', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     // Should display latency values with "ms" suffix
     const latencyValues = screen.getAllByText(/\d+\.\d+ms/);
@@ -71,7 +72,7 @@ describe('MetricsPage', () => {
   });
 
   it('renders latency chart', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     expect(screen.getByText('Latency Over Time')).toBeInTheDocument();
     expect(screen.getByText('Last 60 seconds')).toBeInTheDocument();
@@ -79,7 +80,7 @@ describe('MetricsPage', () => {
   });
 
   it('initializes with latency data', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     // Should display latency values on mount
     const latencyValues = screen.getAllByText(/\d+\.\d+ms/);
@@ -87,7 +88,7 @@ describe('MetricsPage', () => {
   });
 
   it('renders event log with headers', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     expect(screen.getByText('Event Log')).toBeInTheDocument();
     expect(screen.getByText('Timestamp')).toBeInTheDocument();
@@ -98,13 +99,13 @@ describe('MetricsPage', () => {
   });
 
   it('renders virtual scrolling list for event log', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     expect(screen.getByTestId('virtual-list')).toBeInTheDocument();
   });
 
   it('displays event log entries', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     // Should render some event entries (at least the first 10 due to virtual scrolling mock)
     const eventTypes = ['press', 'release', 'tap', 'hold', 'macro', 'layer_switch'];
@@ -116,14 +117,14 @@ describe('MetricsPage', () => {
   });
 
   it('renders state inspector', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     expect(screen.getByText('State Inspector')).toBeInTheDocument();
     expect(screen.getByText('Current daemon internal state')).toBeInTheDocument();
   });
 
   it('displays state fields', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     expect(screen.getByText('Active Layer')).toBeInTheDocument();
     expect(screen.getByText('Tap/Hold Timers')).toBeInTheDocument();
@@ -133,7 +134,7 @@ describe('MetricsPage', () => {
   });
 
   it('shows default state values', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     expect(screen.getByText('Base')).toBeInTheDocument(); // Active Layer
     expect(screen.getByText('0 active')).toBeInTheDocument(); // Tap/Hold Timers
@@ -143,7 +144,7 @@ describe('MetricsPage', () => {
   });
 
   it('displays multiple events in the log', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     // Get virtual list
     const virtualList = screen.getByTestId('virtual-list');
@@ -153,7 +154,7 @@ describe('MetricsPage', () => {
   });
 
   it('formats timestamps correctly', () => {
-    render(<MetricsPage />);
+    renderWithProviders(<MetricsPage />);
 
     // Should display timestamps in HH:MM:SS.mmm format
     // Look for time patterns in the virtual list
@@ -162,7 +163,7 @@ describe('MetricsPage', () => {
   });
 
   it('renders with responsive layout', () => {
-    const { container } = render(<MetricsPage />);
+    const { container } = renderWithProviders(<MetricsPage />);
 
     // Check for grid classes for responsive layout
     const grids = container.querySelectorAll('.grid');
@@ -170,7 +171,7 @@ describe('MetricsPage', () => {
   });
 
   it('displays event type colors', () => {
-    const { container } = render(<MetricsPage />);
+    const { container } = renderWithProviders(<MetricsPage />);
 
     // Event types should have color classes
     const colorClasses = [

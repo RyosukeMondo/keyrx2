@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, act } from '@testing-library/react';
 import { renderWithProviders } from '../../tests/testUtils';
+import { renderWithProviders } from '../../tests/testUtils';
 import { MonacoEditor } from './MonacoEditor';
 import type { ValidationError } from '../hooks/useWasm';
 

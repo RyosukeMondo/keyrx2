@@ -1,19 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { KeyButton, KeyMapping } from './KeyButton';
 
 describe('KeyButton', () => {
   it('renders with label', () => {
     const onClick = vi.fn();
-    render(<KeyButton keyCode="A" label="A" onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} />);
     expect(screen.getByText('A')).toBeInTheDocument();
   });
 
   it('calls onClick when clicked', async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(<KeyButton keyCode="A" label="A" onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} />);
 
     await user.click(screen.getByRole('button'));
     expect(onClick).toHaveBeenCalledTimes(1);
@@ -21,7 +22,7 @@ describe('KeyButton', () => {
 
   it('renders without mapping (default state)', () => {
     const onClick = vi.fn();
-    render(<KeyButton keyCode="A" label="A" onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} />);
 
     const button = screen.getByRole('button');
     expect(button).toHaveClass('bg-slate-700');
@@ -35,7 +36,7 @@ describe('KeyButton', () => {
       tapAction: 'B',
     };
 
-    render(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
 
     const button = screen.getByRole('button');
     // Simple mapping uses default background
@@ -51,7 +52,7 @@ describe('KeyButton', () => {
       threshold: 200,
     };
 
-    render(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
 
     const button = screen.getByRole('button');
     expect(button).toHaveClass('bg-blue-700');
@@ -69,7 +70,7 @@ describe('KeyButton', () => {
       ],
     };
 
-    render(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
 
     const button = screen.getByRole('button');
     expect(button).toHaveClass('bg-blue-700');
@@ -83,7 +84,7 @@ describe('KeyButton', () => {
       targetLayer: 'gaming',
     };
 
-    render(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
 
     const button = screen.getByRole('button');
     expect(button).toHaveClass('bg-blue-700');
@@ -92,7 +93,7 @@ describe('KeyButton', () => {
 
   it('renders pressed state', () => {
     const onClick = vi.fn();
-    render(<KeyButton keyCode="A" label="A" onClick={onClick} isPressed={true} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} isPressed={true} />);
 
     const button = screen.getByRole('button');
     expect(button).toHaveClass('bg-green-500');
@@ -100,7 +101,7 @@ describe('KeyButton', () => {
 
   it('applies custom className', () => {
     const onClick = vi.fn();
-    render(<KeyButton keyCode="A" label="A" onClick={onClick} className="custom-class" />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} className="custom-class" />);
 
     const button = screen.getByRole('button');
     expect(button).toHaveClass('custom-class');
@@ -108,7 +109,7 @@ describe('KeyButton', () => {
 
   it('has proper accessibility attributes', () => {
     const onClick = vi.fn();
-    render(<KeyButton keyCode="A" label="A" onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} />);
 
     const button = screen.getByRole('button');
     expect(button).toHaveAttribute('aria-label');
@@ -118,7 +119,7 @@ describe('KeyButton', () => {
 
   it('has hover and focus styles', () => {
     const onClick = vi.fn();
-    render(<KeyButton keyCode="A" label="A" onClick={onClick} />);
+    renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} />);
 
     const button = screen.getByRole('button');
     expect(button).toHaveClass('hover:bg-slate-600', 'hover:scale-105');

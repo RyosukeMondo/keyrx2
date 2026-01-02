@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { Dropdown } from './Dropdown';
 
@@ -14,7 +15,7 @@ describe('Dropdown', () => {
   describe('Rendering', () => {
     it('renders with placeholder when no value selected', () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value=""
@@ -29,7 +30,7 @@ describe('Dropdown', () => {
 
     it('renders with selected value', () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option2"
@@ -43,7 +44,7 @@ describe('Dropdown', () => {
 
     it('renders disabled state correctly', () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -60,7 +61,7 @@ describe('Dropdown', () => {
 
     it('displays chevron icon', () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -77,7 +78,7 @@ describe('Dropdown', () => {
   describe('Interaction', () => {
     it('opens dropdown on button click', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -97,7 +98,7 @@ describe('Dropdown', () => {
 
     it('selects option on click', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -120,7 +121,7 @@ describe('Dropdown', () => {
 
     it('closes dropdown after selection', async () => {
       const onChange = vi.fn();
-      const { rerender } = render(
+      const { rerender } = renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -153,7 +154,7 @@ describe('Dropdown', () => {
 
     it('prevents interaction when disabled', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -175,7 +176,7 @@ describe('Dropdown', () => {
   describe('Keyboard Navigation', () => {
     it('opens dropdown with Enter key', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -195,7 +196,7 @@ describe('Dropdown', () => {
 
     it('opens dropdown with Space key', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -215,7 +216,7 @@ describe('Dropdown', () => {
 
     it('closes dropdown with Escape key', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -241,7 +242,7 @@ describe('Dropdown', () => {
 
     it('navigates options with arrow keys', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -271,7 +272,7 @@ describe('Dropdown', () => {
   describe('Search Functionality', () => {
     it('renders search input when searchable is true', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -291,7 +292,7 @@ describe('Dropdown', () => {
 
     it('does not render search input when searchable is false', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -311,7 +312,7 @@ describe('Dropdown', () => {
 
     it('filters options based on search term', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -335,7 +336,7 @@ describe('Dropdown', () => {
 
     it('shows "No options found" when search has no results', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -358,7 +359,7 @@ describe('Dropdown', () => {
 
     it('is case-insensitive in search', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -391,7 +392,7 @@ describe('Dropdown', () => {
 
     it('clears search term when dropdown closes', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -420,7 +421,7 @@ describe('Dropdown', () => {
   describe('Accessibility', () => {
     it('has correct aria-label', () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -434,7 +435,7 @@ describe('Dropdown', () => {
 
     it('indicates selected option visually', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option2"
@@ -458,7 +459,7 @@ describe('Dropdown', () => {
 
     it('shows checkmark for selected option', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option2"
@@ -483,7 +484,7 @@ describe('Dropdown', () => {
 
     it('has visible focus outline', () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -500,7 +501,7 @@ describe('Dropdown', () => {
   describe('Visual States', () => {
     it('rotates chevron when open', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"
@@ -523,7 +524,7 @@ describe('Dropdown', () => {
 
     it('highlights option on hover', async () => {
       const onChange = vi.fn();
-      render(
+      renderWithProviders(
         <Dropdown
           options={mockOptions}
           value="option1"

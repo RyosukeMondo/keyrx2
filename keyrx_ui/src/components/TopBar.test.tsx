@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { TopBar } from './TopBar';
 
 describe('TopBar', () => {
   it('renders logo and title', () => {
-    render(<TopBar />);
+    renderWithProviders(<TopBar />);
 
     // Logo should be present
     expect(screen.getByLabelText('KeyRx2 Logo')).toBeInTheDocument();
@@ -15,7 +16,7 @@ describe('TopBar', () => {
   });
 
   it('renders settings and help buttons', () => {
-    render(<TopBar />);
+    renderWithProviders(<TopBar />);
 
     // Settings button should be present
     expect(
@@ -32,7 +33,7 @@ describe('TopBar', () => {
     const user = userEvent.setup();
     const onSettingsClick = vi.fn();
 
-    render(<TopBar onSettingsClick={onSettingsClick} />);
+    renderWithProviders(<TopBar onSettingsClick={onSettingsClick} />);
 
     const settingsButton = screen.getByRole('button', {
       name: /open settings/i,
@@ -46,7 +47,7 @@ describe('TopBar', () => {
     const user = userEvent.setup();
     const onHelpClick = vi.fn();
 
-    render(<TopBar onHelpClick={onHelpClick} />);
+    renderWithProviders(<TopBar onHelpClick={onHelpClick} />);
 
     const helpButton = screen.getByRole('button', {
       name: /help and documentation/i,
@@ -57,21 +58,21 @@ describe('TopBar', () => {
   });
 
   it('has correct ARIA role for header', () => {
-    const { container } = render(<TopBar />);
+    const { container } = renderWithProviders(<TopBar />);
 
     const header = container.querySelector('header');
     expect(header).toHaveAttribute('role', 'banner');
   });
 
   it('applies custom className', () => {
-    const { container } = render(<TopBar className="custom-class" />);
+    const { container } = renderWithProviders(<TopBar className="custom-class" />);
 
     const header = container.querySelector('header');
     expect(header).toHaveClass('custom-class');
   });
 
   it('hides title on mobile screens', () => {
-    render(<TopBar />);
+    renderWithProviders(<TopBar />);
 
     const title = screen.getByText('KeyRx2 Configuration');
 
@@ -81,7 +82,7 @@ describe('TopBar', () => {
   });
 
   it('buttons have hover states', () => {
-    render(<TopBar />);
+    renderWithProviders(<TopBar />);
 
     const settingsButton = screen.getByRole('button', {
       name: /open settings/i,
@@ -98,6 +99,6 @@ describe('TopBar', () => {
   });
 
   it('renders without crashing when callbacks are not provided', () => {
-    expect(() => render(<TopBar />)).not.toThrow();
+    expect(() => renderWithProviders(<TopBar />)).not.toThrow();
   });
 });

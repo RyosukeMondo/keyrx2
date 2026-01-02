@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { BottomNav } from './BottomNav';
 
 describe('BottomNav', () => {
   it('renders all navigation items', () => {
-    render(
+    renderWithProviders(
       <BrowserRouter>
         <BottomNav />
       </BrowserRouter>
@@ -20,7 +21,7 @@ describe('BottomNav', () => {
   });
 
   it('has correct accessibility attributes', () => {
-    render(
+    renderWithProviders(
       <BrowserRouter>
         <BottomNav />
       </BrowserRouter>
@@ -36,7 +37,7 @@ describe('BottomNav', () => {
   });
 
   it('highlights active route', () => {
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/devices']}>
         <BottomNav />
       </MemoryRouter>
@@ -47,7 +48,7 @@ describe('BottomNav', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <BrowserRouter>
         <BottomNav className="custom-class" />
       </BrowserRouter>
@@ -58,7 +59,7 @@ describe('BottomNav', () => {
   });
 
   it('has touch targets >= 44px (h-16 = 64px)', () => {
-    render(
+    renderWithProviders(
       <BrowserRouter>
         <BottomNav />
       </BrowserRouter>
@@ -69,7 +70,7 @@ describe('BottomNav', () => {
   });
 
   it('is fixed at bottom with correct z-index', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <BrowserRouter>
         <BottomNav />
       </BrowserRouter>
@@ -81,7 +82,7 @@ describe('BottomNav', () => {
   });
 
   it('is hidden on medium screens and above (md:hidden)', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <BrowserRouter>
         <BottomNav />
       </BrowserRouter>
@@ -92,7 +93,7 @@ describe('BottomNav', () => {
   });
 
   it('fills icon for active state', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <MemoryRouter initialEntries={['/profiles']}>
         <BottomNav />
       </MemoryRouter>
@@ -104,7 +105,7 @@ describe('BottomNav', () => {
   });
 
   it('makes active label semibold', () => {
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/config']}>
         <BottomNav />
       </MemoryRouter>
@@ -115,7 +116,7 @@ describe('BottomNav', () => {
   });
 
   it('has focus visible styles', () => {
-    render(
+    renderWithProviders(
       <BrowserRouter>
         <BottomNav />
       </BrowserRouter>

@@ -8,7 +8,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { DevicesPage } from './DevicesPage';
 
@@ -21,7 +22,7 @@ describe('DevicesPage - Integration Tests', () => {
   describe('Device rename flow', () => {
     it('successfully renames device', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       // Wait for page to render (uses internal mock data)
       await waitFor(() => {
@@ -53,7 +54,7 @@ describe('DevicesPage - Integration Tests', () => {
 
     it('handles rename with Enter key', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -73,7 +74,7 @@ describe('DevicesPage - Integration Tests', () => {
 
     it('cancels rename on Escape key', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -94,7 +95,7 @@ describe('DevicesPage - Integration Tests', () => {
 
     it('cancels rename on Cancel button click', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -116,7 +117,7 @@ describe('DevicesPage - Integration Tests', () => {
 
     it('validates empty device name', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -141,7 +142,7 @@ describe('DevicesPage - Integration Tests', () => {
   describe('Scope toggle flow', () => {
     it('successfully changes device scope', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -169,7 +170,7 @@ describe('DevicesPage - Integration Tests', () => {
   describe('Forget device flow', () => {
     it('shows confirmation modal before forgetting device', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -188,7 +189,7 @@ describe('DevicesPage - Integration Tests', () => {
 
     it('successfully forgets device on confirmation', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -216,7 +217,7 @@ describe('DevicesPage - Integration Tests', () => {
 
     it('cancels forget operation on Cancel button', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -246,7 +247,7 @@ describe('DevicesPage - Integration Tests', () => {
   describe('Layout selector flow', () => {
     it('changes keyboard layout preset', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();
@@ -272,7 +273,7 @@ describe('DevicesPage - Integration Tests', () => {
   describe('Multiple devices interaction', () => {
     it('can rename multiple devices in sequence', async () => {
       const user = userEvent.setup();
-      render(<DevicesPage />);
+      renderWithProviders(<DevicesPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Main Keyboard')).toBeInTheDocument();

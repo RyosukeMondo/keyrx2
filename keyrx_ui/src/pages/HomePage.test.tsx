@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { BrowserRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
 
 const renderWithRouter = (component: React.ReactElement) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>);
+  return renderWithProviders(<BrowserRouter>{component}</BrowserRouter>);
 };
 
 describe('HomePage', () => {

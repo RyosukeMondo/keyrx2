@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { MetricsChart } from './MetricsChart';
 import type { LatencyMetrics } from '../types/rpc';
 
@@ -26,7 +27,7 @@ vi.mock('recharts', () => ({
 
 describe('MetricsChart', () => {
   it('renders empty state when data is empty', () => {
-    render(<MetricsChart data={[]} />);
+    renderWithProviders(<MetricsChart data={[]} />);
     expect(screen.getByText('No latency data available yet...')).toBeInTheDocument();
   });
 
@@ -35,7 +36,7 @@ describe('MetricsChart', () => {
       { min: 1000, avg: 2000, max: 3000, p50: 1500, p95: 2500, p99: 2900, count: 10 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
     expect(screen.getByText('Latency Metrics')).toBeInTheDocument();
   });
 
@@ -44,7 +45,7 @@ describe('MetricsChart', () => {
       { min: 1000, avg: 2000, max: 3000, p50: 1500, p95: 2500, p99: 2900, count: 10 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     expect(screen.getByTestId('responsive-container')).toBeInTheDocument();
     expect(screen.getByTestId('line-chart')).toBeInTheDocument();
@@ -60,7 +61,7 @@ describe('MetricsChart', () => {
       { min: 1000, avg: 2000, max: 3000, p50: 1500, p95: 2500, p99: 2900, count: 10 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     expect(screen.getByTestId('line-avg')).toBeInTheDocument();
     expect(screen.getByTestId('line-p95')).toBeInTheDocument();
@@ -72,7 +73,7 @@ describe('MetricsChart', () => {
       { min: 1000, avg: 2000, max: 3000, p50: 1500, p95: 2500, p99: 2900, count: 10 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     const referenceLine = screen.getByTestId('reference-line');
     expect(referenceLine).toBeInTheDocument();
@@ -86,7 +87,7 @@ describe('MetricsChart', () => {
       { min: 2000, avg: 4000, max: 5000, p50: 3000, p95: 4500, p99: 4800, count: 20 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     const lineChart = screen.getByTestId('line-chart');
     const chartData = JSON.parse(lineChart.getAttribute('data-chart-data') || '[]');
@@ -108,7 +109,7 @@ describe('MetricsChart', () => {
       { min: 3000, avg: 5000, max: 6000, p50: 4000, p95: 5500, p99: 5900, count: 30 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     const lineChart = screen.getByTestId('line-chart');
     const chartData = JSON.parse(lineChart.getAttribute('data-chart-data') || '[]');
@@ -123,7 +124,7 @@ describe('MetricsChart', () => {
       { min: 1000, avg: 2000, max: 3000, p50: 1500, p95: 2500, p99: 2900, count: 10 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     const avgLine = screen.getByTestId('line-avg');
     const p95Line = screen.getByTestId('line-p95');
@@ -139,7 +140,7 @@ describe('MetricsChart', () => {
       { min: 1000, avg: 2000, max: 3000, p50: 1500, p95: 2500, p99: 2900, count: 10 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     const avgLine = screen.getByTestId('line-avg');
     const p95Line = screen.getByTestId('line-p95');
@@ -155,7 +156,7 @@ describe('MetricsChart', () => {
       { min: 1000, avg: 2000, max: 3000, p50: 1500, p95: 2500, p99: 2900, count: 10 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     const lineChart = screen.getByTestId('line-chart');
     const chartData = JSON.parse(lineChart.getAttribute('data-chart-data') || '[]');
@@ -180,7 +181,7 @@ describe('MetricsChart', () => {
       count: 10 + i,
     }));
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     const lineChart = screen.getByTestId('line-chart');
     const chartData = JSON.parse(lineChart.getAttribute('data-chart-data') || '[]');
@@ -195,7 +196,7 @@ describe('MetricsChart', () => {
       { min: 1000, avg: 2000, max: 3000, p50: 1500, p95: 2500, p99: 2900, count: 10 },
     ];
 
-    render(<MetricsChart data={data} />);
+    renderWithProviders(<MetricsChart data={data} />);
 
     expect(screen.getByTestId('responsive-container')).toBeInTheDocument();
   });

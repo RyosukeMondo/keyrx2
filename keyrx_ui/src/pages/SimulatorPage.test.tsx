@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { SimulatorPage } from './SimulatorPage';
 
 // Mock the KeyboardVisualizer component
@@ -41,7 +42,7 @@ describe('SimulatorPage', () => {
   });
 
   it('renders simulator page with title and description', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     expect(screen.getByText('Keyboard Simulator')).toBeInTheDocument();
     expect(
@@ -50,7 +51,7 @@ describe('SimulatorPage', () => {
   });
 
   it('renders state display with initial values', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     expect(screen.getByText('State')).toBeInTheDocument();
     expect(screen.getByText('MD_00 (Base)')).toBeInTheDocument();
@@ -60,7 +61,7 @@ describe('SimulatorPage', () => {
   });
 
   it('renders event log section', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     expect(screen.getByText('Event Log')).toBeInTheDocument();
     expect(
@@ -69,7 +70,7 @@ describe('SimulatorPage', () => {
   });
 
   it('adds press event when key is clicked', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     const keyA = screen.getByTestId('key-A');
     fireEvent.click(keyA);
@@ -79,7 +80,7 @@ describe('SimulatorPage', () => {
   });
 
   it('shows key as pressed after click', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     const keyA = screen.getByTestId('key-A');
     fireEvent.click(keyA);
@@ -88,7 +89,7 @@ describe('SimulatorPage', () => {
   });
 
   it('removes key from pressed state on second click', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     const keyA = screen.getByTestId('key-A');
 
@@ -102,7 +103,7 @@ describe('SimulatorPage', () => {
   });
 
   it('adds release event when pressed key is clicked again', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     const keyA = screen.getByTestId('key-A');
 
@@ -116,7 +117,7 @@ describe('SimulatorPage', () => {
   });
 
   it('resets simulator state when reset button is clicked', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     // Press a key
     const keyA = screen.getByTestId('key-A');
@@ -135,7 +136,7 @@ describe('SimulatorPage', () => {
   });
 
   it('copies event log to clipboard', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     // Create some events
     const keyA = screen.getByTestId('key-A');
@@ -151,7 +152,7 @@ describe('SimulatorPage', () => {
   });
 
   it('disables copy button when event log is empty', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     const copyButton = screen.getByRole('button', {
       name: /Copy event log/,
@@ -161,7 +162,7 @@ describe('SimulatorPage', () => {
   });
 
   it('shows press event for tap-hold configured key', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     const capsKey = screen.getByTestId('key-CAPS');
 
@@ -172,7 +173,7 @@ describe('SimulatorPage', () => {
   });
 
   it('shows initial modifier state as inactive', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     // Check all modifiers start as inactive (no checkmark)
     const modifiers = screen.getAllByText(/Ctrl|Shift|Alt|Gui/);
@@ -185,7 +186,7 @@ describe('SimulatorPage', () => {
   });
 
   it('shows release event when key is clicked twice', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     const capsKey = screen.getByTestId('key-CAPS');
 
@@ -199,13 +200,13 @@ describe('SimulatorPage', () => {
   });
 
   it('renders keyboard visualizer component', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     expect(screen.getByTestId('keyboard-visualizer')).toBeInTheDocument();
   });
 
   it('shows interactive keyboard heading', () => {
-    render(<SimulatorPage />);
+    renderWithProviders(<SimulatorPage />);
 
     expect(screen.getByText('Interactive Keyboard')).toBeInTheDocument();
   });

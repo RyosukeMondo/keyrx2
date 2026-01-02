@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { KeyConfigDialog } from './KeyConfigDialog';
 
@@ -22,14 +23,14 @@ describe('KeyConfigDialog', () => {
 
   describe('Rendering', () => {
     it('should render with correct title', () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
       expect(
         screen.getByText('Configure Key: CapsLock')
       ).toBeInTheDocument();
     });
 
     it('should render all action type buttons', () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
       expect(
         screen.getByRole('button', { name: /Select Tap-Hold action type/i })
       ).toBeInTheDocument();
@@ -47,7 +48,7 @@ describe('KeyConfigDialog', () => {
     });
 
     it('should default to tap-hold action type', () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
       const tapHoldButton = screen.getByRole('button', {
         name: /Select Tap-Hold action type/i,
       });
@@ -55,12 +56,12 @@ describe('KeyConfigDialog', () => {
     });
 
     it('should render preview panel', () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
       expect(screen.getByText('Preview')).toBeInTheDocument();
     });
 
     it('should render save and cancel buttons', () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
       expect(
         screen.getByRole('button', { name: /Cancel key configuration/i })
       ).toBeInTheDocument();
@@ -73,7 +74,7 @@ describe('KeyConfigDialog', () => {
   describe('Simple Remap', () => {
     it('should show simple remap form when selected', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const simpleButton = screen.getByRole('button', {
         name: /Select Simple Remap action type/i,
@@ -87,7 +88,7 @@ describe('KeyConfigDialog', () => {
 
     it('should update preview for simple remap', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const simpleButton = screen.getByRole('button', {
         name: /Select Simple Remap action type/i,
@@ -100,7 +101,7 @@ describe('KeyConfigDialog', () => {
 
   describe('Tap-Hold', () => {
     it('should show tap-hold form by default', () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       expect(
         screen.getByLabelText(/Select tap action key/i)
@@ -114,7 +115,7 @@ describe('KeyConfigDialog', () => {
     });
 
     it('should display threshold slider with correct range', () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
       const slider = screen.getByLabelText(
         /Set hold threshold in milliseconds/i
       ) as HTMLInputElement;
@@ -125,7 +126,7 @@ describe('KeyConfigDialog', () => {
     });
 
     it('should update threshold value when slider changes', async () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const slider = screen.getByLabelText(
         /Set hold threshold in milliseconds/i
@@ -139,7 +140,7 @@ describe('KeyConfigDialog', () => {
     });
 
     it('should show correct preview for tap-hold', async () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
       expect(
         screen.getByText(/Configure tap and hold actions/i)
       ).toBeInTheDocument();
@@ -149,7 +150,7 @@ describe('KeyConfigDialog', () => {
   describe('Macro', () => {
     it('should show macro form when selected', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const macroButton = screen.getByRole('button', {
         name: /Select Macro action type/i,
@@ -164,7 +165,7 @@ describe('KeyConfigDialog', () => {
 
     it('should show empty state when no macro steps', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const macroButton = screen.getByRole('button', {
         name: /Select Macro action type/i,
@@ -178,7 +179,7 @@ describe('KeyConfigDialog', () => {
 
     it('should add macro step when clicking add button', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const macroButton = screen.getByRole('button', {
         name: /Select Macro action type/i,
@@ -197,7 +198,7 @@ describe('KeyConfigDialog', () => {
 
     it('should remove macro step when clicking remove button', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const macroButton = screen.getByRole('button', {
         name: /Select Macro action type/i,
@@ -221,7 +222,7 @@ describe('KeyConfigDialog', () => {
 
     it('should show delay input for delay type macro step', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const macroButton = screen.getByRole('button', {
         name: /Select Macro action type/i,
@@ -245,7 +246,7 @@ describe('KeyConfigDialog', () => {
 
     it('should update preview with macro step count', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const macroButton = screen.getByRole('button', {
         name: /Select Macro action type/i,
@@ -264,7 +265,7 @@ describe('KeyConfigDialog', () => {
   describe('Layer Switch', () => {
     it('should show layer switch form when selected', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const layerButton = screen.getByRole('button', {
         name: /Select Layer Switch action type/i,
@@ -279,7 +280,7 @@ describe('KeyConfigDialog', () => {
 
     it('should show correct preview for layer switch', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const layerButton = screen.getByRole('button', {
         name: /Select Layer Switch action type/i,
@@ -293,7 +294,7 @@ describe('KeyConfigDialog', () => {
   describe('Save and Cancel', () => {
     it('should call onClose when cancel button clicked', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const cancelButton = screen.getByRole('button', {
         name: /Cancel key configuration/i,
@@ -306,7 +307,7 @@ describe('KeyConfigDialog', () => {
     it('should call onSave with correct data for simple remap', async () => {
       const user = userEvent.setup();
       mockOnSave.mockResolvedValue(undefined);
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const simpleButton = screen.getByRole('button', {
         name: /Select Simple Remap action type/i,
@@ -329,7 +330,7 @@ describe('KeyConfigDialog', () => {
     it('should call onSave with correct data for tap-hold', async () => {
       const user = userEvent.setup();
       mockOnSave.mockResolvedValue(undefined);
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const saveButton = screen.getByRole('button', {
         name: /Save key configuration/i,
@@ -351,7 +352,7 @@ describe('KeyConfigDialog', () => {
       mockOnSave.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const saveButton = screen.getByRole('button', {
         name: /Save key configuration/i,
@@ -366,7 +367,7 @@ describe('KeyConfigDialog', () => {
       mockOnSave.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const saveButton = screen.getByRole('button', {
         name: /Save key configuration/i,
@@ -383,7 +384,7 @@ describe('KeyConfigDialog', () => {
     it('should close dialog after successful save', async () => {
       const user = userEvent.setup();
       mockOnSave.mockResolvedValue(undefined);
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const saveButton = screen.getByRole('button', {
         name: /Save key configuration/i,
@@ -406,7 +407,7 @@ describe('KeyConfigDialog', () => {
         threshold: 300,
       };
 
-      render(
+      renderWithProviders(
         <KeyConfigDialog {...defaultProps} currentMapping={currentMapping} />
       );
 
@@ -422,7 +423,7 @@ describe('KeyConfigDialog', () => {
         tapAction: 'Escape',
       };
 
-      render(
+      renderWithProviders(
         <KeyConfigDialog {...defaultProps} currentMapping={currentMapping} />
       );
 
@@ -438,7 +439,7 @@ describe('KeyConfigDialog', () => {
         targetLayer: 'Layer1',
       };
 
-      render(
+      renderWithProviders(
         <KeyConfigDialog {...defaultProps} currentMapping={currentMapping} />
       );
 
@@ -451,7 +452,7 @@ describe('KeyConfigDialog', () => {
 
   describe('Accessibility', () => {
     it('should have proper aria-labels on all interactive elements', () => {
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       expect(
         screen.getByLabelText(/Select Tap-Hold action type/i)
@@ -475,7 +476,7 @@ describe('KeyConfigDialog', () => {
 
     it('should be keyboard navigable', async () => {
       const user = userEvent.setup();
-      render(<KeyConfigDialog {...defaultProps} />);
+      renderWithProviders(<KeyConfigDialog {...defaultProps} />);
 
       const firstButton = screen.getByRole('button', {
         name: /Select Tap-Hold action type/i,

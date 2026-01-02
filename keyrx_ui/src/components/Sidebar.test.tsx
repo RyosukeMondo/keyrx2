@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { BrowserRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { Sidebar } from './Sidebar';
@@ -9,7 +10,7 @@ const renderWithRouter = (
   { route = '/' } = {}
 ) => {
   window.history.pushState({}, 'Test page', route);
-  return render(ui, { wrapper: BrowserRouter });
+  return renderWithProviders(ui, { wrapper: BrowserRouter });
 };
 
 describe('Sidebar', () => {

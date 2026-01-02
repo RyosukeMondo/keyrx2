@@ -1,12 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { Tooltip } from './Tooltip';
 
 describe('Tooltip', () => {
 
   it('renders children correctly', () => {
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text">
         <button>Hover me</button>
       </Tooltip>
@@ -17,7 +18,7 @@ describe('Tooltip', () => {
 
   it('shows tooltip after delay on hover', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text" delay={100}>
         <button>Hover me</button>
       </Tooltip>
@@ -39,7 +40,7 @@ describe('Tooltip', () => {
 
   it('shows tooltip instantly on keyboard focus', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text" delay={500}>
         <button>Focus me</button>
       </Tooltip>
@@ -55,7 +56,7 @@ describe('Tooltip', () => {
 
   it('hides tooltip on mouse leave', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text" delay={100}>
         <button>Hover me</button>
       </Tooltip>
@@ -77,7 +78,7 @@ describe('Tooltip', () => {
 
   it('hides tooltip on blur', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text">
         <button>Focus me</button>
       </Tooltip>
@@ -99,7 +100,7 @@ describe('Tooltip', () => {
 
   it('does not show tooltip when disabled', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text" disabled delay={100}>
         <button>Hover me</button>
       </Tooltip>
@@ -116,7 +117,7 @@ describe('Tooltip', () => {
 
   it('sets aria-describedby when tooltip is visible', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text" delay={100}>
         <button>Hover me</button>
       </Tooltip>
@@ -137,7 +138,7 @@ describe('Tooltip', () => {
 
   it('cleans up timeout on unmount', async () => {
     const user = userEvent.setup();
-    const { unmount } = render(
+    const { unmount } = renderWithProviders(
       <Tooltip content="Tooltip text" delay={100}>
         <button>Hover me</button>
       </Tooltip>
@@ -157,7 +158,7 @@ describe('Tooltip', () => {
 
   it('cancels timeout if mouse leaves before delay', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text" delay={200}>
         <button>Hover me</button>
       </Tooltip>
@@ -180,7 +181,7 @@ describe('Tooltip', () => {
 
   it('supports custom className', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text" delay={100} className="custom-class">
         <button>Hover me</button>
       </Tooltip>
@@ -197,7 +198,7 @@ describe('Tooltip', () => {
 
   it('supports ReactNode content', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip
         content={
           <div>
@@ -223,7 +224,7 @@ describe('Tooltip', () => {
 
   it('uses correct default delay of 500ms', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <Tooltip content="Tooltip text">
         <button>Hover me</button>
       </Tooltip>

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { KeyboardVisualizer } from './KeyboardVisualizer';
 import { KeyMapping } from './KeyButton';
@@ -13,7 +14,7 @@ describe('KeyboardVisualizer', () => {
   };
 
   it('renders keyboard with all keys', () => {
-    render(<KeyboardVisualizer {...defaultProps} />);
+    renderWithProviders(<KeyboardVisualizer {...defaultProps} />);
 
     // Check for some key labels
     expect(
@@ -29,7 +30,7 @@ describe('KeyboardVisualizer', () => {
 
   it('calls onKeyClick when key is clicked', async () => {
     const user = userEvent.setup();
-    render(<KeyboardVisualizer {...defaultProps} />);
+    renderWithProviders(<KeyboardVisualizer {...defaultProps} />);
 
     const escKey = screen.getByRole('button', { name: /Key KC_ESC\./ });
     await user.click(escKey);
@@ -50,7 +51,7 @@ describe('KeyboardVisualizer', () => {
       ],
     ]);
 
-    render(<KeyboardVisualizer {...defaultProps} keyMappings={keyMappings} />);
+    renderWithProviders(<KeyboardVisualizer {...defaultProps} keyMappings={keyMappings} />);
 
     const aKey = screen.getByRole('button', { name: /Key KC_A\./ });
     expect(aKey).toHaveClass('bg-blue-700');
@@ -59,7 +60,7 @@ describe('KeyboardVisualizer', () => {
   it('shows pressed state in simulator mode', () => {
     const pressedKeys = new Set(['KC_A', 'KC_LSFT']);
 
-    render(
+    renderWithProviders(
       <KeyboardVisualizer
         {...defaultProps}
         simulatorMode={true}
@@ -72,7 +73,7 @@ describe('KeyboardVisualizer', () => {
   });
 
   it('renders with correct grid layout', () => {
-    const { container } = render(<KeyboardVisualizer {...defaultProps} />);
+    const { container } = renderWithProviders(<KeyboardVisualizer {...defaultProps} />);
 
     const grid = container.querySelector('.keyboard-grid');
     expect(grid).toHaveStyle({
@@ -81,7 +82,7 @@ describe('KeyboardVisualizer', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <KeyboardVisualizer {...defaultProps} className="custom-class" />
     );
 
@@ -103,7 +104,7 @@ describe('KeyboardVisualizer', () => {
       ],
     ]);
 
-    render(<KeyboardVisualizer {...defaultProps} keyMappings={keyMappings} />);
+    renderWithProviders(<KeyboardVisualizer {...defaultProps} keyMappings={keyMappings} />);
 
     const aKey = screen.getByRole('button', { name: /Key KC_A\./ });
     await user.hover(aKey);
@@ -115,7 +116,7 @@ describe('KeyboardVisualizer', () => {
 
   it('handles keyboard navigation', async () => {
     const user = userEvent.setup();
-    render(<KeyboardVisualizer {...defaultProps} />);
+    renderWithProviders(<KeyboardVisualizer {...defaultProps} />);
 
     const escKey = screen.getByRole('button', { name: /Key KC_ESC\./ });
 
@@ -129,7 +130,7 @@ describe('KeyboardVisualizer', () => {
   });
 
   it('renders wide keys with correct span', () => {
-    render(<KeyboardVisualizer {...defaultProps} />);
+    renderWithProviders(<KeyboardVisualizer {...defaultProps} />);
 
     // Space bar should span multiple columns
     const spaceKey = screen.getByRole('button', { name: /Key KC_SPC\./ });

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { SkipToContent } from './SkipToContent';
 
@@ -17,19 +18,19 @@ describe('SkipToContent', () => {
   });
 
   it('renders skip link', () => {
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
     expect(screen.getByText('Skip to main content')).toBeInTheDocument();
   });
 
   it('has correct href attribute', () => {
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
     const link = screen.getByText('Skip to main content');
     expect(link).toHaveAttribute('href', '#main-content');
   });
 
   it('focuses main element when clicked', async () => {
     const user = userEvent.setup();
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
 
     const link = screen.getByText('Skip to main content');
     const main = document.querySelector('main');
@@ -42,7 +43,7 @@ describe('SkipToContent', () => {
 
   it('prevents default link behavior', async () => {
     const user = userEvent.setup();
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
 
     const link = screen.getByText('Skip to main content');
     const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -54,7 +55,7 @@ describe('SkipToContent', () => {
   });
 
   it('changes clip-path on focus', () => {
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
     const link = screen.getByText('Skip to main content') as HTMLAnchorElement;
 
     // Initially has clip-path
@@ -68,7 +69,7 @@ describe('SkipToContent', () => {
   });
 
   it('restores clip-path on blur', () => {
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
     const link = screen.getByText('Skip to main content') as HTMLAnchorElement;
 
     // Focus the link
@@ -81,13 +82,13 @@ describe('SkipToContent', () => {
   });
 
   it('has high z-index for visibility', () => {
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
     const link = screen.getByText('Skip to main content');
     expect(link).toHaveClass('z-[9999]');
   });
 
   it('has accessibility styles', () => {
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
     const link = screen.getByText('Skip to main content');
     expect(link).toHaveClass(
       'focus:outline',
@@ -106,7 +107,7 @@ describe('SkipToContent', () => {
       main.scrollIntoView = scrollIntoViewMock;
     }
 
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
 
     const link = screen.getByText('Skip to main content');
     await user.click(link);
@@ -121,7 +122,7 @@ describe('SkipToContent', () => {
       document.body.removeChild(main);
     }
 
-    render(<SkipToContent />);
+    renderWithProviders(<SkipToContent />);
 
     const link = screen.getByText('Skip to main content');
 

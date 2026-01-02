@@ -1,25 +1,26 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { screen, within, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { ProfilesPage } from './ProfilesPage';
 
 describe('ProfilesPage', () => {
   it('renders page title', () => {
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
     expect(
       screen.getByRole('heading', { name: 'Profiles' })
     ).toBeInTheDocument();
   });
 
   it('renders Create Profile button', () => {
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
     expect(
       screen.getByRole('button', { name: /Create new profile/i })
     ).toBeInTheDocument();
   });
 
   it('renders initial profile cards', () => {
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     expect(screen.getByText('Default')).toBeInTheDocument();
     expect(screen.getByText('Gaming')).toBeInTheDocument();
@@ -27,13 +28,13 @@ describe('ProfilesPage', () => {
   });
 
   it('shows active indicator on Default profile', () => {
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
     expect(screen.getByText('ACTIVE')).toBeInTheDocument();
   });
 
   it('opens create modal when Create Profile button is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     const createButton = screen.getByRole('button', {
       name: /Create new profile/i,
@@ -47,7 +48,7 @@ describe('ProfilesPage', () => {
 
   it('creates a new profile when form is submitted', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Open create modal
     await user.click(
@@ -72,7 +73,7 @@ describe('ProfilesPage', () => {
 
   it('shows validation error when profile name is empty', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Open create modal
     await user.click(
@@ -88,7 +89,7 @@ describe('ProfilesPage', () => {
 
   it('shows validation error when profile name is too long', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Open create modal
     await user.click(
@@ -106,7 +107,7 @@ describe('ProfilesPage', () => {
 
   it('shows validation error when profile name already exists', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Open create modal
     await user.click(
@@ -125,7 +126,7 @@ describe('ProfilesPage', () => {
 
   it('closes create modal when Cancel is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Open create modal
     await user.click(
@@ -151,7 +152,7 @@ describe('ProfilesPage', () => {
 
   it('activates a profile when Activate button is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Initially, Default should be active
     const defaultCard = screen.getByText('Default').closest('.border-green-500');
@@ -178,7 +179,7 @@ describe('ProfilesPage', () => {
 
   it('opens edit modal when Edit button is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Click Edit on Gaming profile
     const editButton = screen.getByRole('button', {
@@ -197,7 +198,7 @@ describe('ProfilesPage', () => {
 
   it('updates profile when edit form is submitted', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Click Edit on Gaming profile
     await user.click(
@@ -221,7 +222,7 @@ describe('ProfilesPage', () => {
 
   it('closes edit modal when Cancel is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Open edit modal
     await user.click(
@@ -247,7 +248,7 @@ describe('ProfilesPage', () => {
 
   it('opens delete confirmation modal when Delete button is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Click Delete on Gaming profile
     const deleteButton = screen.getByRole('button', {
@@ -267,7 +268,7 @@ describe('ProfilesPage', () => {
 
   it('deletes profile when deletion is confirmed', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Click Delete on Gaming profile
     await user.click(
@@ -287,7 +288,7 @@ describe('ProfilesPage', () => {
 
   it('closes delete modal when Cancel is clicked', async () => {
     const user = userEvent.setup();
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Open delete modal
     await user.click(
@@ -324,7 +325,7 @@ describe('ProfilesPage', () => {
   });
 
   it('shows all action buttons with proper accessibility labels', () => {
-    render(<ProfilesPage />);
+    renderWithProviders(<ProfilesPage />);
 
     // Gaming profile (inactive)
     expect(

@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders } from '../../tests/testUtils';
 import { Button } from './Button';
 
 describe('Button', () => {
   it('renders with children', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button">
         Click me
       </Button>
@@ -14,7 +15,7 @@ describe('Button', () => {
 
   it('calls onClick when clicked', () => {
     const handleClick = vi.fn();
-    render(
+    renderWithProviders(
       <Button onClick={handleClick} aria-label="Test button">
         Click me
       </Button>
@@ -25,7 +26,7 @@ describe('Button', () => {
 
   it('does not call onClick when disabled', () => {
     const handleClick = vi.fn();
-    render(
+    renderWithProviders(
       <Button onClick={handleClick} aria-label="Test button" disabled>
         Click me
       </Button>
@@ -36,7 +37,7 @@ describe('Button', () => {
 
   it('does not call onClick when loading', () => {
     const handleClick = vi.fn();
-    render(
+    renderWithProviders(
       <Button onClick={handleClick} aria-label="Test button" loading>
         Click me
       </Button>
@@ -46,7 +47,7 @@ describe('Button', () => {
   });
 
   it('renders loading spinner when loading', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" loading>
         Click me
       </Button>
@@ -56,7 +57,7 @@ describe('Button', () => {
   });
 
   it('applies primary variant classes', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" variant="primary">
         Click me
       </Button>
@@ -66,7 +67,7 @@ describe('Button', () => {
   });
 
   it('applies secondary variant classes', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" variant="secondary">
         Click me
       </Button>
@@ -76,7 +77,7 @@ describe('Button', () => {
   });
 
   it('applies danger variant classes', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" variant="danger">
         Click me
       </Button>
@@ -86,7 +87,7 @@ describe('Button', () => {
   });
 
   it('applies ghost variant classes', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" variant="ghost">
         Click me
       </Button>
@@ -96,7 +97,7 @@ describe('Button', () => {
   });
 
   it('applies small size classes', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" size="sm">
         Click me
       </Button>
@@ -107,7 +108,7 @@ describe('Button', () => {
   });
 
   it('applies medium size classes', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" size="md">
         Click me
       </Button>
@@ -118,7 +119,7 @@ describe('Button', () => {
   });
 
   it('applies large size classes', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" size="lg">
         Click me
       </Button>
@@ -129,7 +130,7 @@ describe('Button', () => {
   });
 
   it('sets aria-label attribute', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Custom label">
         Click me
       </Button>
@@ -138,7 +139,7 @@ describe('Button', () => {
   });
 
   it('sets aria-disabled when disabled', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" disabled>
         Click me
       </Button>
@@ -148,7 +149,7 @@ describe('Button', () => {
   });
 
   it('sets aria-busy when loading', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" loading>
         Click me
       </Button>
@@ -158,7 +159,7 @@ describe('Button', () => {
   });
 
   it('accepts custom className', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" className="custom-class">
         Click me
       </Button>
@@ -168,7 +169,7 @@ describe('Button', () => {
   });
 
   it('applies button type attribute', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button" type="submit">
         Submit
       </Button>
@@ -178,7 +179,7 @@ describe('Button', () => {
   });
 
   it('creates ripple element on click', () => {
-    render(
+    renderWithProviders(
       <Button onClick={vi.fn()} aria-label="Test button">
         Click me
       </Button>
