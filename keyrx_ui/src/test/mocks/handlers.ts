@@ -98,7 +98,7 @@ export const handlers = [
 
   // Profile endpoints
   http.get('/api/profiles', () => {
-    return HttpResponse.json(mockProfiles);
+    return HttpResponse.json({ profiles: mockProfiles });
   }),
 
   http.post('/api/profiles', async ({ request }) => {

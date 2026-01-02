@@ -65,7 +65,7 @@
   - _Result: Fixed 331 context errors by updating all test files to use renderWithProviders. Updated 3 integration test files, 6 page test files, 30 component test files, 4 tests/ directory files, and a11y test utils. All QueryClient context errors resolved. Test pass rate improved from 68.73% (521/758) to 71.63% (543/758)._
   - _Prompt: Role: React Developer specializing in context providers and component testing | Task: Fix all context-dependent tests identified in task 5 audit by wrapping with appropriate providers using renderWithProviders utility from task 2, following requirement 2.2 | Restrictions: Only modify test files not production code, ensure correct provider nesting order, do not over-wrap with unnecessary providers | Success: All context-related test failures resolved, tests use appropriate providers, no "useContext must be used within Provider" errors remain_
 
-- [ ] 7. Fix async operation test failures
+- [-] 7. Fix async operation test failures
   - Files: Multiple test files with async timing issues (identified in task 5)
   - Add proper waitFor, act, and async handling
   - Update tests using React Testing Library async utilities correctly

@@ -14,6 +14,7 @@ import { useConfigStore } from '../stores/configStore';
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
   useParams: () => ({ profile: 'default' }),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
 
 describe('ConfigPage - Integration Tests', () => {
