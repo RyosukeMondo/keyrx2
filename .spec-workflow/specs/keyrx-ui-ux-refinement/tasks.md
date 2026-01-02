@@ -120,7 +120,7 @@
 
 ## Visual Configuration Editor
 
-- [ ] 12. Create KeyAssignmentPanel component in keyrx_ui/src/components/KeyAssignmentPanel.tsx
+- [x] 12. Create KeyAssignmentPanel component in keyrx_ui/src/components/KeyAssignmentPanel.tsx
   - File: keyrx_ui/src/components/KeyAssignmentPanel.tsx
   - Create categorized key palette (VK_*, MD_*, LK_*, Layers, Macros)
   - Implement drag source handlers using @dnd-kit/core
