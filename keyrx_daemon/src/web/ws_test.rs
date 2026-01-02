@@ -13,6 +13,7 @@ async fn test_broadcast_channel_publishes_state_event() {
         modifiers: vec!["MD_00".to_string()],
         locks: vec![],
         layer: "base".to_string(),
+        active_profile: None,
     });
 
     // Send event
@@ -94,6 +95,7 @@ async fn test_broadcast_channel_multiple_subscribers() {
         modifiers: vec![],
         locks: vec![],
         layer: "base".to_string(),
+        active_profile: None,
     });
 
     event_tx.send(state_event.clone()).unwrap();
@@ -120,6 +122,7 @@ async fn test_broadcast_channel_lagging_subscriber() {
                 modifiers: vec![],
                 locks: vec![],
                 layer: format!("layer{}", i),
+                active_profile: None,
             }))
             .unwrap();
     }
@@ -139,6 +142,7 @@ async fn test_event_serialization_state() {
         modifiers: vec!["MD_00".to_string(), "MD_01".to_string()],
         locks: vec!["LK_00".to_string()],
         layer: "gaming".to_string(),
+        active_profile: None,
     });
 
     let json = serde_json::to_string(&event).unwrap();
@@ -252,6 +256,7 @@ async fn test_channel_capacity_bounds() {
                 modifiers: vec![],
                 locks: vec![],
                 layer: format!("layer{}", i),
+                active_profile: None,
             }))
             .ok(); // Use ok() instead of unwrap() as send can fail if no receivers
     }
@@ -266,6 +271,7 @@ async fn test_event_cloning() {
         modifiers: vec!["MD_00".to_string()],
         locks: vec!["LK_00".to_string()],
         layer: "test".to_string(),
+        active_profile: None,
     });
 
     let cloned = original.clone();
@@ -294,6 +300,7 @@ async fn test_subscriber_disconnect_cleanup() {
             modifiers: vec![],
             locks: vec![],
             layer: "base".to_string(),
+            active_profile: None,
         }))
         .unwrap();
 

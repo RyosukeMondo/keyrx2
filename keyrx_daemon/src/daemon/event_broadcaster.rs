@@ -148,6 +148,7 @@ mod tests {
             modifiers: vec!["MD_00".to_string()],
             locks: vec![],
             layer: "base".to_string(),
+            active_profile: None,
         };
 
         broadcaster.broadcast_state(state.clone());

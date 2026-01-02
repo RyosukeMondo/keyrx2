@@ -33,6 +33,10 @@ pub struct DaemonState {
 
     /// Current active layer name.
     pub layer: String,
+
+    /// Currently active profile name (if any).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_profile: Option<String>,
 }
 
 /// Individual key event data.
