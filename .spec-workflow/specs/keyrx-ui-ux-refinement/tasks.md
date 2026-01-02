@@ -54,7 +54,7 @@
   - _Requirements: R2 (Auto-Save Device Layout Selection), NFR Performance (Auto-Save Debouncing)_
   - _Prompt: Implement the task for spec keyrx-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend React Developer with expertise in custom hooks and state management | Task: Create generic useAutoSave hook with debouncing (500ms default), retry logic (3 attempts, exponential backoff), loading/error states, and lastSavedAt tracking following requirement R2 and NFR Performance. Use debounce utility (lodash or custom) | Restrictions: Must clean up timers on unmount, do not retry on validation errors (4xx), cancel pending saves when component unmounts, use TypeScript generics for type safety, follow React hooks best practices | Success: Hook debounces multiple rapid calls into single save, retries failed saves automatically, exposes clear loading/error states, cancels pending operations on unmount, TypeScript types are fully inferred, unit tests cover debouncing, retry, and cleanup | Instructions: After completing the task, run spec-workflow-guide to get the workflow guide, then update tasks.md to mark this task as in-progress [-], log the implementation with log-implementation tool including detailed artifacts (functions with signatures and purpose), and mark as complete [x] when done_
 
-- [ ] 6. Extend RpcClient with new methods in keyrx_ui/src/api/rpc.ts
+- [x] 6. Extend RpcClient with new methods in keyrx_ui/src/api/rpc.ts
   - File: keyrx_ui/src/api/rpc.ts
   - Add method: setDeviceLayout(serial: string, layout: string): Promise<void>
   - Add method: getProfileConfig(name: string): Promise<ProfileConfig>
