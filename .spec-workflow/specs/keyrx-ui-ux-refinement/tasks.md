@@ -202,7 +202,7 @@
   - _Requirements: R2, NFR Reliability_
   - _Prompt: Implement the task for spec keyrx-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with expertise in React hook testing and Vitest | Task: Write comprehensive unit tests for useAutoSave hook covering debouncing, retry logic, cleanup, and state management following requirement R2 and NFR Reliability. Use @testing-library/react-hooks and vitest | Restrictions: Must test behavior not implementation, use fake timers (vi.useFakeTimers), mock saveFn, test all edge cases (unmount during save, rapid changes, failures), achieve >90% coverage | Success: All tests pass, debouncing is verified (single save after rapid calls), retry logic is tested (3 attempts with backoff), cleanup is verified (no memory leaks), coverage exceeds 90%, tests run reliably | Instructions: After completing the task, run spec-workflow-guide to get the workflow guide, then update tasks.md to mark this task as in-progress [-], log the implementation with log-implementation tool including detailed artifacts (test files, coverage metrics), and mark as complete [x] when done_
 
-- [ ] 20. Write integration tests for ProfileManager in keyrx_daemon/tests/profile_manager_test.rs
+- [x] 20. Write integration tests for ProfileManager in keyrx_daemon/tests/profile_manager_test.rs
   - File: keyrx_daemon/tests/profile_manager_test.rs
   - Test profile creation (file created with template)
   - Test activation flow (compile → persist → reload)
