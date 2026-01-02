@@ -225,7 +225,7 @@
   - _Requirements: R5_
   - _Prompt: Implement the task for spec keyrx-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Automation Engineer with expertise in E2E testing and Playwright/Cypress | Task: Write end-to-end tests for visual config editor covering drag-drop, scope toggle, layer switching, auto-save, and error handling following requirement R5. Use Playwright or Cypress with mock backend | Restrictions: Must test real user interactions (mouse/keyboard), use data-testid for selectors (not CSS classes), ensure tests are deterministic (no flaky tests), clean state between tests, run in headless mode for CI | Success: All E2E tests pass reliably, drag-drop flow is validated end-to-end, auto-save persistence is verified (refresh test), error handling prevents invalid saves, tests run in CI without flakiness, critical user journeys are covered | Instructions: After completing the task, run spec-workflow-guide to get the workflow guide, then update tasks.md to mark this task as in-progress [-], log the implementation with log-implementation tool including detailed artifacts (test files, user journeys covered), and mark as complete [x] when done_
 
-- [-] 22. Update documentation in docs/ui-ux-refinement.md
+- [x] 22. Update documentation in docs/ui-ux-refinement.md
   - File: docs/ui-ux-refinement.md
   - Document new visual editor usage
   - Document profile-config integration workflow
