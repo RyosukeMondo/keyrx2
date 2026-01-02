@@ -182,7 +182,7 @@
 
 ## Integration and Testing
 
-- [ ] 18. Update React Query cache keys in keyrx_ui/src/lib/queryClient.ts
+- [x] 18. Update React Query cache keys in keyrx_ui/src/lib/queryClient.ts
   - File: keyrx_ui/src/lib/queryClient.ts
   - Add new query keys: deviceLayout(serial), profileConfig(name), activeProfile
   - Update invalidation patterns for profile activation

@@ -33,18 +33,26 @@ export const queryClient = new QueryClient({
 /**
  * Query keys for cache management
  * Centralized query key definitions for type safety and consistency
+ *
+ * Invalidation patterns:
+ * - Profile activation: Invalidates activeProfile, daemonState, and all profileConfig queries
+ * - Profile creation/deletion: Invalidates profiles list and activeProfile
+ * - Config updates: Invalidates specific profileConfig and related config queries
+ * - Device layout changes: Invalidates specific deviceLayout query
  */
 export const queryKeys = {
   // Device queries
   devices: ['devices'] as const,
   device: (id: string) => ['devices', id] as const,
+  deviceLayout: (serial: string) => ['devices', serial, 'layout'] as const,
 
   // Profile queries
   profiles: ['profiles'] as const,
   profile: (name: string) => ['profiles', name] as const,
   activeProfile: ['profiles', 'active'] as const,
+  profileConfig: (name: string) => ['profiles', name, 'config'] as const,
 
-  // Config queries
+  // Config queries (legacy - prefer profileConfig for new code)
   config: (profile: string) => ['config', profile] as const,
   keyMapping: (profile: string, key: string) =>
     ['config', profile, 'key', key] as const,
