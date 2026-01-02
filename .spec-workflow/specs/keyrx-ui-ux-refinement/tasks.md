@@ -65,7 +65,7 @@
   - _Requirements: R2, R4_
   - _Prompt: Implement the task for spec keyrx-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: TypeScript Developer with expertise in RPC protocols and type safety | Task: Extend RpcClient class with new methods for device layout persistence and profile-config operations following requirements R2 and R4. Use existing RpcClient patterns from src/api/rpc.ts and useUnifiedApi hook integration | Restrictions: Must follow existing RPC method naming conventions, maintain type safety (no 'any' types), use proper error handling (throw typed errors), do not add dependencies, ensure JSON-RPC 2.0 compliance | Success: All new methods are type-safe, RPC requests are properly formatted, responses are correctly parsed, errors are thrown with descriptive messages, methods integrate seamlessly with existing RpcClient usage | Instructions: After completing the task, run spec-workflow-guide to get the workflow guide, then update tasks.md to mark this task as in-progress [-], log the implementation with log-implementation tool including detailed artifacts (functions with full signatures and purpose, apiEndpoints called), and mark as complete [x] when done_
 
-- [ ] 7. Create useProfileConfig hook in keyrx_ui/src/hooks/useProfileConfig.ts
+- [-] 7. Create useProfileConfig hook in keyrx_ui/src/hooks/useProfileConfig.ts
   - File: keyrx_ui/src/hooks/useProfileConfig.ts
   - Implement React Query hook for profile config CRUD
   - Add useGetProfileConfig(name: string) query hook
