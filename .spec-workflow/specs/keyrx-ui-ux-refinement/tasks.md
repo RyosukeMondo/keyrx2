@@ -98,7 +98,7 @@
   - _Requirements: R3 (Persistent Profile Activation), R4 (Profile-to-Configuration File Mapping)_
   - _Prompt: Implement the task for spec keyrx-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer with expertise in mutation handling and error management | Task: Update ProfilesPage activation flow to call new backend activation endpoint, handle compilation errors gracefully, update cache invalidation to include daemonState/activeProfile queries following requirements R3 and R4. Extend useActivateProfile from src/hooks/useProfiles.ts and use RPC methods from src/api/rpc.ts | Restrictions: Must maintain optimistic update pattern, rollback on errors, show compilation errors with line numbers in toast, do not break existing profile CRUD, ensure [Active] badge persists correctly | Success: Profile activation calls backend endpoint correctly, compilation errors are displayed with line/column info, active badge persists across refreshes, React Query cache updates propagate to all pages, error rollback works correctly | Instructions: After completing the task, run spec-workflow-guide to get the workflow guide, then update tasks.md to mark this task as in-progress [-], log the implementation with log-implementation tool including detailed artifacts (components, functions, integrations), and mark as complete [x] when done_
 
-- [ ] 10. Add active profile header to MetricsPage in keyrx_ui/src/pages/MetricsPage.tsx
+- [-] 10. Add active profile header to MetricsPage in keyrx_ui/src/pages/MetricsPage.tsx
   - File: keyrx_ui/src/pages/MetricsPage.tsx
   - Add header section showing active profile name
   - Subscribe to daemon-state WebSocket events for real-time updates

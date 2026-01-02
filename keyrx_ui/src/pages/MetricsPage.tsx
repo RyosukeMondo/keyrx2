@@ -129,7 +129,6 @@ export const MetricsPage: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      fractionalSecondDigits: 3,
     });
   };
 
@@ -181,6 +180,10 @@ export const MetricsPage: React.FC = () => {
           <LoadingSkeleton variant="text" width="250px" height="32px" />
           <LoadingSkeleton variant="text" width="300px" height="20px" className="mt-2" />
         </div>
+
+        <Card padding="md">
+          <LoadingSkeleton variant="rectangular" height="60px" />
+        </Card>
 
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card padding="md">
@@ -249,6 +252,21 @@ export const MetricsPage: React.FC = () => {
           </div>
         )}
       </header>
+
+      {/* Active Profile Header */}
+      <Card padding="md">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-500/10 rounded-lg">
+            <Activity className="w-5 h-5 text-blue-500" />
+          </div>
+          <div>
+            <p className="text-sm text-slate-400">Active Profile</p>
+            <p className="text-lg font-semibold text-slate-100">
+              {storeState?.activeProfile || 'No Active Profile'}
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {/* Latency Statistics Cards - responsive grid */}
       <section className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4" aria-label="Latency statistics">

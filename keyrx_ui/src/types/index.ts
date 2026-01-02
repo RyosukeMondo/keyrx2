@@ -79,6 +79,7 @@ export interface DaemonState {
   locks: string[];
   tapHoldPending: boolean;
   uptime: number;
+  activeProfile?: string | null;
 }
 
 // WebSocket Message Types
