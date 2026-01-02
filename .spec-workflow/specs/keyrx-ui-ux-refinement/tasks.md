@@ -108,7 +108,7 @@
   - _Requirements: R7 (Display Active Profile in Metrics Page)_
   - _Prompt: Implement the task for spec keyrx-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Developer with expertise in WebSocket subscriptions and real-time UIs | Task: Add active profile header to MetricsPage that subscribes to daemon-state WebSocket events and displays current active profile name following requirement R7. Use existing WebSocket patterns from src/hooks/useMetrics.ts | Restrictions: Must not duplicate WebSocket subscriptions, update within 1 second of profile change, show loading state during initial fetch, do not break existing metrics display, maintain responsive layout | Success: Active profile name displays in header, updates in real-time via WebSocket, shows "No Active Profile" when appropriate, loading state is handled gracefully, component is responsive | Instructions: After completing the task, run spec-workflow-guide to get the workflow guide, then update tasks.md to mark this task as in-progress [-], log the implementation with log-implementation tool including detailed artifacts (components, integrations with WebSocket), and mark as complete [x] when done_
 
-- [ ] 11. Add profile selector to SimulatorPage in keyrx_ui/src/pages/SimulatorPage.tsx
+- [x] 11. Add profile selector to SimulatorPage in keyrx_ui/src/pages/SimulatorPage.tsx
   - File: keyrx_ui/src/pages/SimulatorPage.tsx
   - Add dropdown to select profile for simulation
   - Load selected profile's compiled .krx into WASM simulator
