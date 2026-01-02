@@ -168,7 +168,7 @@
   - _Requirements: R5 (Visual Configuration Editor with Drag-and-Drop)_
   - _Prompt: Implement the task for spec keyrx-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React UI Developer with expertise in modal dialogs and complex forms | Task: Create KeyAssignmentPopup modal with tabbed interface (Key/Modifier/Lock/Layer/Macro) and tap-hold configuration UI following requirement R5. Use existing modal patterns for consistency | Restrictions: Must follow existing modal patterns, ensure focus trap (accessibility), close on Escape key, prevent body scroll when open, use controlled component pattern, keep component under 400 lines | Success: Modal opens/closes correctly, tabs switch smoothly, tap-hold UI is intuitive, focus management works (returns to trigger on close), keyboard navigation is functional, component is accessible | Instructions: After completing the task, run spec-workflow-guide to get the workflow guide, then update tasks.md to mark this task as in-progress [-], log the implementation with log-implementation tool including detailed artifacts (components, props, exports), and mark as complete [x] when done_
 
-- [ ] 17. Implement ConfigPage visual editor in keyrx_ui/src/pages/ConfigPage.tsx
+- [x] 17. Implement ConfigPage visual editor in keyrx_ui/src/pages/ConfigPage.tsx
   - File: keyrx_ui/src/pages/ConfigPage.tsx
   - Replace existing implementation with visual editor layout
   - Integrate KeyboardVisualizer, KeyAssignmentPanel, DeviceScopeToggle, LayerSelector
