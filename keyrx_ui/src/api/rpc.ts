@@ -27,7 +27,7 @@
 
 import type { UseUnifiedApiReturn } from '../hooks/useUnifiedApi';
 import type { DaemonState, KeyEvent, LatencyMetrics } from '../types/rpc';
-import type { Profile, Device, Config, Layer, SimulationInput, SimulationResult, PaginatedEvents } from './types';
+import type { Profile, ProfileConfig, Device, Config, Layer, SimulationInput, SimulationResult, PaginatedEvents } from './types';
 
 /**
  * Type-safe RPC client for daemon communication.
@@ -116,6 +116,39 @@ export class RpcClient {
     return this.api.command<void>('rename_profile', { old_name: oldName, new_name: newName });
   }
 
+  /**
+   * Get profile configuration source code.
+   *
+   * @param name - Name of the profile
+   * @returns Profile configuration with name and source code
+   * @throws Error if profile does not exist
+   */
+  async getProfileConfig(name: string): Promise<ProfileConfig> {
+    return this.api.query<ProfileConfig>('get_profile_config', { name });
+  }
+
+  /**
+   * Set profile configuration source code.
+   *
+   * @param name - Name of the profile
+   * @param source - Rhai configuration source code
+   * @returns Success status
+   * @throws Error if profile does not exist or source is invalid
+   */
+  async setProfileConfig(name: string, source: string): Promise<void> {
+    return this.api.command<void>('set_profile_config', { name, source });
+  }
+
+  /**
+   * Get the currently active profile name.
+   *
+   * @returns Active profile name or null if no profile is active
+   * @throws Error if the request fails
+   */
+  async getActiveProfile(): Promise<string | null> {
+    return this.api.query<string | null>('get_active_profile');
+  }
+
   // ========================================
   // Device Methods
   // ========================================
@@ -163,6 +196,18 @@ export class RpcClient {
    */
   async forgetDevice(serial: string): Promise<void> {
     return this.api.command<void>('forget_device', { serial });
+  }
+
+  /**
+   * Set device keyboard layout preference.
+   *
+   * @param serial - Device serial number
+   * @param layout - Layout name (e.g., 'ansi', 'iso', 'jis')
+   * @returns Success status
+   * @throws Error if device does not exist or layout is invalid
+   */
+  async setDeviceLayout(serial: string, layout: string): Promise<void> {
+    return this.api.command<void>('set_device_layout', { serial, layout });
   }
 
   // ========================================
