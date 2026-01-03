@@ -2,7 +2,7 @@
 
 use axum::{
     extract::Path,
-    routing::{delete, get, put},
+    routing::{delete, get, patch, put},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -20,6 +20,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         .route("/devices/:id/scope", put(set_device_scope))
         .route("/devices/:id/layout", put(set_device_layout))
         .route("/devices/:id/layout", get(get_device_layout))
+        .route("/devices/:id", patch(update_device_config))
         .route("/devices/:id", delete(forget_device))
 }
 
@@ -201,6 +202,56 @@ async fn get_device_layout(
     Ok(Json(GetDeviceLayoutResponse {
         layout: device.layout.clone(),
     }))
+}
+
+/// PATCH /api/devices/:id - Update device configuration
+#[derive(Deserialize)]
+struct UpdateDeviceConfigRequest {
+    layout: Option<String>,
+    scope: Option<String>,
+}
+
+async fn update_device_config(
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateDeviceConfigRequest>,
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::WebError;
+
+    let config_dir = get_config_dir()?;
+    let registry_path = config_dir.join("devices.json");
+
+    let mut registry = DeviceRegistry::load(&registry_path)?;
+
+    // Update layout if provided
+    if let Some(layout) = &payload.layout {
+        registry.set_layout(&id, layout).map_err(|e| {
+            use crate::error::RegistryError;
+            RegistryError::CorruptedRegistry(e.to_string())
+        })?;
+    }
+
+    // Update scope if provided
+    if let Some(scope_str) = &payload.scope {
+        let scope = match scope_str.as_str() {
+            "global" => DeviceScope::Global,
+            "device-specific" => DeviceScope::DeviceSpecific,
+            _ => {
+                return Err(WebError::InvalidRequest {
+                    reason: "Invalid scope value".to_string(),
+                }
+                .into())
+            }
+        };
+
+        registry.set_scope(&id, scope).map_err(|e| {
+            use crate::error::RegistryError;
+            RegistryError::CorruptedRegistry(e.to_string())
+        })?;
+    }
+
+    registry.save()?;
+
+    Ok(Json(json!({ "success": true })))
 }
 
 /// DELETE /api/devices/:id - Forget device
