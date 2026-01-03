@@ -129,7 +129,7 @@
 
 ### Task 12: Create useDragAndDrop hook for state management
 
-- [ ] 12. Create useDragAndDrop custom hook for drag-and-drop state
+- [x] 12. Create useDragAndDrop custom hook for drag-and-drop state
   - File: `keyrx_ui/src/hooks/useDragAndDrop.ts` (NEW)
   - Purpose: Encapsulate drag-and-drop state logic (active drag key, drop handlers, save logic)
   - _Leverage: `useSetProfileConfig` hook, `KeyMapping` and `AssignableKey` types_
