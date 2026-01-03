@@ -47,7 +47,7 @@ use thiserror::Error;
 
 use log::{info, warn};
 
-use crate::config_loader::ConfigError;
+use crate::error::ConfigError;
 use crate::platform::{Platform, PlatformError};
 
 // Submodules
@@ -474,7 +474,7 @@ mod tests {
     #[test]
     #[ignore = "Requires Platform refactoring"]
     fn test_daemon_error_config_variant() {
-        use crate::config_loader::ConfigError;
+        use crate::error::ConfigError;
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let config_err = ConfigError::Io(io_err);
         let daemon_err = DaemonError::Config(config_err);

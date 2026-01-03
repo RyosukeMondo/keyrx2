@@ -81,6 +81,7 @@ impl ConfigService {
         let active_profile = self
             .profile_manager
             .get_active()
+            .map_err(|_| ConfigError::ProfileNotFound("failed to get active profile".to_string()))?
             .ok_or_else(|| ConfigError::ProfileNotFound("no active profile".to_string()))?;
 
         let metadata = self
@@ -113,6 +114,7 @@ impl ConfigService {
         let active_profile = self
             .profile_manager
             .get_active()
+            .map_err(|_| ConfigError::ProfileNotFound("failed to get active profile".to_string()))?
             .ok_or_else(|| ConfigError::ProfileNotFound("no active profile".to_string()))?;
 
         let metadata = self
@@ -152,6 +154,7 @@ impl ConfigService {
         let active_profile = self
             .profile_manager
             .get_active()
+            .map_err(|_| ConfigError::ProfileNotFound("failed to get active profile".to_string()))?
             .ok_or_else(|| ConfigError::ProfileNotFound("no active profile".to_string()))?;
 
         let metadata = self
@@ -182,6 +185,7 @@ impl ConfigService {
         let active_profile = self
             .profile_manager
             .get_active()
+            .map_err(|_| ConfigError::ProfileNotFound("failed to get active profile".to_string()))?
             .ok_or_else(|| ConfigError::ProfileNotFound("no active profile".to_string()))?;
 
         let metadata = self
@@ -212,6 +216,7 @@ impl ConfigService {
         let active_profile = self
             .profile_manager
             .get_active()
+            .map_err(|_| ConfigError::ProfileNotFound("failed to get active profile".to_string()))?
             .ok_or_else(|| ConfigError::ProfileNotFound("no active profile".to_string()))?;
 
         let metadata = self

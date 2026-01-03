@@ -780,7 +780,7 @@ fn handle_diff(
 fn get_profile_name(manager: &ProfileManager, profile: Option<String>) -> DaemonResult<String> {
     if let Some(name) = profile {
         Ok(name)
-    } else if let Some(active) = manager.get_active() {
+    } else if let Ok(Some(active)) = manager.get_active() {
         Ok(active)
     } else {
         Err(CliError::InvalidArguments {

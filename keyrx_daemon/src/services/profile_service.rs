@@ -113,7 +113,7 @@ impl ProfileService {
 
         // Access ProfileManager through Arc without mutable access
         let profiles = self.profile_manager.list();
-        let active_name = self.profile_manager.get_active();
+        let active_name = self.profile_manager.get_active().ok().flatten();
 
         let mut result: Vec<ProfileInfo> = profiles
             .iter()
@@ -169,7 +169,7 @@ impl ProfileService {
             .get(name)
             .ok_or_else(|| ProfileError::NotFound(name.to_string()))?;
 
-        let active_name = self.profile_manager.get_active();
+        let active_name = self.profile_manager.get_active().ok().flatten();
 
         Ok(ProfileInfo {
             name: metadata.name.clone(),
@@ -373,7 +373,7 @@ impl ProfileService {
         let manager_ptr = Arc::as_ptr(&self.profile_manager) as *mut ProfileManager;
         let metadata = unsafe { (*manager_ptr).rename(old_name, new_name)? };
 
-        let active_name = self.profile_manager.get_active();
+        let active_name = self.profile_manager.get_active().ok().flatten();
 
         log::info!("Profile renamed successfully");
 
@@ -550,7 +550,7 @@ impl ProfileService {
     /// # }
     /// ```
     pub async fn get_active_profile(&self) -> Option<String> {
-        self.profile_manager.get_active()
+        self.profile_manager.get_active().ok().flatten()
     }
 
     /// Gets the configuration content for a profile.

@@ -416,7 +416,7 @@ fn resolve_profile(
 ) -> Result<String, Box<dyn std::error::Error>> {
     if let Some(name) = profile {
         Ok(name.to_string())
-    } else if let Some(active) = manager.get_active() {
+    } else if let Ok(Some(active)) = manager.get_active() {
         Ok(active)
     } else {
         Err("No active profile. Use --profile to specify a profile.".into())

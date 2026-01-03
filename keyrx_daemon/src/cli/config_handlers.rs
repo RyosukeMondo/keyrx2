@@ -256,7 +256,7 @@ pub fn handle_diff(
 fn get_profile_name(manager: &ProfileManager, profile: Option<String>) -> Result<String, i32> {
     if let Some(name) = profile {
         Ok(name)
-    } else if let Some(active) = manager.get_active() {
+    } else if let Ok(Some(active)) = manager.get_active() {
         Ok(active)
     } else {
         eprintln!("Error: No active profile. Use --profile to specify one.");

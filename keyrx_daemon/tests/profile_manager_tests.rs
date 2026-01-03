@@ -112,7 +112,7 @@ fn test_export_import() {
 fn test_get_active_profile() {
     let (_temp, mut manager) = setup_test_manager();
 
-    assert!(manager.get_active().is_none());
+    assert!(manager.get_active().unwrap().is_none());
 
     manager.create("test", ProfileTemplate::Blank).unwrap();
 
@@ -182,13 +182,16 @@ fn test_delete_active_profile() {
     // Simulate activating the profile by setting it directly
     manager.set_active_for_testing("active-profile".to_string());
 
-    assert_eq!(manager.get_active(), Some("active-profile".to_string()));
+    assert_eq!(
+        manager.get_active().unwrap(),
+        Some("active-profile".to_string())
+    );
 
     // Delete the active profile
     manager.delete("active-profile").unwrap();
 
     // Active profile should be cleared
-    assert!(manager.get_active().is_none());
+    assert!(manager.get_active().unwrap().is_none());
     assert!(manager.get("active-profile").is_none());
 }
 
@@ -596,7 +599,7 @@ fn test_activate_success() {
     if activation_result.success {
         assert_eq!(activation_result.error, None);
         assert!(activation_result.compile_time_ms > 0);
-        assert_eq!(manager.get_active(), Some("test".to_string()));
+        assert_eq!(manager.get_active().unwrap(), Some("test".to_string()));
     } else {
         // Compilation failed - this is acceptable in test environment
         assert!(activation_result.error.is_some());
@@ -615,7 +618,7 @@ fn test_activate_nonexistent_profile() {
     assert!(matches!(result, Err(ProfileError::NotFound(_))));
 
     // Active profile should remain None
-    assert!(manager.get_active().is_none());
+    assert!(manager.get_active().unwrap().is_none());
 }
 
 #[test]
@@ -643,7 +646,7 @@ fn test_activate_compilation_error() {
     assert!(activation_result.error.is_some());
 
     // Active profile should remain None (not updated on error)
-    assert!(manager.get_active().is_none());
+    assert!(manager.get_active().unwrap().is_none());
 }
 
 #[test]
@@ -656,7 +659,7 @@ fn test_activate_preserves_previous_active_on_error() {
     assert!(result.is_ok());
 
     // Skip test if compilation not available in test environment
-    let initial_active = manager.get_active();
+    let initial_active = manager.get_active().unwrap();
     if initial_active.is_none() {
         println!("Skipping test - compilation not available in test environment");
         return;
@@ -676,7 +679,7 @@ fn test_activate_preserves_previous_active_on_error() {
     assert!(!activation_result.success);
 
     // Previous active profile should be preserved
-    assert_eq!(manager.get_active(), Some("valid".to_string()));
+    assert_eq!(manager.get_active().unwrap(), Some("valid".to_string()));
 }
 
 #[test]
@@ -689,7 +692,7 @@ fn test_activate_replaces_previous_active() {
     assert!(result1.is_ok());
 
     // Skip if compilation not available
-    if manager.get_active().is_none() {
+    if manager.get_active().unwrap().is_none() {
         println!("Skipping test - compilation not available");
         return;
     }
@@ -699,7 +702,7 @@ fn test_activate_replaces_previous_active() {
     manager.activate("profile2").unwrap();
 
     // Active profile should be updated
-    assert_eq!(manager.get_active(), Some("profile2".to_string()));
+    assert_eq!(manager.get_active().unwrap(), Some("profile2".to_string()));
 }
 
 #[test]
@@ -763,7 +766,7 @@ fn test_concurrent_activation_serialized() {
 
     // Final active profile should be profile2 if compilation succeeded
     if result2.unwrap().success {
-        assert_eq!(manager.get_active(), Some("profile2".to_string()));
+        assert_eq!(manager.get_active().unwrap(), Some("profile2".to_string()));
     }
 }
 
@@ -776,17 +779,17 @@ fn test_delete_clears_active_profile() {
     assert!(result.is_ok());
 
     // Only proceed if activation succeeded
-    if manager.get_active().is_none() {
+    if manager.get_active().unwrap().is_none() {
         println!("Skipping test - activation failed");
         return;
     }
 
-    assert_eq!(manager.get_active(), Some("test".to_string()));
+    assert_eq!(manager.get_active().unwrap(), Some("test".to_string()));
 
     manager.delete("test").unwrap();
 
     // Active profile should be cleared after deletion
-    assert!(manager.get_active().is_none());
+    assert!(manager.get_active().unwrap().is_none());
 }
 
 #[test]
@@ -800,15 +803,15 @@ fn test_activate_after_delete() {
     assert!(result1.is_ok());
 
     // Skip if compilation not available
-    if manager.get_active().is_none() {
+    if manager.get_active().unwrap().is_none() {
         println!("Skipping test - compilation not available");
         return;
     }
 
     manager.delete("profile1").unwrap();
-    assert!(manager.get_active().is_none());
+    assert!(manager.get_active().unwrap().is_none());
 
     // Should be able to activate profile2
     manager.activate("profile2").unwrap();
-    assert_eq!(manager.get_active(), Some("profile2".to_string()));
+    assert_eq!(manager.get_active().unwrap(), Some("profile2".to_string()));
 }

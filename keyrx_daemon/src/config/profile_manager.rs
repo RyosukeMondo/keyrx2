@@ -86,6 +86,9 @@ pub enum ProfileError {
 
     #[error("Invalid template")]
     InvalidTemplate,
+
+    #[error("Lock error: {0}")]
+    LockError(String),
 }
 
 impl ProfileManager {
@@ -272,12 +275,9 @@ layer("lower", #{
     /// Activate a profile with hot-reload.
     pub fn activate(&mut self, name: &str) -> Result<ActivationResult, ProfileError> {
         // Acquire activation lock to serialize concurrent activations
-        // SAFETY: This unwrap is acceptable because:
-        // 1. activation_lock is only used within ProfileManager methods
-        // 2. No panic should occur while holding this lock
-        // 3. Mutex poisoning would indicate a critical bug in profile activation
-        // TODO(unwrap-remediation): Consider using recover_lock_with_context for resilience
-        let _lock = self.activation_lock.lock().unwrap();
+        let _lock = self.activation_lock.lock().map_err(|e| {
+            ProfileError::LockError(format!("Failed to acquire activation lock: {}", e))
+        })?;
 
         let start = Instant::now();
 
@@ -337,13 +337,13 @@ layer("lower", #{
         };
 
         // Atomic swap
-        // SAFETY: RwLock write unwrap is acceptable because:
-        // 1. This is a simple state update operation
-        // 2. No panics should occur while holding the write lock
-        // 3. activation_lock prevents concurrent activations
-        // TODO(unwrap-remediation): Use recover_rwlock_write for better resilience
         let reload_start = Instant::now();
-        *self.active_profile.write().unwrap() = Some(name.to_string());
+        *self.active_profile.write().map_err(|e| {
+            (
+                compile_time,
+                ProfileError::LockError(format!("Failed to acquire write lock: {}", e)),
+            )
+        })? = Some(name.to_string());
         let reload_time = reload_start.elapsed().as_millis() as u64;
 
         Ok((compile_time, reload_time))
@@ -358,10 +358,15 @@ layer("lower", #{
             .clone();
 
         // Check if this is the active profile
-        let active = self.active_profile.read().unwrap();
+        let active = self
+            .active_profile
+            .read()
+            .map_err(|e| ProfileError::LockError(format!("Failed to acquire read lock: {}", e)))?;
         if active.as_deref() == Some(name) {
             drop(active);
-            *self.active_profile.write().unwrap() = None;
+            *self.active_profile.write().map_err(|e| {
+                ProfileError::LockError(format!("Failed to acquire write lock: {}", e))
+            })? = None;
         }
 
         // Delete both .rhai and .krx files
@@ -457,7 +462,9 @@ layer("lower", #{
 
         // Update active profile reference if renaming the active profile
         {
-            let mut active = self.active_profile.write().unwrap();
+            let mut active = self.active_profile.write().map_err(|e| {
+                ProfileError::LockError(format!("Failed to acquire write lock: {}", e))
+            })?;
             if active.as_ref() == Some(&old_name.to_string()) {
                 *active = Some(new_name.to_string());
             }
@@ -513,8 +520,15 @@ layer("lower", #{
     }
 
     /// Get the currently active profile name.
-    pub fn get_active(&self) -> Option<String> {
-        self.active_profile.read().unwrap().clone()
+    ///
+    /// # Errors
+    ///
+    /// Returns `ProfileError::LockError` if the RwLock is poisoned.
+    pub fn get_active(&self) -> Result<Option<String>, ProfileError> {
+        self.active_profile
+            .read()
+            .map(|guard| guard.clone())
+            .map_err(|e| ProfileError::LockError(format!("Failed to acquire read lock: {}", e)))
     }
 
     /// Get profile metadata by name.
@@ -613,7 +627,10 @@ layer("lower", #{
     // Test-only methods (available for integration tests)
     #[doc(hidden)]
     pub fn set_active_for_testing(&mut self, name: String) {
-        *self.active_profile.write().unwrap() = Some(name);
+        *self
+            .active_profile
+            .write()
+            .expect("Test helper: RwLock poisoned") = Some(name);
     }
 
     #[doc(hidden)]

@@ -80,7 +80,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
   - _Prompt: Implement the task for spec error-handling-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust CLI Developer with expertise in error propagation and anyhow | Task: Migrate CLI handler functions in config.rs, profiles.rs, devices.rs, simulate.rs to return Result<(), DaemonError> following requirements 3.1-3.5. Replace all unwrap() with ? operator. Add .context() for operation details. Target: eliminate 40-50 unwraps. | Restrictions: Maintain existing CLI command behavior, ensure error messages are user-friendly, do not change command-line interface | Success: All CLI handlers return Result, unwraps eliminated, error messages include helpful context. Edit tasks.md [-] → [x], log with artifacts (function signatures changed, unwraps eliminated count, context added)_
 
-- [ ] 9. Migrate configuration loading functions
+- [x] 9. Migrate configuration loading functions
   - Files: keyrx_daemon/src/config/profile_manager.rs, keyrx_daemon/src/config/layout_manager.rs, keyrx_daemon/src/config_loader.rs
   - Change function signatures to return Result<T, ConfigError>
   - Replace unwrap() with ? and add context

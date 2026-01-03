@@ -194,9 +194,8 @@ impl LayoutManager {
         let mut key_count = 0;
 
         for item in arr {
-            if item.is_array() {
+            if let Some(row) = item.as_array() {
                 // This is a row of keys
-                let row = item.as_array().unwrap();
                 for key in row {
                     if key.is_string() || key.is_object() {
                         key_count += 1;
