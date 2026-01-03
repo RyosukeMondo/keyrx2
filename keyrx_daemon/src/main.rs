@@ -162,12 +162,10 @@ fn main() {
             }
         }
         Commands::Profiles(args) => handle_profiles_command(args),
-        Commands::Config(args) => {
-            match keyrx_daemon::cli::config::execute(args, None) {
-                Ok(()) => Ok(()),
-                Err(code) => Err((code, String::new())), // Error already printed by execute
-            }
-        }
+        Commands::Config(args) => match keyrx_daemon::cli::config::execute(args, None) {
+            Ok(()) => Ok(()),
+            Err(e) => Err((exit_codes::CONFIG_ERROR, e.to_string())),
+        },
         Commands::Layers(args) => match keyrx_daemon::cli::layers::execute(args) {
             Ok(()) => Ok(()),
             Err(e) => Err((exit_codes::CONFIG_ERROR, e.to_string())),

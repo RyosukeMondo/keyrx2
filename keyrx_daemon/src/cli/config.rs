@@ -7,6 +7,7 @@
 use crate::cli::logging;
 use crate::config::profile_manager::ProfileManager;
 use crate::config::rhai_generator::{KeyAction, MacroStep, RhaiGenerator};
+use crate::error::{CliError, ConfigError, DaemonResult};
 use clap::{Args, Subcommand};
 use serde::Serialize;
 use std::path::PathBuf;
@@ -175,16 +176,8 @@ struct DiffOutput {
     differences: Vec<String>,
 }
 
-/// JSON output for errors.
-#[derive(Serialize)]
-struct ErrorOutput {
-    success: bool,
-    error: String,
-    code: u32,
-}
-
 /// Execute the config command.
-pub fn execute(args: ConfigArgs, config_dir: Option<PathBuf>) -> Result<(), i32> {
+pub fn execute(args: ConfigArgs, config_dir: Option<PathBuf>) -> DaemonResult<()> {
     // Determine config directory (priority: parameter, env var, default)
     let config_dir = config_dir
         .or_else(|| std::env::var("KEYRX_CONFIG_DIR").ok().map(PathBuf::from))
@@ -195,23 +188,19 @@ pub fn execute(args: ConfigArgs, config_dir: Option<PathBuf>) -> Result<(), i32>
         });
 
     // Initialize ProfileManager
-    let mut manager = match ProfileManager::new(config_dir.clone()) {
-        Ok(mgr) => mgr,
-        Err(e) => {
-            output_error(
-                &format!("Failed to initialize profile manager: {}", e),
-                1,
-                args.json,
-            );
-            return Err(1);
-        }
-    };
+    let mut manager =
+        ProfileManager::new(config_dir.clone()).map_err(|e| CliError::CommandFailed {
+            command: "config".to_string(),
+            reason: format!("Failed to initialize profile manager: {}", e),
+        })?;
 
     // Scan profiles
-    if let Err(e) = manager.scan_profiles() {
-        output_error(&format!("Failed to scan profiles: {}", e), 1, args.json);
-        return Err(1);
-    }
+    manager
+        .scan_profiles()
+        .map_err(|e| CliError::CommandFailed {
+            command: "config".to_string(),
+            reason: format!("Failed to scan profiles: {}", e),
+        })?;
 
     match args.command {
         ConfigCommands::SetKey {
@@ -268,60 +257,62 @@ fn handle_set_key(
     layer: String,
     profile: Option<String>,
     json: bool,
-) -> Result<(), i32> {
+) -> DaemonResult<()> {
     logging::log_command_start(
         "config set-key",
         &format!("{} -> {} (layer: {})", key, target, layer),
     );
 
     let profile_name = get_profile_name(manager, profile)?;
-    let profile_meta = match manager.get(&profile_name) {
-        Some(meta) => meta,
-        None => {
-            logging::log_command_error(
-                "config set-key",
-                &format!("Profile not found: {}", profile_name),
-            );
-            output_error(&format!("Profile not found: {}", profile_name), 1001, json);
-            return Err(1);
+    let profile_meta = manager.get(&profile_name).ok_or_else(|| {
+        logging::log_command_error(
+            "config set-key",
+            &format!("Profile not found: {}", profile_name),
+        );
+        ConfigError::InvalidProfile {
+            name: profile_name.clone(),
+            reason: "Profile not found".to_string(),
         }
-    };
+    })?;
 
     // Load Rhai generator
-    let mut gen = match RhaiGenerator::load(&profile_meta.rhai_path) {
-        Ok(g) => g,
-        Err(e) => {
-            logging::log_command_error("config set-key", &format!("Failed to load profile: {}", e));
-            output_error(&format!("Failed to load profile: {}", e), 1, json);
-            return Err(1);
+    let mut gen = RhaiGenerator::load(&profile_meta.rhai_path).map_err(|e| {
+        logging::log_command_error("config set-key", &format!("Failed to load profile: {}", e));
+        ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: e.to_string(),
         }
-    };
+    })?;
 
     // Set the mapping
     let action = KeyAction::SimpleRemap {
         output: target.clone(),
     };
 
-    if let Err(e) = gen.set_key_mapping(&layer, &key, action) {
+    gen.set_key_mapping(&layer, &key, action).map_err(|e| {
         logging::log_command_error("config set-key", &format!("Failed to set mapping: {}", e));
-        output_error(&format!("Failed to set mapping: {}", e), 1, json);
-        return Err(1);
-    }
+        CliError::CommandFailed {
+            command: "set-key".to_string(),
+            reason: e.to_string(),
+        }
+    })?;
 
     logging::log_config_change(&profile_name, "set_key", &key, &layer);
 
     // Save the file
-    if let Err(e) = gen.save(&profile_meta.rhai_path) {
-        output_error(&format!("Failed to save profile: {}", e), 1, json);
-        return Err(1);
-    }
+    gen.save(&profile_meta.rhai_path)
+        .map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: format!("Failed to save: {}", e),
+        })?;
 
     // Recompile
     let compile_start = std::time::Instant::now();
-    if let Err(e) = keyrx_compiler::compile_file(&profile_meta.rhai_path, &profile_meta.krx_path) {
-        output_error(&format!("Compilation failed: {}", e), 2001, json);
-        return Err(1);
-    }
+    keyrx_compiler::compile_file(&profile_meta.rhai_path, &profile_meta.krx_path).map_err(|e| {
+        ConfigError::CompilationFailed {
+            reason: e.to_string(),
+        }
+    })?;
     let compile_time = compile_start.elapsed().as_millis() as u64;
 
     logging::log_command_success("config set-key", compile_time);
@@ -356,24 +347,21 @@ fn handle_set_tap_hold(
     layer: String,
     profile: Option<String>,
     json: bool,
-) -> Result<(), i32> {
+) -> DaemonResult<()> {
     let profile_name = get_profile_name(manager, profile)?;
-    let profile_meta = match manager.get(&profile_name) {
-        Some(meta) => meta,
-        None => {
-            output_error(&format!("Profile not found: {}", profile_name), 1001, json);
-            return Err(1);
-        }
-    };
+    let profile_meta = manager
+        .get(&profile_name)
+        .ok_or_else(|| ConfigError::InvalidProfile {
+            name: profile_name.clone(),
+            reason: "Profile not found".to_string(),
+        })?;
 
     // Load Rhai generator
-    let mut gen = match RhaiGenerator::load(&profile_meta.rhai_path) {
-        Ok(g) => g,
-        Err(e) => {
-            output_error(&format!("Failed to load profile: {}", e), 1, json);
-            return Err(1);
-        }
-    };
+    let mut gen =
+        RhaiGenerator::load(&profile_meta.rhai_path).map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: e.to_string(),
+        })?;
 
     // Set the mapping
     let action = KeyAction::TapHold {
@@ -382,23 +370,26 @@ fn handle_set_tap_hold(
         threshold_ms: threshold,
     };
 
-    if let Err(e) = gen.set_key_mapping(&layer, &key, action) {
-        output_error(&format!("Failed to set mapping: {}", e), 1, json);
-        return Err(1);
-    }
+    gen.set_key_mapping(&layer, &key, action)
+        .map_err(|e| CliError::CommandFailed {
+            command: "set-tap-hold".to_string(),
+            reason: e.to_string(),
+        })?;
 
     // Save the file
-    if let Err(e) = gen.save(&profile_meta.rhai_path) {
-        output_error(&format!("Failed to save profile: {}", e), 1, json);
-        return Err(1);
-    }
+    gen.save(&profile_meta.rhai_path)
+        .map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: format!("Failed to save: {}", e),
+        })?;
 
     // Recompile
     let compile_start = std::time::Instant::now();
-    if let Err(e) = keyrx_compiler::compile_file(&profile_meta.rhai_path, &profile_meta.krx_path) {
-        output_error(&format!("Compilation failed: {}", e), 2001, json);
-        return Err(1);
-    }
+    keyrx_compiler::compile_file(&profile_meta.rhai_path, &profile_meta.krx_path).map_err(|e| {
+        ConfigError::CompilationFailed {
+            reason: e.to_string(),
+        }
+    })?;
     let compile_time = compile_start.elapsed().as_millis() as u64;
 
     if json {
@@ -428,56 +419,52 @@ fn handle_set_macro(
     layer: String,
     profile: Option<String>,
     json: bool,
-) -> Result<(), i32> {
+) -> DaemonResult<()> {
     let profile_name = get_profile_name(manager, profile)?;
-    let profile_meta = match manager.get(&profile_name) {
-        Some(meta) => meta,
-        None => {
-            output_error(&format!("Profile not found: {}", profile_name), 1001, json);
-            return Err(1);
-        }
-    };
+    let profile_meta = manager
+        .get(&profile_name)
+        .ok_or_else(|| ConfigError::InvalidProfile {
+            name: profile_name.clone(),
+            reason: "Profile not found".to_string(),
+        })?;
 
     // Parse macro sequence
-    let macro_steps = match parse_macro_sequence(&sequence) {
-        Ok(steps) => steps,
-        Err(e) => {
-            output_error(&format!("Invalid macro sequence: {}", e), 1, json);
-            return Err(1);
-        }
-    };
+    let macro_steps = parse_macro_sequence(&sequence).map_err(|e| CliError::InvalidArguments {
+        reason: format!("Invalid macro sequence: {}", e),
+    })?;
 
     // Load Rhai generator
-    let mut gen = match RhaiGenerator::load(&profile_meta.rhai_path) {
-        Ok(g) => g,
-        Err(e) => {
-            output_error(&format!("Failed to load profile: {}", e), 1, json);
-            return Err(1);
-        }
-    };
+    let mut gen =
+        RhaiGenerator::load(&profile_meta.rhai_path).map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: e.to_string(),
+        })?;
 
     // Set the mapping
     let action = KeyAction::Macro {
         sequence: macro_steps,
     };
 
-    if let Err(e) = gen.set_key_mapping(&layer, &key, action) {
-        output_error(&format!("Failed to set mapping: {}", e), 1, json);
-        return Err(1);
-    }
+    gen.set_key_mapping(&layer, &key, action)
+        .map_err(|e| CliError::CommandFailed {
+            command: "set-macro".to_string(),
+            reason: e.to_string(),
+        })?;
 
     // Save the file
-    if let Err(e) = gen.save(&profile_meta.rhai_path) {
-        output_error(&format!("Failed to save profile: {}", e), 1, json);
-        return Err(1);
-    }
+    gen.save(&profile_meta.rhai_path)
+        .map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: format!("Failed to save: {}", e),
+        })?;
 
     // Recompile
     let compile_start = std::time::Instant::now();
-    if let Err(e) = keyrx_compiler::compile_file(&profile_meta.rhai_path, &profile_meta.krx_path) {
-        output_error(&format!("Compilation failed: {}", e), 2001, json);
-        return Err(1);
-    }
+    keyrx_compiler::compile_file(&profile_meta.rhai_path, &profile_meta.krx_path).map_err(|e| {
+        ConfigError::CompilationFailed {
+            reason: e.to_string(),
+        }
+    })?;
     let compile_time = compile_start.elapsed().as_millis() as u64;
 
     if json {
@@ -506,24 +493,21 @@ fn handle_get_key(
     layer: String,
     profile: Option<String>,
     json: bool,
-) -> Result<(), i32> {
+) -> DaemonResult<()> {
     let profile_name = get_profile_name(manager, profile)?;
-    let profile_meta = match manager.get(&profile_name) {
-        Some(meta) => meta,
-        None => {
-            output_error(&format!("Profile not found: {}", profile_name), 1001, json);
-            return Err(1);
-        }
-    };
+    let profile_meta = manager
+        .get(&profile_name)
+        .ok_or_else(|| ConfigError::InvalidProfile {
+            name: profile_name.clone(),
+            reason: "Profile not found".to_string(),
+        })?;
 
     // Load Rhai file and search for the mapping
-    let content = match std::fs::read_to_string(&profile_meta.rhai_path) {
-        Ok(c) => c,
-        Err(e) => {
-            output_error(&format!("Failed to read profile: {}", e), 1, json);
-            return Err(1);
-        }
-    };
+    let content =
+        std::fs::read_to_string(&profile_meta.rhai_path).map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: format!("Failed to read profile: {}", e),
+        })?;
 
     // Simple line-based search for the key
     let mapping = find_key_mapping(&content, &key, &layer);
@@ -550,43 +534,43 @@ fn handle_delete_key(
     layer: String,
     profile: Option<String>,
     json: bool,
-) -> Result<(), i32> {
+) -> DaemonResult<()> {
     let profile_name = get_profile_name(manager, profile)?;
-    let profile_meta = match manager.get(&profile_name) {
-        Some(meta) => meta,
-        None => {
-            output_error(&format!("Profile not found: {}", profile_name), 1001, json);
-            return Err(1);
-        }
-    };
+    let profile_meta = manager
+        .get(&profile_name)
+        .ok_or_else(|| ConfigError::InvalidProfile {
+            name: profile_name.clone(),
+            reason: "Profile not found".to_string(),
+        })?;
 
     // Load Rhai generator
-    let mut gen = match RhaiGenerator::load(&profile_meta.rhai_path) {
-        Ok(g) => g,
-        Err(e) => {
-            output_error(&format!("Failed to load profile: {}", e), 1, json);
-            return Err(1);
-        }
-    };
+    let mut gen =
+        RhaiGenerator::load(&profile_meta.rhai_path).map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: e.to_string(),
+        })?;
 
     // Delete the mapping
-    if let Err(e) = gen.delete_key_mapping(&layer, &key) {
-        output_error(&format!("Failed to delete mapping: {}", e), 1, json);
-        return Err(1);
-    }
+    gen.delete_key_mapping(&layer, &key)
+        .map_err(|e| CliError::CommandFailed {
+            command: "delete-key".to_string(),
+            reason: e.to_string(),
+        })?;
 
     // Save the file
-    if let Err(e) = gen.save(&profile_meta.rhai_path) {
-        output_error(&format!("Failed to save profile: {}", e), 1, json);
-        return Err(1);
-    }
+    gen.save(&profile_meta.rhai_path)
+        .map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: format!("Failed to save: {}", e),
+        })?;
 
     // Recompile
     let compile_start = std::time::Instant::now();
-    if let Err(e) = keyrx_compiler::compile_file(&profile_meta.rhai_path, &profile_meta.krx_path) {
-        output_error(&format!("Compilation failed: {}", e), 2001, json);
-        return Err(1);
-    }
+    keyrx_compiler::compile_file(&profile_meta.rhai_path, &profile_meta.krx_path).map_err(|e| {
+        ConfigError::CompilationFailed {
+            reason: e.to_string(),
+        }
+    })?;
     let compile_time = compile_start.elapsed().as_millis() as u64;
 
     if json {
@@ -613,15 +597,14 @@ fn handle_validate(
     manager: &ProfileManager,
     profile: Option<String>,
     json: bool,
-) -> Result<(), i32> {
+) -> DaemonResult<()> {
     let profile_name = get_profile_name(manager, profile)?;
-    let profile_meta = match manager.get(&profile_name) {
-        Some(meta) => meta,
-        None => {
-            output_error(&format!("Profile not found: {}", profile_name), 1001, json);
-            return Err(1);
-        }
-    };
+    let profile_meta = manager
+        .get(&profile_name)
+        .ok_or_else(|| ConfigError::InvalidProfile {
+            name: profile_name.clone(),
+            reason: "Profile not found".to_string(),
+        })?;
 
     // Attempt dry-run compilation
     logging::log_command_start("config validate", &profile_name);
@@ -654,39 +637,40 @@ fn handle_validate(
             if json {
                 let output = ValidationOutput {
                     success: false,
-                    profile: profile_name,
-                    errors: vec![error_msg],
+                    profile: profile_name.clone(),
+                    errors: vec![error_msg.clone()],
                 };
                 println!("{}", serde_json::to_string(&output).unwrap());
             } else {
                 println!("✗ Profile '{}' validation failed:", profile_name);
                 println!("  {}", e);
             }
-            Err(1)
+            Err(ConfigError::CompilationFailed { reason: error_msg }.into())
         }
     }
 }
 
-fn handle_show(manager: &ProfileManager, profile: Option<String>, json: bool) -> Result<(), i32> {
+fn handle_show(manager: &ProfileManager, profile: Option<String>, json: bool) -> DaemonResult<()> {
     let profile_name = get_profile_name(manager, profile)?;
-    let profile_meta = match manager.get(&profile_name) {
-        Some(meta) => meta,
-        None => {
-            output_error(&format!("Profile not found: {}", profile_name), 1001, json);
-            return Err(1);
-        }
-    };
+    let profile_meta = manager
+        .get(&profile_name)
+        .ok_or_else(|| ConfigError::InvalidProfile {
+            name: profile_name.clone(),
+            reason: "Profile not found".to_string(),
+        })?;
 
     // Load the Rhai file and analyze it
-    let _gen = match RhaiGenerator::load(&profile_meta.rhai_path) {
-        Ok(g) => g,
-        Err(e) => {
-            output_error(&format!("Failed to load profile: {}", e), 1, json);
-            return Err(1);
-        }
-    };
+    let _gen =
+        RhaiGenerator::load(&profile_meta.rhai_path).map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: e.to_string(),
+        })?;
 
-    let content = std::fs::read_to_string(&profile_meta.rhai_path).unwrap();
+    let content =
+        std::fs::read_to_string(&profile_meta.rhai_path).map_err(|e| ConfigError::ParseError {
+            path: profile_meta.rhai_path.clone(),
+            reason: format!("Failed to read profile: {}", e),
+        })?;
     let device_id = extract_device_id(&content).unwrap_or_else(|| "*".to_string());
     let layers = extract_layer_list(&content);
     let mapping_count = count_mappings(&content);
@@ -714,39 +698,33 @@ fn handle_diff(
     profile1: String,
     profile2: String,
     json: bool,
-) -> Result<(), i32> {
-    let meta1 = match manager.get(&profile1) {
-        Some(m) => m,
-        None => {
-            output_error(&format!("Profile not found: {}", profile1), 1001, json);
-            return Err(1);
-        }
-    };
+) -> DaemonResult<()> {
+    let meta1 = manager
+        .get(&profile1)
+        .ok_or_else(|| ConfigError::InvalidProfile {
+            name: profile1.clone(),
+            reason: "Profile not found".to_string(),
+        })?;
 
-    let meta2 = match manager.get(&profile2) {
-        Some(m) => m,
-        None => {
-            output_error(&format!("Profile not found: {}", profile2), 1001, json);
-            return Err(1);
-        }
-    };
+    let meta2 = manager
+        .get(&profile2)
+        .ok_or_else(|| ConfigError::InvalidProfile {
+            name: profile2.clone(),
+            reason: "Profile not found".to_string(),
+        })?;
 
     // Read both files
-    let content1 = match std::fs::read_to_string(&meta1.rhai_path) {
-        Ok(c) => c,
-        Err(e) => {
-            output_error(&format!("Failed to read {}: {}", profile1, e), 1, json);
-            return Err(1);
-        }
-    };
+    let content1 =
+        std::fs::read_to_string(&meta1.rhai_path).map_err(|e| ConfigError::ParseError {
+            path: meta1.rhai_path.clone(),
+            reason: format!("Failed to read {}: {}", profile1, e),
+        })?;
 
-    let content2 = match std::fs::read_to_string(&meta2.rhai_path) {
-        Ok(c) => c,
-        Err(e) => {
-            output_error(&format!("Failed to read {}: {}", profile2, e), 1, json);
-            return Err(1);
-        }
-    };
+    let content2 =
+        std::fs::read_to_string(&meta2.rhai_path).map_err(|e| ConfigError::ParseError {
+            path: meta2.rhai_path.clone(),
+            reason: format!("Failed to read {}: {}", profile2, e),
+        })?;
 
     // Simple line-based diff
     let differences = compute_diff(&content1, &content2);
@@ -772,27 +750,16 @@ fn handle_diff(
 
 // Helper functions
 
-fn get_profile_name(manager: &ProfileManager, profile: Option<String>) -> Result<String, i32> {
+fn get_profile_name(manager: &ProfileManager, profile: Option<String>) -> DaemonResult<String> {
     if let Some(name) = profile {
         Ok(name)
     } else if let Some(active) = manager.get_active() {
         Ok(active)
     } else {
-        eprintln!("Error: No active profile. Use --profile to specify one.");
-        Err(1)
-    }
-}
-
-fn output_error(message: &str, code: u32, json: bool) {
-    if json {
-        let output = ErrorOutput {
-            success: false,
-            error: message.to_string(),
-            code,
-        };
-        println!("{}", serde_json::to_string(&output).unwrap());
-    } else {
-        eprintln!("Error: {}", message);
+        Err(CliError::InvalidArguments {
+            reason: "No active profile. Use --profile to specify one.".to_string(),
+        }
+        .into())
     }
 }
 
