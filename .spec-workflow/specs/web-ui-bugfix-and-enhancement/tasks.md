@@ -175,7 +175,7 @@
 
 ### Task 16: Write unit tests for new components
 
-- [ ] 16. Write unit tests for new drag-and-drop components
+- [x] 16. Write unit tests for new drag-and-drop components
   - Files: `keyrx_ui/src/components/config/*.test.tsx` (NEW), `keyrx_ui/src/hooks/useDragAndDrop.test.ts` (NEW)
   - Purpose: Ensure ≥80% test coverage for all new components and hooks
   - _Leverage: `@testing-library/react`, `vitest`, existing test utilities in `tests/testUtils.tsx`_
