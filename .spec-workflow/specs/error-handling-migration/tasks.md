@@ -148,7 +148,7 @@
   - _Requirements: 6.5_
   - _Prompt: Implement the task for spec error-handling-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: DevOps Engineer with expertise in build automation and quality gates | Task: Deprecate manual unwrap counting script check_unwraps.sh following requirement 6.5. Remove from verify.sh and pre-commit hook. Clippy lints now enforce unwrap policy automatically. Add deprecation notice to script explaining migration to clippy. | Restrictions: Ensure clippy enforcement is active before removing manual check, update documentation to reflect new approach | Success: check_unwraps.sh removed from verification pipeline, clippy enforces unwrap policy, documentation updated. Edit tasks.md [-] → [x], log with artifacts (scripts modified, deprecation notice)_
 
-- [ ] 16. Write error handling documentation
+- [x] 16. Write error handling documentation
   - Files: docs/ERROR_HANDLING_GUIDE.md (create new), docs/UNWRAP_HANDLING_STRATEGY.md (update)
   - Document error type hierarchy and usage patterns
   - Provide before/after migration examples
