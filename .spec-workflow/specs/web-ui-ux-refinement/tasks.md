@@ -165,7 +165,7 @@
   - _Requirements: Requirement 3 (Persist DevicesPage Layout and Scope Selection)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Data Model Developer with serde expertise | Task: Create DeviceConfig model in keyrx_daemon/src/config/device.rs with proper serialization | Restrictions: Must implement proper Default, follow existing config patterns, use kebab-case for JSON serialization | _Leverage: serde for serialization, existing config models as patterns | _Requirements: Requirement 3 (Persist DevicesPage Layout and Scope Selection) | Success: DeviceConfig serializes/deserializes correctly, Default implementation works, follows project patterns | Instructions: 1. Mark [-]. 2. Implement model. 3. Log (taskId="3.2", filesCreated, artifacts with classes). 4. Mark [x]._
 
-- [ ] 3.3. Create useUpdateDevice hook
+- [x] 3.3. Create useUpdateDevice hook
   - Files: `keyrx_ui/src/hooks/useUpdateDevice.ts`
   - Implement mutation hook calling PATCH /api/devices/:serial
   - Invalidate devices query on success
