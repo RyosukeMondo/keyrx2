@@ -98,7 +98,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
   };
 
   return (
-    <Card key={device.id} variant="elevated" className="bg-slate-800">
+    <Card key={device.id} variant="elevated" className="bg-slate-800" data-testid="device-card">
       <div className="flex flex-col gap-md">
         {/* Device header */}
         <div className="flex items-start justify-between">
