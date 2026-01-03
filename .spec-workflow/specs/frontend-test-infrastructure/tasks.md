@@ -123,7 +123,7 @@
 
 ### 3.2. Verify WebSocket Integration
 
-- [ ] 3.2.1. Add WebSocket integration smoke test
+- [x] 3.2.1. Add WebSocket integration smoke test
   - Files: `keyrx_ui/tests/integration/websocket-msw.test.ts` (NEW)
   - Test: MSW WebSocket server connects automatically in tests
   - Test: Helper functions (setDaemonState, sendLatencyUpdate) broadcast correctly
