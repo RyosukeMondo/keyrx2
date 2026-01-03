@@ -252,7 +252,7 @@
 
 **Note**: This is optional and can be deferred. Current query parameter approach works fine.
 
-- [ ] 6.1. Implement nested routing for /profiles/:name/config
+- [-] 6.1. Implement nested routing for /profiles/:name/config
   - Files: `keyrx_ui/src/App.tsx` (routing configuration)
   - Add nested route: `/profiles/:name/config`
   - Update ProfileCard "Edit" button to navigate to nested route

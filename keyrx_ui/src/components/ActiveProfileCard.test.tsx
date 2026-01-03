@@ -84,7 +84,7 @@ describe('ActiveProfileCard', () => {
     expect(editButton).toBeInTheDocument();
   });
 
-  it('navigates to config page when Edit is clicked', async () => {
+  it('navigates to nested config route when Edit is clicked', async () => {
     const user = userEvent.setup();
     renderWithRouter(<ActiveProfileCard profile={mockProfile} />);
 
@@ -93,7 +93,7 @@ describe('ActiveProfileCard', () => {
     });
     await user.click(editButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/config');
+    expect(mockNavigate).toHaveBeenCalledWith('/profiles/Gaming/config');
   });
 
   it('applies custom className', () => {

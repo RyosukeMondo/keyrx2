@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import {
   DndContext,
   DragEndEvent,
@@ -43,8 +43,9 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
 }) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { name: profileNameFromRoute } = useParams<{ name: string }>();
   const profileNameFromQuery = searchParams.get('profile');
-  const profileName = propProfileName || profileNameFromQuery || 'Default';
+  const profileName = propProfileName || profileNameFromRoute || profileNameFromQuery || 'Default';
 
   const api = useUnifiedApi();
   const { data: profileConfig, isLoading: isLoadingConfig, error: configError } = useGetProfileConfig(profileName);
@@ -105,7 +106,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
 
   // Handle profile change from ProfileHeader dropdown
   const handleProfileChange = useCallback((newProfileName: string) => {
-    navigate(`/config?profile=${newProfileName}`);
+    navigate(`/profiles/${encodeURIComponent(newProfileName)}/config`);
   }, [navigate]);
 
   // Mock layers - would come from profile config parsing

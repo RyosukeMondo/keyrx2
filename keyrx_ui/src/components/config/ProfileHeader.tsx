@@ -38,7 +38,7 @@ export interface ProfileHeaderProps {
  *   profileName="my-profile"
  *   isActive={true}
  *   lastModified={new Date()}
- *   onProfileChange={(name) => navigate(`/config?profile=${name}`)}
+ *   onProfileChange={(name) => navigate(`/profiles/${encodeURIComponent(name)}/config`)}
  *   availableProfiles={['default', 'my-profile', 'gaming']}
  * />
  * ```

@@ -31,6 +31,7 @@ function App() {
                 <Route path="/home" element={<HomePage />} />
                 <Route path="/devices" element={<DevicesPage />} />
                 <Route path="/profiles" element={<ProfilesPage />} />
+                <Route path="/profiles/:name/config" element={<ConfigPage />} />
                 <Route path="/config" element={<ConfigPage />} />
                 <Route path="/metrics" element={<MetricsPage />} />
                 <Route path="/simulator" element={<SimulatorPage />} />

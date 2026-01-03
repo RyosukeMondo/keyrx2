@@ -38,7 +38,7 @@ export const ActiveProfileCard: React.FC<ActiveProfileCardProps> = ({
 
   const handleEdit = () => {
     if (profile) {
-      navigate('/config');
+      navigate(`/profiles/${encodeURIComponent(profile.name)}/config`);
     }
   };
 
