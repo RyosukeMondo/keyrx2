@@ -313,6 +313,18 @@ fn extract_config_error_details(
             Some("Check file permissions and disk space".to_string()),
             None,
         ),
+        ConfigError::Profile(msg) => (
+            "Config".to_string(),
+            format!("Profile error: {}", msg),
+            Some("Check profile configuration and ensure profile exists".to_string()),
+            None,
+        ),
+        ConfigError::Generator(msg) => (
+            "Config".to_string(),
+            format!("Generator error: {}", msg),
+            Some("Check Rhai configuration syntax and structure".to_string()),
+            None,
+        ),
     }
 }
 
@@ -554,6 +566,8 @@ fn error_code(error: &DaemonError) -> u32 {
         DaemonError::Config(ConfigError::CompilationFailed { .. }) => 2003,
         DaemonError::Config(ConfigError::Core(_)) => 2004,
         DaemonError::Config(ConfigError::Io(_)) => 2005,
+        DaemonError::Config(ConfigError::Profile(_)) => 2006,
+        DaemonError::Config(ConfigError::Generator(_)) => 2007,
 
         // Platform errors: 3000-3999
         DaemonError::Platform(PlatformError::DeviceAccess { .. }) => 3000,

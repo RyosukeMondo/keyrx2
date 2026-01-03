@@ -103,6 +103,16 @@ impl IntoResponse for DaemonError {
                     "IO_ERROR",
                     "File system error occurred while accessing configuration".to_string(),
                 ),
+                ConfigError::Profile(msg) => (
+                    StatusCode::BAD_REQUEST,
+                    "PROFILE_ERROR",
+                    format!("Profile error: {}", msg),
+                ),
+                ConfigError::Generator(msg) => (
+                    StatusCode::BAD_REQUEST,
+                    "GENERATOR_ERROR",
+                    format!("Generator error: {}", msg),
+                ),
             },
 
             // Web errors - mixed status codes

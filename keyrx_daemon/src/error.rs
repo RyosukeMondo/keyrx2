@@ -233,6 +233,26 @@ pub enum ConfigError {
     /// IO error occurred during configuration operation.
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
+
+    /// Profile manager error occurred.
+    #[error("Profile error: {0}")]
+    Profile(String),
+
+    /// Rhai generator error occurred.
+    #[error("Generator error: {0}")]
+    Generator(String),
+}
+
+impl From<crate::config::profile_manager::ProfileError> for ConfigError {
+    fn from(err: crate::config::profile_manager::ProfileError) -> Self {
+        ConfigError::Profile(err.to_string())
+    }
+}
+
+impl From<crate::config::rhai_generator::GeneratorError> for ConfigError {
+    fn from(err: crate::config::rhai_generator::GeneratorError) -> Self {
+        ConfigError::Generator(err.to_string())
+    }
 }
 
 /// Web server and API errors.

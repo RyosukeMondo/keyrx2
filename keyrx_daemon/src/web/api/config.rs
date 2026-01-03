@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::error::ApiError;
-use crate::config::rhai_generator::{GeneratorError, KeyAction, RhaiGenerator};
+use crate::config::rhai_generator::{KeyAction, RhaiGenerator};
+use crate::error::DaemonError;
 use crate::web::AppState;
 
 pub fn routes() -> Router<Arc<AppState>> {
@@ -22,7 +22,9 @@ pub fn routes() -> Router<Arc<AppState>> {
 }
 
 /// GET /api/config - Get current configuration
-async fn get_config() -> Result<Json<Value>, ApiError> {
+async fn get_config() -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config_dir = get_config_dir()?;
     let active_profile = query_active_profile().unwrap_or_else(|| "default".to_string());
 
@@ -31,19 +33,16 @@ async fn get_config() -> Result<Json<Value>, ApiError> {
         .join(format!("{}.rhai", active_profile));
 
     if !rhai_path.exists() {
-        return Err(ApiError::NotFound(format!(
-            "Active profile '{}' not found",
-            active_profile
-        )));
+        return Err(ConfigError::FileNotFound { path: rhai_path }.into());
     }
 
     let generator =
-        RhaiGenerator::load(&rhai_path).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        RhaiGenerator::load(&rhai_path).map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     // Get base mappings and layers
     let base_mappings = generator
         .get_layer_mappings("base")
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+        .map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     let layers = generator.list_layers();
 
@@ -76,7 +75,9 @@ struct SetKeyMappingRequest {
 
 async fn set_key_mapping(
     Json(payload): Json<SetKeyMappingRequest>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::{ConfigError, WebError};
+
     let config_dir = get_config_dir()?;
     let active_profile = query_active_profile().unwrap_or_else(|| "default".to_string());
 
@@ -85,29 +86,26 @@ async fn set_key_mapping(
         .join(format!("{}.rhai", active_profile));
 
     if !rhai_path.exists() {
-        return Err(ApiError::NotFound(format!(
-            "Active profile '{}' not found",
-            active_profile
-        )));
+        return Err(ConfigError::FileNotFound { path: rhai_path }.into());
     }
 
     let mut generator =
-        RhaiGenerator::load(&rhai_path).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        RhaiGenerator::load(&rhai_path).map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     // Parse action type
     let action = match payload.action_type.as_str() {
         "simple" => {
-            let output = payload.output.ok_or_else(|| {
-                ApiError::BadRequest("Missing 'output' field for simple remap".to_string())
+            let output = payload.output.ok_or_else(|| WebError::InvalidRequest {
+                reason: "Missing 'output' field for simple remap".to_string(),
             })?;
             KeyAction::SimpleRemap { output }
         }
         "tap_hold" => {
-            let tap = payload.tap.ok_or_else(|| {
-                ApiError::BadRequest("Missing 'tap' field for tap_hold".to_string())
+            let tap = payload.tap.ok_or_else(|| WebError::InvalidRequest {
+                reason: "Missing 'tap' field for tap_hold".to_string(),
             })?;
-            let hold = payload.hold.ok_or_else(|| {
-                ApiError::BadRequest("Missing 'hold' field for tap_hold".to_string())
+            let hold = payload.hold.ok_or_else(|| WebError::InvalidRequest {
+                reason: "Missing 'hold' field for tap_hold".to_string(),
             })?;
             let threshold_ms = payload.threshold_ms.unwrap_or(200);
             KeyAction::TapHold {
@@ -117,40 +115,38 @@ async fn set_key_mapping(
             }
         }
         _ => {
-            return Err(ApiError::BadRequest(format!(
-                "Unsupported action type: {}. Use 'simple' or 'tap_hold'",
-                payload.action_type
-            )))
+            return Err(WebError::InvalidRequest {
+                reason: format!(
+                    "Unsupported action type: {}. Use 'simple' or 'tap_hold'",
+                    payload.action_type
+                ),
+            }
+            .into())
         }
     };
 
     generator
         .set_key_mapping(&payload.layer, &payload.key, action)
-        .map_err(|e| match e {
-            GeneratorError::LayerNotFound(layer) => {
-                ApiError::NotFound(format!("Layer '{}' not found", layer))
-            }
-            GeneratorError::InvalidKeyName(key) => {
-                ApiError::BadRequest(format!("Invalid key name: {}", key))
-            }
-            _ => ApiError::InternalError(e.to_string()),
-        })?;
+        .map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     generator
         .save(&rhai_path)
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+        .map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     Ok(Json(json!({ "success": true })))
 }
 
 /// DELETE /api/config/key-mappings/:id - Delete key mapping
 /// Format: layer:key (e.g., "base:A" or "MD_00:Space")
-async fn delete_key_mapping(Path(id): Path<String>) -> Result<Json<Value>, ApiError> {
+async fn delete_key_mapping(Path(id): Path<String>) -> Result<Json<Value>, DaemonError> {
+    use crate::error::{ConfigError, WebError};
+
     let parts: Vec<&str> = id.split(':').collect();
     if parts.len() != 2 {
-        return Err(ApiError::BadRequest(
-            "Invalid mapping ID. Use format 'layer:key' (e.g., 'base:A')".to_string(),
-        ));
+        return Err(WebError::InvalidRequest {
+            reason: "Invalid mapping ID. Use format 'layer:key' (e.g., 'base:A')".to_string(),
+        }
+        .into());
     }
 
     let layer = parts[0];
@@ -164,30 +160,19 @@ async fn delete_key_mapping(Path(id): Path<String>) -> Result<Json<Value>, ApiEr
         .join(format!("{}.rhai", active_profile));
 
     if !rhai_path.exists() {
-        return Err(ApiError::NotFound(format!(
-            "Active profile '{}' not found",
-            active_profile
-        )));
+        return Err(ConfigError::FileNotFound { path: rhai_path }.into());
     }
 
     let mut generator =
-        RhaiGenerator::load(&rhai_path).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        RhaiGenerator::load(&rhai_path).map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     generator
         .delete_key_mapping(layer, key)
-        .map_err(|e| match e {
-            GeneratorError::LayerNotFound(layer) => {
-                ApiError::NotFound(format!("Layer '{}' not found", layer))
-            }
-            GeneratorError::InvalidKeyName(key) => {
-                ApiError::BadRequest(format!("Invalid key name: {}", key))
-            }
-            _ => ApiError::InternalError(e.to_string()),
-        })?;
+        .map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     generator
         .save(&rhai_path)
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+        .map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     Ok(Json(json!({ "success": true })))
 }
@@ -198,7 +183,11 @@ struct UpdateConfigRequest {
     content: String,
 }
 
-async fn update_config(Json(payload): Json<UpdateConfigRequest>) -> Result<Json<Value>, ApiError> {
+async fn update_config(
+    Json(payload): Json<UpdateConfigRequest>,
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config_dir = get_config_dir()?;
     let active_profile = query_active_profile().unwrap_or_else(|| "default".to_string());
 
@@ -207,8 +196,7 @@ async fn update_config(Json(payload): Json<UpdateConfigRequest>) -> Result<Json<
         .join(format!("{}.rhai", active_profile));
 
     // Write the configuration content to the file
-    std::fs::write(&rhai_path, payload.content.as_bytes())
-        .map_err(|e| ApiError::InternalError(format!("Failed to write config file: {}", e)))?;
+    std::fs::write(&rhai_path, payload.content.as_bytes()).map_err(ConfigError::Io)?;
 
     // Validate the configuration by attempting to load it
     // This ensures syntax errors are caught
@@ -239,7 +227,9 @@ struct LayerInfo {
 }
 
 /// GET /api/layers - List layers
-async fn list_layers() -> Result<Json<Value>, ApiError> {
+async fn list_layers() -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config_dir = get_config_dir()?;
     let active_profile = query_active_profile().unwrap_or_else(|| "default".to_string());
 
@@ -248,19 +238,16 @@ async fn list_layers() -> Result<Json<Value>, ApiError> {
         .join(format!("{}.rhai", active_profile));
 
     if !rhai_path.exists() {
-        return Err(ApiError::NotFound(format!(
-            "Active profile '{}' not found",
-            active_profile
-        )));
+        return Err(ConfigError::FileNotFound { path: rhai_path }.into());
     }
 
     let generator =
-        RhaiGenerator::load(&rhai_path).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        RhaiGenerator::load(&rhai_path).map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     // Get base layer
     let base_mappings = generator
         .get_layer_mappings("base")
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+        .map_err(|e| ConfigError::Generator(e.to_string()))?;
 
     let mut layers = vec![LayerInfo {
         id: "base".to_string(),
@@ -285,10 +272,15 @@ async fn list_layers() -> Result<Json<Value>, ApiError> {
 }
 
 /// Get config directory path
-fn get_config_dir() -> Result<std::path::PathBuf, ApiError> {
+fn get_config_dir() -> Result<std::path::PathBuf, DaemonError> {
+    use crate::error::ConfigError;
+
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| ApiError::InternalError("Cannot determine home directory".to_string()))?;
+        .map_err(|_| ConfigError::ParseError {
+            path: std::path::PathBuf::from("~"),
+            reason: "Cannot determine home directory".to_string(),
+        })?;
 
     Ok(std::path::PathBuf::from(home).join(".config/keyrx"))
 }

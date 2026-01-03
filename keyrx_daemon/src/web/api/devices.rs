@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::error::ApiError;
 use crate::config::device_registry::{DeviceRegistry, DeviceScope};
+use crate::error::DaemonError;
 use crate::web::AppState;
 
 pub fn routes() -> Router<Arc<AppState>> {
@@ -41,7 +41,7 @@ struct DevicesListResponse {
 
 /// GET /api/devices - List all connected devices
 #[cfg(any(target_os = "linux", target_os = "windows"))]
-async fn list_devices() -> Result<Json<DevicesListResponse>, ApiError> {
+async fn list_devices() -> Result<Json<DevicesListResponse>, DaemonError> {
     use crate::device_manager::enumerate_keyboards;
 
     // Get registry path
@@ -49,12 +49,13 @@ async fn list_devices() -> Result<Json<DevicesListResponse>, ApiError> {
     let registry_path = config_dir.join("devices.json");
 
     // Load registry (contains user-set names and scopes)
-    let registry = DeviceRegistry::load(&registry_path)
-        .map_err(|e| ApiError::InternalError(format!("Failed to load device registry: {}", e)))?;
+    let registry = DeviceRegistry::load(&registry_path)?;
 
     // Enumerate actual connected devices
-    let keyboards = enumerate_keyboards()
-        .map_err(|e| ApiError::InternalError(format!("Failed to enumerate keyboards: {}", e)))?;
+    let keyboards = enumerate_keyboards().map_err(|e| {
+        use crate::error::PlatformError;
+        PlatformError::DeviceError(e.to_string())
+    })?;
 
     let devices: Vec<DeviceResponse> = keyboards
         .into_iter()
@@ -83,7 +84,7 @@ async fn list_devices() -> Result<Json<DevicesListResponse>, ApiError> {
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
-async fn list_devices() -> Result<Json<DevicesListResponse>, ApiError> {
+async fn list_devices() -> Result<Json<DevicesListResponse>, DaemonError> {
     Ok(Json(DevicesListResponse {
         devices: Vec::new(),
     }))
@@ -98,20 +99,18 @@ struct RenameDeviceRequest {
 async fn rename_device(
     Path(id): Path<String>,
     Json(payload): Json<RenameDeviceRequest>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
     let config_dir = get_config_dir()?;
     let registry_path = config_dir.join("devices.json");
 
-    let mut registry = DeviceRegistry::load(&registry_path)
-        .map_err(|e| ApiError::InternalError(format!("Failed to load device registry: {}", e)))?;
+    let mut registry = DeviceRegistry::load(&registry_path)?;
 
-    registry
-        .rename(&id, &payload.name)
-        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
+    registry.rename(&id, &payload.name).map_err(|e| {
+        use crate::error::RegistryError;
+        RegistryError::CorruptedRegistry(e.to_string())
+    })?;
 
-    registry
-        .save()
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    registry.save()?;
 
     Ok(Json(json!({ "success": true })))
 }
@@ -125,26 +124,31 @@ struct SetDeviceScopeRequest {
 async fn set_device_scope(
     Path(id): Path<String>,
     Json(payload): Json<SetDeviceScopeRequest>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::WebError;
+
     let scope = match payload.scope.as_str() {
         "global" => DeviceScope::Global,
         "device-specific" => DeviceScope::DeviceSpecific,
-        _ => return Err(ApiError::BadRequest("Invalid scope value".to_string())),
+        _ => {
+            return Err(WebError::InvalidRequest {
+                reason: "Invalid scope value".to_string(),
+            }
+            .into())
+        }
     };
 
     let config_dir = get_config_dir()?;
     let registry_path = config_dir.join("devices.json");
 
-    let mut registry = DeviceRegistry::load(&registry_path)
-        .map_err(|e| ApiError::InternalError(format!("Failed to load device registry: {}", e)))?;
+    let mut registry = DeviceRegistry::load(&registry_path)?;
 
-    registry
-        .set_scope(&id, scope)
-        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
+    registry.set_scope(&id, scope).map_err(|e| {
+        use crate::error::RegistryError;
+        RegistryError::CorruptedRegistry(e.to_string())
+    })?;
 
-    registry
-        .save()
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    registry.save()?;
 
     Ok(Json(json!({ "success": true })))
 }
@@ -158,20 +162,18 @@ struct SetDeviceLayoutRequest {
 async fn set_device_layout(
     Path(id): Path<String>,
     Json(payload): Json<SetDeviceLayoutRequest>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
     let config_dir = get_config_dir()?;
     let registry_path = config_dir.join("devices.json");
 
-    let mut registry = DeviceRegistry::load(&registry_path)
-        .map_err(|e| ApiError::InternalError(format!("Failed to load device registry: {}", e)))?;
+    let mut registry = DeviceRegistry::load(&registry_path)?;
 
-    registry
-        .set_layout(&id, &payload.layout)
-        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
+    registry.set_layout(&id, &payload.layout).map_err(|e| {
+        use crate::error::RegistryError;
+        RegistryError::CorruptedRegistry(e.to_string())
+    })?;
 
-    registry
-        .save()
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    registry.save()?;
 
     Ok(Json(json!({ "success": true })))
 }
@@ -184,16 +186,17 @@ struct GetDeviceLayoutResponse {
 
 async fn get_device_layout(
     Path(id): Path<String>,
-) -> Result<Json<GetDeviceLayoutResponse>, ApiError> {
+) -> Result<Json<GetDeviceLayoutResponse>, DaemonError> {
+    use crate::error::RegistryError;
+
     let config_dir = get_config_dir()?;
     let registry_path = config_dir.join("devices.json");
 
-    let registry = DeviceRegistry::load(&registry_path)
-        .map_err(|e| ApiError::InternalError(format!("Failed to load device registry: {}", e)))?;
+    let registry = DeviceRegistry::load(&registry_path)?;
 
     let device = registry
         .get(&id)
-        .ok_or_else(|| ApiError::NotFound(format!("Device not found: {}", id)))?;
+        .ok_or_else(|| RegistryError::CorruptedRegistry(format!("Device not found: {}", id)))?;
 
     Ok(Json(GetDeviceLayoutResponse {
         layout: device.layout.clone(),
@@ -201,29 +204,32 @@ async fn get_device_layout(
 }
 
 /// DELETE /api/devices/:id - Forget device
-async fn forget_device(Path(id): Path<String>) -> Result<Json<Value>, ApiError> {
+async fn forget_device(Path(id): Path<String>) -> Result<Json<Value>, DaemonError> {
     let config_dir = get_config_dir()?;
     let registry_path = config_dir.join("devices.json");
 
-    let mut registry = DeviceRegistry::load(&registry_path)
-        .map_err(|e| ApiError::InternalError(format!("Failed to load device registry: {}", e)))?;
+    let mut registry = DeviceRegistry::load(&registry_path)?;
 
-    registry
-        .forget(&id)
-        .map_err(|e| ApiError::NotFound(e.to_string()))?;
+    registry.forget(&id).map_err(|e| {
+        use crate::error::RegistryError;
+        RegistryError::CorruptedRegistry(e.to_string())
+    })?;
 
-    registry
-        .save()
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    registry.save()?;
 
     Ok(Json(json!({ "success": true })))
 }
 
 /// Get config directory path
-fn get_config_dir() -> Result<std::path::PathBuf, ApiError> {
+fn get_config_dir() -> Result<std::path::PathBuf, DaemonError> {
+    use crate::error::ConfigError;
+
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| ApiError::InternalError("Cannot determine home directory".to_string()))?;
+        .map_err(|_| ConfigError::ParseError {
+            path: std::path::PathBuf::from("~"),
+            reason: "Cannot determine home directory".to_string(),
+        })?;
 
     Ok(std::path::PathBuf::from(home).join(".config/keyrx"))
 }

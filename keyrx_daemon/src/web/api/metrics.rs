@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::error::ApiError;
+use crate::error::{DaemonError, SocketError};
 use crate::ipc::{DaemonIpc, IpcRequest, IpcResponse, DEFAULT_SOCKET_PATH};
 use crate::web::AppState;
 
@@ -69,7 +69,7 @@ struct StatusResponse {
     device_count: Option<usize>,
 }
 
-async fn get_status() -> Result<Json<StatusResponse>, ApiError> {
+async fn get_status() -> Result<Json<StatusResponse>, DaemonError> {
     // Try to query daemon via IPC
     let daemon_info = query_daemon_status();
 
@@ -98,13 +98,15 @@ struct LatencyStatsResponse {
 }
 
 /// GET /api/metrics/latency - Get latency statistics
-async fn get_latency_stats() -> Result<Json<LatencyStatsResponse>, ApiError> {
+async fn get_latency_stats() -> Result<Json<LatencyStatsResponse>, DaemonError> {
+    use crate::error::WebError;
+
     let socket_path = std::path::PathBuf::from(DEFAULT_SOCKET_PATH);
     let mut ipc = crate::ipc::unix_socket::UnixSocketIpc::new(socket_path);
 
     let response = ipc
         .send_request(&IpcRequest::GetLatencyMetrics)
-        .map_err(|_| ApiError::DaemonNotRunning)?;
+        .map_err(|_| SocketError::NotConnected)?;
 
     match response {
         IpcResponse::Latency {
@@ -120,13 +122,14 @@ async fn get_latency_stats() -> Result<Json<LatencyStatsResponse>, ApiError> {
             p95_us,
             p99_us,
         })),
-        IpcResponse::Error { code, message } => Err(ApiError::InternalError(format!(
-            "Daemon error {}: {}",
-            code, message
-        ))),
-        _ => Err(ApiError::InternalError(
-            "Unexpected response from daemon".to_string(),
-        )),
+        IpcResponse::Error { code, message } => Err(WebError::InvalidRequest {
+            reason: format!("Daemon error {}: {}", code, message),
+        }
+        .into()),
+        _ => Err(WebError::InvalidRequest {
+            reason: "Unexpected response from daemon".to_string(),
+        }
+        .into()),
     }
 }
 
@@ -136,7 +139,9 @@ struct EventLogQuery {
 }
 
 /// GET /api/metrics/events - Get event log
-async fn get_event_log(Query(params): Query<EventLogQuery>) -> Result<Json<Value>, ApiError> {
+async fn get_event_log(Query(params): Query<EventLogQuery>) -> Result<Json<Value>, DaemonError> {
+    use crate::error::WebError;
+
     let count = params.count.unwrap_or(100);
 
     let socket_path = std::path::PathBuf::from(DEFAULT_SOCKET_PATH);
@@ -144,25 +149,26 @@ async fn get_event_log(Query(params): Query<EventLogQuery>) -> Result<Json<Value
 
     let response = ipc
         .send_request(&IpcRequest::GetEventsTail { count })
-        .map_err(|_| ApiError::DaemonNotRunning)?;
+        .map_err(|_| SocketError::NotConnected)?;
 
     match response {
         IpcResponse::Events { events } => Ok(Json(json!({
             "count": events.len(),
             "events": events,
         }))),
-        IpcResponse::Error { code, message } => Err(ApiError::InternalError(format!(
-            "Daemon error {}: {}",
-            code, message
-        ))),
-        _ => Err(ApiError::InternalError(
-            "Unexpected response from daemon".to_string(),
-        )),
+        IpcResponse::Error { code, message } => Err(WebError::InvalidRequest {
+            reason: format!("Daemon error {}: {}", code, message),
+        }
+        .into()),
+        _ => Err(WebError::InvalidRequest {
+            reason: "Unexpected response from daemon".to_string(),
+        }
+        .into()),
     }
 }
 
 /// DELETE /api/metrics/events - Clear event log
-async fn clear_event_log() -> Result<Json<Value>, ApiError> {
+async fn clear_event_log() -> Result<Json<Value>, DaemonError> {
     // Note: The daemon doesn't currently have a "clear events" IPC command
     // This would require adding a new IpcRequest::ClearEvents variant
     // For now, return a not implemented response
@@ -186,13 +192,15 @@ struct DaemonStateResponse {
 }
 
 /// GET /api/daemon/state - Get current daemon state
-async fn get_daemon_state() -> Result<Json<DaemonStateResponse>, ApiError> {
+async fn get_daemon_state() -> Result<Json<DaemonStateResponse>, DaemonError> {
+    use crate::error::WebError;
+
     let socket_path = std::path::PathBuf::from(DEFAULT_SOCKET_PATH);
     let mut ipc = crate::ipc::unix_socket::UnixSocketIpc::new(socket_path);
 
     let response = ipc
         .send_request(&IpcRequest::GetState)
-        .map_err(|_| ApiError::DaemonNotRunning)?;
+        .map_err(|_| SocketError::NotConnected)?;
 
     match response {
         IpcResponse::State { state } => {
@@ -255,13 +263,14 @@ async fn get_daemon_state() -> Result<Json<DaemonStateResponse>, ApiError> {
                 active_lock_count: locks.len(),
             }))
         }
-        IpcResponse::Error { code, message } => Err(ApiError::InternalError(format!(
-            "Daemon error {}: {}",
-            code, message
-        ))),
-        _ => Err(ApiError::InternalError(
-            "Unexpected response from daemon".to_string(),
-        )),
+        IpcResponse::Error { code, message } => Err(WebError::InvalidRequest {
+            reason: format!("Daemon error {}: {}", code, message),
+        }
+        .into()),
+        _ => Err(WebError::InvalidRequest {
+            reason: "Unexpected response from daemon".to_string(),
+        }
+        .into()),
     }
 }
 

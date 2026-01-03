@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::error::ApiError;
-use crate::config::profile_manager::{ProfileError, ProfileManager, ProfileTemplate};
+use crate::config::profile_manager::{ProfileManager, ProfileTemplate};
+use crate::error::DaemonError;
 use crate::web::AppState;
 
 pub fn routes() -> Router<Arc<AppState>> {
@@ -65,13 +65,15 @@ struct ProfilesListResponse {
 }
 
 /// GET /api/profiles - List all profiles
-async fn list_profiles() -> Result<Json<ProfilesListResponse>, ApiError> {
+async fn list_profiles() -> Result<Json<ProfilesListResponse>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config_dir = get_config_dir()?;
     let mut pm =
-        ProfileManager::new(config_dir).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     pm.scan_profiles()
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     let active_profile = query_active_profile();
 
@@ -103,20 +105,27 @@ struct CreateProfileRequest {
 
 async fn create_profile(
     Json(payload): Json<CreateProfileRequest>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::{ConfigError, WebError};
+
     let template = match payload.template.as_str() {
         "blank" => ProfileTemplate::Blank,
         "qmk-layers" => ProfileTemplate::QmkLayers,
-        _ => return Err(ApiError::BadRequest("Invalid template".to_string())),
+        _ => {
+            return Err(WebError::InvalidRequest {
+                reason: "Invalid template".to_string(),
+            }
+            .into())
+        }
     };
 
     let config_dir = get_config_dir()?;
     let mut pm =
-        ProfileManager::new(config_dir).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     let metadata = pm
         .create(&payload.name, template)
-        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     Ok(Json(json!({
         "success": true,
@@ -129,19 +138,22 @@ async fn create_profile(
 }
 
 /// POST /api/profiles/:name/activate - Activate profile
-async fn activate_profile(Path(name): Path<String>) -> Result<Json<Value>, ApiError> {
+async fn activate_profile(Path(name): Path<String>) -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config_dir = get_config_dir()?;
     let mut pm =
-        ProfileManager::new(config_dir).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     let result = pm
         .activate(&name)
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     if !result.success {
-        return Err(ApiError::InternalError(
-            result.error.unwrap_or_else(|| "Unknown error".to_string()),
-        ));
+        return Err(ConfigError::CompilationFailed {
+            reason: result.error.unwrap_or_else(|| "Unknown error".to_string()),
+        }
+        .into());
     }
 
     Ok(Json(json!({
@@ -152,13 +164,15 @@ async fn activate_profile(Path(name): Path<String>) -> Result<Json<Value>, ApiEr
 }
 
 /// DELETE /api/profiles/:name - Delete profile
-async fn delete_profile(Path(name): Path<String>) -> Result<Json<Value>, ApiError> {
+async fn delete_profile(Path(name): Path<String>) -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config_dir = get_config_dir()?;
     let mut pm =
-        ProfileManager::new(config_dir).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     pm.delete(&name)
-        .map_err(|e| ApiError::NotFound(e.to_string()))?;
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     Ok(Json(json!({ "success": true })))
 }
@@ -172,14 +186,16 @@ struct DuplicateProfileRequest {
 async fn duplicate_profile(
     Path(name): Path<String>,
     Json(payload): Json<DuplicateProfileRequest>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config_dir = get_config_dir()?;
     let mut pm =
-        ProfileManager::new(config_dir).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     let metadata = pm
         .duplicate(&name, &payload.new_name)
-        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     Ok(Json(json!({
         "success": true,
@@ -199,23 +215,20 @@ struct RenameProfileRequest {
 async fn rename_profile(
     Path(name): Path<String>,
     Json(payload): Json<RenameProfileRequest>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config_dir = get_config_dir()?;
     let mut pm =
-        ProfileManager::new(config_dir).map_err(|e| ApiError::InternalError(e.to_string()))?;
+        ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     // Scan profiles to ensure the profile list is up to date
     pm.scan_profiles()
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
-    let metadata = pm.rename(&name, &payload.new_name).map_err(|e| match e {
-        ProfileError::NotFound(_) => ApiError::NotFound(format!("Profile '{}' not found", name)),
-        ProfileError::AlreadyExists(_) => {
-            ApiError::BadRequest(format!("Profile '{}' already exists", payload.new_name))
-        }
-        ProfileError::InvalidName(_) => ApiError::BadRequest(e.to_string()),
-        _ => ApiError::InternalError(e.to_string()),
-    })?;
+    let metadata = pm
+        .rename(&name, &payload.new_name)
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     Ok(Json(json!({
         "success": true,
@@ -228,7 +241,9 @@ async fn rename_profile(
 }
 
 /// GET /api/profiles/active - Get active profile
-async fn get_active_profile(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
+async fn get_active_profile(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, DaemonError> {
     let active_profile = state.profile_service.get_active_profile().await;
 
     Ok(Json(json!({
@@ -240,17 +255,14 @@ async fn get_active_profile(State(state): State<Arc<AppState>>) -> Result<Json<V
 async fn get_profile_config(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     let config = state
         .profile_service
         .get_profile_config(&name)
         .await
-        .map_err(|e| match e {
-            ProfileError::NotFound(_) => {
-                ApiError::NotFound(format!("Profile '{}' not found", name))
-            }
-            _ => ApiError::InternalError(e.to_string()),
-        })?;
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     Ok(Json(json!({
         "name": name,
@@ -268,17 +280,14 @@ async fn set_profile_config(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
     Json(payload): Json<SetProfileConfigRequest>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>, DaemonError> {
+    use crate::error::ConfigError;
+
     state
         .profile_service
         .set_profile_config(&name, &payload.config)
         .await
-        .map_err(|e| match e {
-            ProfileError::NotFound(_) => {
-                ApiError::NotFound(format!("Profile '{}' not found", name))
-            }
-            _ => ApiError::InternalError(e.to_string()),
-        })?;
+        .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
     Ok(Json(json!({
         "success": true,
@@ -286,10 +295,15 @@ async fn set_profile_config(
 }
 
 /// Get config directory path
-fn get_config_dir() -> Result<std::path::PathBuf, ApiError> {
+fn get_config_dir() -> Result<std::path::PathBuf, DaemonError> {
+    use crate::error::ConfigError;
+
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| ApiError::InternalError("Cannot determine home directory".to_string()))?;
+        .map_err(|_| ConfigError::ParseError {
+            path: std::path::PathBuf::from("~"),
+            reason: "Cannot determine home directory".to_string(),
+        })?;
 
     Ok(std::path::PathBuf::from(home).join(".config/keyrx"))
 }
