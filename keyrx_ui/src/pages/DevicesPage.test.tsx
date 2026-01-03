@@ -10,42 +10,55 @@ vi.mock('react-router-dom', () => ({
 }));
 
 describe('DevicesPage', () => {
-  it('renders devices page with device list', () => {
+  it('renders devices page with device list', async () => {
     renderWithProviders(<DevicesPage />);
 
-    expect(screen.getByText('Devices')).toBeInTheDocument();
+    // Wait for data to load
+    await waitFor(() => {
+      expect(screen.getByText('Devices')).toBeInTheDocument();
+    });
+
     expect(screen.getByText(/Device List \(2 connected\)/)).toBeInTheDocument();
-    expect(screen.getAllByText('Main Keyboard').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Left Numpad').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Test Keyboard 1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Test Keyboard 2').length).toBeGreaterThan(0);
   });
 
-  it('shows connected status for active device', () => {
+  it('shows connected status for active device', async () => {
     renderWithProviders(<DevicesPage />);
 
-    const connectedLabels = screen.getAllByText('✓ Connected');
-    expect(connectedLabels.length).toBeGreaterThan(0);
+    // Wait for devices to load
+    await screen.findByText('Devices');
+
+    await waitFor(() => {
+      const connectedLabels = screen.getAllByText('✓ Connected');
+      expect(connectedLabels.length).toBeGreaterThan(0);
+    });
   });
 
-  it('displays device details', () => {
+  it('displays device details', async () => {
     renderWithProviders(<DevicesPage />);
 
-    expect(screen.getByText(/USB\\VID_1234&PID_5678\\ABC123/)).toBeInTheDocument();
-    expect(screen.getByText(/Serial: ABC123/)).toBeInTheDocument();
-    expect(screen.getByText(/Vendor: 0x1234/)).toBeInTheDocument();
-    expect(screen.getByText(/Product: 0x5678/)).toBeInTheDocument();
+    // Wait for devices to load
+    await screen.findByText('Devices');
+
+    await waitFor(() => {
+      expect(screen.getByText(/0x1234/)).toBeInTheDocument();
+      expect(screen.getByText(/0x5678/)).toBeInTheDocument();
+    });
   });
 
   it('enters rename mode when Rename button is clicked', async () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const renameButton = screen.getByLabelText('Rename device Main Keyboard');
+    // Wait for devices to load
+    const renameButton = await screen.findByLabelText('Rename device Test Keyboard 1');
     await user.click(renameButton);
 
     // Input should appear with current name
     const input = screen.getByRole('textbox', { name: 'Device name' });
     expect(input).toBeInTheDocument();
-    expect(input).toHaveValue('Main Keyboard');
+    expect(input).toHaveValue('Test Keyboard 1');
 
     // Save and Cancel buttons should appear
     expect(screen.getByLabelText('Save device name')).toBeInTheDocument();
@@ -56,7 +69,8 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const renameButton = screen.getByLabelText('Rename device Main Keyboard');
+    // Wait for devices to load
+    const renameButton = await screen.findByLabelText('Rename device Test Keyboard 1');
     await user.click(renameButton);
 
     const input = screen.getByRole('textbox', { name: 'Device name' });
@@ -77,7 +91,8 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const renameButton = screen.getByLabelText('Rename device Main Keyboard');
+    // Wait for devices to load
+    const renameButton = await screen.findByLabelText('Rename device Test Keyboard 1');
     await user.click(renameButton);
 
     const input = screen.getByRole('textbox', { name: 'Device name' });
@@ -95,7 +110,8 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const renameButton = screen.getByLabelText('Rename device Main Keyboard');
+    // Wait for devices to load
+    const renameButton = await screen.findByLabelText('Rename device Test Keyboard 1');
     await user.click(renameButton);
 
     const input = screen.getByRole('textbox', { name: 'Device name' });
@@ -109,7 +125,7 @@ describe('DevicesPage', () => {
     expect(screen.queryByRole('textbox', { name: 'Device name' })).not.toBeInTheDocument();
 
     // Original name should still be displayed
-    expect(screen.getAllByText('Main Keyboard').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Test Keyboard 1').length).toBeGreaterThan(0);
     expect(screen.queryByText('This should not be saved')).not.toBeInTheDocument();
   });
 
@@ -117,7 +133,8 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const renameButton = screen.getByLabelText('Rename device Main Keyboard');
+    // Wait for devices to load
+    const renameButton = await screen.findByLabelText('Rename device Test Keyboard 1');
     await user.click(renameButton);
 
     const input = screen.getByRole('textbox', { name: 'Device name' });
@@ -128,14 +145,15 @@ describe('DevicesPage', () => {
       expect(screen.queryByRole('textbox', { name: 'Device name' })).not.toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('Main Keyboard').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Test Keyboard 1').length).toBeGreaterThan(0);
   });
 
   it('shows error when trying to save empty name', async () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const renameButton = screen.getByLabelText('Rename device Main Keyboard');
+    // Wait for devices to load
+    const renameButton = await screen.findByLabelText('Rename device Test Keyboard 1');
     await user.click(renameButton);
 
     const input = screen.getByRole('textbox', { name: 'Device name' });
@@ -155,7 +173,8 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const renameButton = screen.getByLabelText('Rename device Main Keyboard');
+    // Wait for devices to load
+    const renameButton = await screen.findByLabelText('Rename device Test Keyboard 1');
     await user.click(renameButton);
 
     const input = screen.getByRole('textbox', { name: 'Device name' });
@@ -170,11 +189,18 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
+    // Wait for devices to load
+    await screen.findByText('Devices');
+
+    await waitFor(() => {
+      const deviceSpecificButton = screen.getAllByLabelText('Set scope to device-specific')[0];
+      expect(deviceSpecificButton).toBeInTheDocument();
+    });
+
     const deviceSpecificButton = screen.getAllByLabelText('Set scope to device-specific')[0];
     await user.click(deviceSpecificButton);
 
     // Check that the button is now highlighted
-    // Note: Exact assertion depends on implementation
     expect(deviceSpecificButton).toHaveClass('border-primary-500');
   });
 
@@ -182,7 +208,15 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    // Find the second device (Left Numpad) which has device-specific scope
+    // Wait for devices to load
+    await screen.findByText('Devices');
+
+    await waitFor(() => {
+      const globalButtons = screen.getAllByLabelText('Set scope to global');
+      expect(globalButtons.length).toBeGreaterThan(1);
+    });
+
+    // Find the second device (Test Keyboard 2) which has device-specific scope
     const globalButtons = screen.getAllByLabelText('Set scope to global');
     const globalButton = globalButtons[1]; // Second device
     await user.click(globalButton);
@@ -193,6 +227,14 @@ describe('DevicesPage', () => {
   it('changes layout via dropdown', async () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
+
+    // Wait for devices to load
+    await screen.findByText('Devices');
+
+    await waitFor(() => {
+      const layoutDropdowns = screen.getAllByLabelText('Select keyboard layout');
+      expect(layoutDropdowns.length).toBeGreaterThan(0);
+    });
 
     // Find the first layout dropdown
     const layoutDropdowns = screen.getAllByLabelText('Select keyboard layout');
@@ -213,7 +255,8 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const forgetButton = screen.getByLabelText('Forget device Main Keyboard');
+    // Wait for devices to load
+    const forgetButton = await screen.findByLabelText('Forget device Test Keyboard 1');
     await user.click(forgetButton);
 
     // Modal should appear with confirmation message
@@ -225,7 +268,8 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const forgetButton = screen.getByLabelText('Forget device Main Keyboard');
+    // Wait for devices to load
+    const forgetButton = await screen.findByLabelText('Forget device Test Keyboard 1');
     await user.click(forgetButton);
 
     const cancelButton = screen.getByLabelText('Cancel forget device');
@@ -237,14 +281,15 @@ describe('DevicesPage', () => {
     });
 
     // Device should still be in the list
-    expect(screen.getAllByText('Main Keyboard').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Test Keyboard 1').length).toBeGreaterThan(0);
   });
 
   it('removes device when Forget Device is confirmed', async () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
-    const forgetButton = screen.getByLabelText('Forget device Main Keyboard');
+    // Wait for devices to load
+    const forgetButton = await screen.findByLabelText('Forget device Test Keyboard 1');
     await user.click(forgetButton);
 
     const confirmButton = screen.getByLabelText('Confirm forget device');
@@ -257,7 +302,7 @@ describe('DevicesPage', () => {
 
     // Device should be removed from the list - check that it's gone from the page
     await waitFor(() => {
-      expect(screen.queryByLabelText('Forget device Main Keyboard')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Forget device Test Keyboard 1')).not.toBeInTheDocument();
     });
 
     // Device count should update
@@ -268,8 +313,11 @@ describe('DevicesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<DevicesPage />);
 
+    // Wait for devices to load
+    await screen.findByText('Devices');
+
     // Remove first device
-    const forgetButton1 = screen.getByLabelText('Forget device Main Keyboard');
+    const forgetButton1 = screen.getByLabelText('Forget device Test Keyboard 1');
     await user.click(forgetButton1);
     const confirmButton1 = screen.getByLabelText('Confirm forget device');
     await user.click(confirmButton1);
@@ -278,7 +326,7 @@ describe('DevicesPage', () => {
     });
 
     // Remove second device
-    const forgetButton2 = screen.getByLabelText('Forget device Left Numpad');
+    const forgetButton2 = screen.getByLabelText('Forget device Test Keyboard 2');
     await user.click(forgetButton2);
     const confirmButton2 = screen.getByLabelText('Confirm forget device');
     await user.click(confirmButton2);
@@ -292,12 +340,17 @@ describe('DevicesPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('has accessible labels for all interactive elements', () => {
+  it('has accessible labels for all interactive elements', async () => {
     renderWithProviders(<DevicesPage />);
 
-    // Rename buttons
-    expect(screen.getByLabelText('Rename device Main Keyboard')).toBeInTheDocument();
-    expect(screen.getByLabelText('Rename device Left Numpad')).toBeInTheDocument();
+    // Wait for devices to load
+    await screen.findByText('Devices');
+
+    await waitFor(() => {
+      // Rename buttons
+      expect(screen.getByLabelText('Rename device Test Keyboard 1')).toBeInTheDocument();
+      expect(screen.getByLabelText('Rename device Test Keyboard 2')).toBeInTheDocument();
+    });
 
     // Scope buttons
     expect(screen.getAllByLabelText('Set scope to global').length).toBeGreaterThan(0);
@@ -307,7 +360,7 @@ describe('DevicesPage', () => {
     expect(screen.getAllByLabelText('Select keyboard layout').length).toBeGreaterThan(0);
 
     // Forget buttons
-    expect(screen.getByLabelText('Forget device Main Keyboard')).toBeInTheDocument();
-    expect(screen.getByLabelText('Forget device Left Numpad')).toBeInTheDocument();
+    expect(screen.getByLabelText('Forget device Test Keyboard 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Forget device Test Keyboard 2')).toBeInTheDocument();
   });
 });

@@ -15,6 +15,7 @@ mod linux_tray_tests {
     use std::time::Duration;
 
     /// Helper: Check if we're in a graphical environment
+    #[allow(dead_code)]
     fn has_display() -> bool {
         std::env::var("DISPLAY").is_ok() || std::env::var("WAYLAND_DISPLAY").is_ok()
     }

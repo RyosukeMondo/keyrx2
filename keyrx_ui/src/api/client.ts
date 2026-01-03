@@ -16,7 +16,7 @@ export class ApiError extends Error {
 
 interface ApiResponse<T> {
   data?: T;
-  error?: string;
+  error?: string | { code: string; message: string };
   errorCode?: string;
 }
 
@@ -47,10 +47,34 @@ async function apiFetch<T>(
     const data: ApiResponse<T> = await response.json();
 
     if (!response.ok) {
+      // Extract error message from object or string
+      let errorMessage: string;
+      let errorCode: string | undefined;
+
+      if (typeof data.error === 'object' && data.error !== null) {
+        // Backend error object format: { code: "...", message: "..." }
+        const message = data.error.message;
+
+        // Ensure message is a string (handle case where message itself is an object)
+        errorMessage = typeof message === 'string'
+          ? message
+          : JSON.stringify(message);
+
+        errorCode = data.error.code;
+      } else if (typeof data.error === 'string') {
+        // Simple string error
+        errorMessage = data.error;
+        errorCode = data.errorCode;
+      } else {
+        // Fallback
+        errorMessage = `Request failed: ${response.statusText}`;
+        errorCode = data.errorCode;
+      }
+
       throw new ApiError(
-        data.error || `Request failed: ${response.statusText}`,
+        errorMessage,
         response.status,
-        data.errorCode
+        errorCode
       );
     }
 

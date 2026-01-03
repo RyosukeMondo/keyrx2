@@ -13,7 +13,7 @@
   "lint-staged": {
     "*.rs": [
       "cargo fmt --check --",
-      "cargo clippy --all-targets -- -D warnings"
+      "bash -c 'cargo clippy --all-targets -- -D warnings'"
     ],
     "keyrx_ui_v2/**/*.{ts,tsx,js,jsx}": [
       "prettier --check",

@@ -165,6 +165,52 @@ export function renderWithProviders(
 }
 
 /**
+ * WebSocket Testing Helpers
+ *
+ * These utilities use jest-websocket-mock (compatible with Vitest) for robust WebSocket testing.
+ * The library automatically integrates with React Testing Library's act() function.
+ *
+ * Basic Usage Pattern:
+ * ```typescript
+ * beforeEach(async () => {
+ *   await setupMockWebSocket();
+ * });
+ *
+ * afterEach(() => {
+ *   cleanupMockWebSocket();
+ * });
+ *
+ * test('handles WebSocket messages', async () => {
+ *   renderWithProviders(<MyComponent />);
+ *
+ *   // Simulate connection handshake
+ *   await simulateConnected();
+ *
+ *   // Send daemon state update
+ *   sendDaemonStateUpdate({ running: true });
+ *
+ *   // Assert component updated
+ *   expect(screen.getByText('Running')).toBeInTheDocument();
+ *
+ *   // Assert client sent messages
+ *   await waitForMessage({ type: 'subscribe', channel: 'daemon-state' });
+ * });
+ * ```
+ */
+export {
+  setupMockWebSocket,
+  getMockWebSocket,
+  cleanupMockWebSocket,
+  sendServerMessage,
+  simulateConnected,
+  sendDaemonStateUpdate,
+  sendLatencyUpdate,
+  waitForMessage,
+  assertReceivedMessages,
+  WS_URL,
+} from './helpers/websocket';
+
+/**
  * Re-export testing utilities for convenience
  */
 export * from '@testing-library/react';

@@ -7,6 +7,7 @@ use std::fs;
 use tempfile::TempDir;
 
 /// Helper to create a test command with a temporary config directory.
+#[allow(deprecated)]
 fn profiles_cmd(temp_dir: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("keyrx_daemon").unwrap();
 

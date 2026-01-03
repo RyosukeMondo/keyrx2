@@ -5,6 +5,7 @@ use predicates::prelude::*;
 use tempfile::TempDir;
 
 /// Helper to create a test command with a custom socket path.
+#[allow(deprecated)]
 fn state_cmd() -> Command {
     Command::cargo_bin("keyrx_daemon").unwrap()
 }

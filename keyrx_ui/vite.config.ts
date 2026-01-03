@@ -27,9 +27,28 @@ export default defineConfig({
       brotliSize: true,
     }),
   ],
+  server: {
+    port: 5173,
+    proxy: {
+      // Proxy API requests to daemon
+      '/api': {
+        target: 'http://localhost:9867',
+        changeOrigin: true,
+        ws: false, // Don't proxy WebSocket here (use /ws prefix instead)
+      },
+      // Proxy WebSocket connections to daemon
+      '/ws': {
+        target: 'ws://localhost:9867',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Fix wasm-pack 'env' import issue
+      'env': path.resolve(__dirname, './src/wasm/env-shim.js'),
     },
   },
   optimizeDeps: {

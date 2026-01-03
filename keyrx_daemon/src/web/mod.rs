@@ -14,6 +14,7 @@ use axum::Router;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
+use tower_http::cors::{Any, CorsLayer};
 
 pub use events::DaemonEvent;
 
@@ -61,11 +62,19 @@ impl AppState {
 
 #[allow(dead_code)]
 pub async fn create_app(event_tx: broadcast::Sender<DaemonEvent>, state: Arc<AppState>) -> Router {
+    // Configure CORS to allow requests from Vite dev server (localhost:5173)
+    // and any other origins for local development
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     Router::new()
         .nest("/api", api::create_router(Arc::clone(&state)))
         .nest("/ws", ws::create_router(event_tx))
         .nest("/ws-rpc", ws_rpc::create_router(Arc::clone(&state)))
         .fallback_service(static_files::serve_static())
+        .layer(cors)
 }
 
 #[allow(dead_code)]

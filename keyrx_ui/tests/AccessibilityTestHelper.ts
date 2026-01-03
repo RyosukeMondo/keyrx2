@@ -7,11 +7,7 @@
  * Requirements: Requirement 4 (WCAG 2.2 Level AA), Task 15
  */
 
-import { axe, toHaveNoViolations } from 'vitest-axe';
-import { expect } from 'vitest';
-
-// Extend Vitest matchers to include axe-core assertions
-expect.extend(toHaveNoViolations);
+import { axe } from 'vitest-axe';
 
 /**
  * WCAG 2.2 Level AA configuration for axe-core

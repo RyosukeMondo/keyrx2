@@ -175,4 +175,46 @@ mod tests {
         assert_eq!(result.compile_time_ms, 100);
         assert!(result.success);
     }
+
+    #[test]
+    fn test_compilation_error_format_user_friendly() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("invalid.rhai");
+        let output = temp_dir.path().join("invalid.krx");
+
+        // Write invalid Rhai script (missing device_start)
+        fs::write(&source, "layer(\"base\", #{});").unwrap();
+
+        let compiler = ProfileCompiler::new();
+        let result = compiler.compile_profile(&source, &output);
+
+        assert!(result.is_err(), "Should fail on invalid script");
+
+        let error = result.unwrap_err();
+        let error_message = error.to_string();
+
+        // Verify error message is user-friendly (NOT Debug format)
+        assert!(
+            !error_message.contains("SyntaxError {"),
+            "Should not contain Rust debug format 'SyntaxError {{'\nGot: {}",
+            error_message
+        );
+        assert!(
+            !error_message.contains("file:"),
+            "Should not contain debug field 'file:'\nGot: {}",
+            error_message
+        );
+        assert!(
+            !error_message.contains("import_chain:"),
+            "Should not contain debug field 'import_chain:'\nGot: {}",
+            error_message
+        );
+
+        // Should contain the actual error information
+        assert!(
+            error_message.contains("Compilation failed") || error_message.contains("line"),
+            "Should contain useful error information\nGot: {}",
+            error_message
+        );
+    }
 }

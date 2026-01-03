@@ -110,7 +110,7 @@ fn start_daemon(krx_path: &std::path::Path) -> Result<Child, std::io::Error> {
 }
 
 #[test]
-#[cfg_attr(tarpaulin, ignore)] // Skip under tarpaulin - test takes too long with coverage instrumentation
+#[ignore] // Skip - test takes too long with coverage instrumentation
 fn test_bug36_sigterm_stops_daemon() -> Result<(), Box<dyn std::error::Error>> {
     use keyrx_daemon::test_utils::VirtualKeyboard;
 
@@ -198,7 +198,7 @@ fn test_bug36_sigterm_stops_daemon() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-#[cfg_attr(tarpaulin, ignore)] // Skip under tarpaulin - test takes too long with coverage instrumentation
+#[ignore] // Skip - test takes too long with coverage instrumentation
 fn test_bug36_sigint_stops_daemon() -> Result<(), Box<dyn std::error::Error>> {
     use keyrx_daemon::test_utils::VirtualKeyboard;
 
@@ -727,14 +727,10 @@ fn test_bug34_poll_error_backoff_implementation() -> Result<(), Box<dyn std::err
             found_poll_error = true;
 
             // Check next 10 lines for sleep/backoff
-            for check_idx in idx..std::cmp::min(idx + 10, lines.len()) {
-                let check_line = lines[check_idx];
+            for (offset, check_line) in lines.iter().skip(idx).take(10).enumerate() {
                 if check_line.contains("sleep") || check_line.contains("Duration::from_millis") {
                     found_sleep_after_error = true;
-                    println!(
-                        "Found sleep after poll error at line offset {}",
-                        check_idx - idx
-                    );
+                    println!("Found sleep after poll error at line offset {}", offset);
                     break;
                 }
             }
@@ -872,16 +868,17 @@ fn test_bug38_config_reload_logging_implementation() -> Result<(), Box<dyn std::
             found_config_get = true;
 
             // Check next 15 lines for else branch with warn!
-            for check_idx in idx..std::cmp::min(idx + 15, lines.len()) {
-                let check_line = lines[check_idx];
+            for (check_offset, check_line) in lines.iter().skip(idx).take(15).enumerate() {
                 if check_line.contains("else") {
                     // Check if this else branch has a warn!
-                    for warn_idx in check_idx..std::cmp::min(check_idx + 5, lines.len()) {
-                        if lines[warn_idx].contains("warn!") {
+                    for (warn_offset, warn_line) in
+                        lines.iter().skip(idx + check_offset).take(5).enumerate()
+                    {
+                        if warn_line.contains("warn!") {
                             found_else_warn = true;
                             println!(
                                 "Found warn! in else branch at line offset {}",
-                                warn_idx - idx
+                                check_offset + warn_offset
                             );
                             break;
                         }

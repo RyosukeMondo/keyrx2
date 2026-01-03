@@ -5,6 +5,7 @@ use predicates::prelude::*;
 use tempfile::TempDir;
 
 /// Helper to create a test command.
+#[allow(deprecated)]
 fn metrics_cmd() -> Command {
     #[allow(deprecated)]
     Command::cargo_bin("keyrx_daemon").unwrap()

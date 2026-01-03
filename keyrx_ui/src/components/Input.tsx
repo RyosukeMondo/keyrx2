@@ -6,7 +6,9 @@ interface InputProps {
   onChange: (value: string) => void;
   error?: string;
   disabled?: boolean;
-  'aria-label': string;
+  'aria-label'?: string;
+  label?: string;
+  helpText?: string;
   maxLength?: number;
   placeholder?: string;
   className?: string;
@@ -22,6 +24,8 @@ export const Input = React.memo<InputProps>(
     error,
     disabled = false,
     'aria-label': ariaLabel,
+    label,
+    helpText,
     maxLength,
     placeholder,
     className = '',
@@ -94,6 +98,11 @@ export const Input = React.memo<InputProps>(
 
     return (
       <div className="w-full">
+        {label && (
+          <label htmlFor={id} className="block text-sm font-medium text-slate-300 mb-2">
+            {label}
+          </label>
+        )}
         <input
           type={type}
           value={value}
@@ -103,13 +112,19 @@ export const Input = React.memo<InputProps>(
           disabled={disabled}
           maxLength={maxLength}
           placeholder={placeholder}
-          aria-label={ariaLabel}
+          aria-label={ariaLabel || label}
           aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
+          aria-describedby={error ? `${id}-error` : helpText ? `${id}-help` : undefined}
           id={id}
           name={name}
           className={inputClasses}
         />
+
+        {helpText && !error && (
+          <div id={`${id}-help`} className="mt-2 text-sm text-slate-400">
+            {helpText}
+          </div>
+        )}
 
         {/* Character counter */}
         {maxLength && (

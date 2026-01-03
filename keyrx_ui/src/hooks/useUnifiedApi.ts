@@ -181,6 +181,38 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
         return;
       }
 
+      // Handle legacy DaemonEvent format (backward compatibility)
+      // Old format: { type: "latency", payload: {...} }
+      // New format: { type: "event", channel: "latency", data: {...} }
+      const anyMessage = message as any;
+      if (anyMessage.type && anyMessage.payload && anyMessage.type !== 'response' && anyMessage.type !== 'connected') {
+        const legacyType = anyMessage.type as string;
+        const legacyPayload = anyMessage.payload;
+
+        // Map legacy event type to channel name
+        const channelMap: Record<string, string> = {
+          'latency': 'latency',
+          'state': 'daemon-state',
+          'event': 'events',
+          'heartbeat': 'heartbeat', // Ignore heartbeats
+        };
+
+        const channel = channelMap[legacyType];
+        if (channel && channel !== 'heartbeat') {
+          const handlers = subscriptions.current.get(channel as SubscriptionChannel);
+          if (handlers) {
+            handlers.forEach((handler) => {
+              try {
+                handler(legacyPayload);
+              } catch (error) {
+                console.error('[useUnifiedApi] Subscription handler error:', error);
+              }
+            });
+          }
+        }
+        return;
+      }
+
       console.warn('[useUnifiedApi] Unknown message type:', message);
     } catch (error) {
       console.error('[useUnifiedApi] Failed to parse message:', error);

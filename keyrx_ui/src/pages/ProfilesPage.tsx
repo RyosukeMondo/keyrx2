@@ -11,6 +11,7 @@ import {
   useActivateProfile,
   useDeleteProfile,
 } from '../hooks/useProfiles';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface Profile {
   id: string;
@@ -105,7 +106,7 @@ export const ProfilesPage: React.FC = () => {
       setNewProfileDescription('');
       setNameError('');
     } catch (err) {
-      setNameError(err instanceof Error ? err.message : 'Failed to create profile');
+      setNameError(getErrorMessage(err, 'Failed to create profile'));
     }
   };
 
@@ -124,7 +125,7 @@ export const ProfilesPage: React.FC = () => {
       }
     } catch (err) {
       // Handle API errors
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      const errorMessage = getErrorMessage(err, 'Unknown error occurred');
       setActivationError(`Failed to activate profile: ${errorMessage}`);
       console.error('Failed to activate profile:', err);
     }

@@ -26,6 +26,8 @@ export type RpcMethod =
   | "get_layers"
   | "get_latency"
   | "get_events"
+  | "get_profile_config"
+  | "get_active_profile"
   // Command methods (state-modifying)
   | "create_profile"
   | "activate_profile"
@@ -40,7 +42,9 @@ export type RpcMethod =
   | "delete_key_mapping"
   | "clear_events"
   | "simulate"
-  | "reset_simulator";
+  | "reset_simulator"
+  | "set_profile_config"
+  | "set_device_layout";
 
 /**
  * Available subscription channels for real-time updates.

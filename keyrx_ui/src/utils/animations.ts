@@ -132,9 +132,9 @@ export const createAnimationProps = (
 ) => {
   if (prefersReducedMotion()) {
     return {
-      initial: false,
+      initial: 'visible',
       animate: 'visible',
-      exit: false,
+      exit: 'visible',
       transition: { duration: 0 },
     };
   }

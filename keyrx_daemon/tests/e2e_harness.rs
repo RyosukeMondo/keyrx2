@@ -681,7 +681,7 @@ impl Default for E2EConfig {
 /// This struct provides detailed information about what happened during
 /// teardown, which is useful for debugging test failures and verifying
 /// cleanup behavior.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TeardownResult {
     /// Whether SIGTERM was successfully sent to the daemon.
     pub sigterm_sent: bool,
@@ -695,19 +695,6 @@ pub struct TeardownResult {
     pub config_cleaned: bool,
     /// Any warnings that occurred during teardown.
     pub warnings: Vec<String>,
-}
-
-impl Default for TeardownResult {
-    fn default() -> Self {
-        Self {
-            sigterm_sent: false,
-            sigkill_sent: false,
-            graceful_shutdown: false,
-            exit_code: None,
-            config_cleaned: false,
-            warnings: Vec::new(),
-        }
-    }
 }
 
 impl TeardownResult {
@@ -1029,7 +1016,7 @@ impl E2EHarness {
             let stderr = self
                 .daemon_process
                 .as_mut()
-                .and_then(|p| Self::read_child_stderr(p));
+                .and_then(Self::read_child_stderr);
             let exit_code = self
                 .daemon_process
                 .as_mut()
@@ -1074,7 +1061,7 @@ impl E2EHarness {
             let stderr = self
                 .daemon_process
                 .as_mut()
-                .and_then(|p| Self::read_child_stderr(p));
+                .and_then(Self::read_child_stderr);
             let exit_code = self
                 .daemon_process
                 .as_mut()

@@ -65,6 +65,109 @@ map("VK_A", "VK_B");
 }
 
 #[test]
+fn test_error_messages_are_user_friendly() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_path = temp_dir.path().join("syntax_error.rhai");
+    let output_path = temp_dir.path().join("syntax_error.krx");
+
+    // Write a script with a syntax error
+    fs::write(
+        &input_path,
+        r#"
+device_start("Test");
+layer("base");
+device_end();
+"#,
+    )
+    .unwrap();
+
+    // Call handle_compile
+    let result = handle_compile(&input_path, &output_path);
+
+    // Verify error occurred
+    assert!(
+        result.is_err(),
+        "Compilation should fail due to syntax error"
+    );
+
+    // Get error message
+    let error = result.unwrap_err();
+    let error_message = error.to_string();
+
+    // Verify error message is user-friendly (NOT Debug format)
+    // Should NOT contain Rust debug patterns like "SyntaxError {", "file:", etc.
+    assert!(
+        !error_message.contains("SyntaxError {"),
+        "Error message should not contain Rust debug format 'SyntaxError {{'\nGot: {}",
+        error_message
+    );
+    assert!(
+        !error_message.contains("file:"),
+        "Error message should not contain debug field 'file:'\nGot: {}",
+        error_message
+    );
+    assert!(
+        !error_message.contains("line:"),
+        "Error message should not contain debug field 'line:'\nGot: {}",
+        error_message
+    );
+    assert!(
+        !error_message.contains("column:"),
+        "Error message should not contain debug field 'column:'\nGot: {}",
+        error_message
+    );
+    assert!(
+        !error_message.contains("import_chain:"),
+        "Error message should not contain debug field 'import_chain:'\nGot: {}",
+        error_message
+    );
+
+    // Should contain user-friendly information
+    assert!(
+        error_message.contains("syntax_error.rhai") || error_message.contains("line"),
+        "Error message should contain file name or line reference\nGot: {}",
+        error_message
+    );
+}
+
+#[test]
+fn test_parse_error_display_not_debug_format() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_path = temp_dir.path().join("unknown_function.rhai");
+    let output_path = temp_dir.path().join("unknown_function.krx");
+
+    // Write a script that calls an unknown function
+    fs::write(
+        &input_path,
+        r#"
+device_start("Test");
+unknown_function("arg");
+device_end();
+"#,
+    )
+    .unwrap();
+
+    let result = handle_compile(&input_path, &output_path);
+
+    assert!(result.is_err(), "Should fail on unknown function");
+
+    let error_message = result.unwrap_err().to_string();
+
+    // Regression test: Ensure we never show "[object Object]" equivalent for Rust
+    // which would be the raw Debug format like "ParseError { ... }"
+    assert!(
+        !error_message.contains("ParseError {"),
+        "Should not expose raw Rust Debug format\nGot: {}",
+        error_message
+    );
+    assert!(
+        !error_message.contains(" { ") || !error_message.contains(": "),
+        "Should not have struct-like debug formatting\nGot: {}",
+        error_message
+    );
+}
+
+#[test]
 fn test_handle_compile_file_not_found() {
     let temp_dir = TempDir::new().unwrap();
     let input_path = temp_dir.path().join("nonexistent.rhai");

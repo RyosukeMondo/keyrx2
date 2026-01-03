@@ -6,6 +6,7 @@ import { Card } from '../components/Card';
 import { useProfiles } from '../hooks/useProfiles';
 import { useGetProfileConfig } from '../hooks/useProfileConfig';
 import { useWasm } from '../hooks/useWasm';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface SimulatorEvent {
   timestamp: string;
@@ -92,7 +93,7 @@ export const SimulatorPage: React.FC = () => {
           console.info(`Profile "${profileConfig.name}" loaded successfully`);
         }
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
+        const errorMsg = getErrorMessage(err, 'Failed to load profile config');
         setConfigLoadError(errorMsg);
         setIsUsingProfileConfig(false);
         console.error('Failed to load profile config:', err);

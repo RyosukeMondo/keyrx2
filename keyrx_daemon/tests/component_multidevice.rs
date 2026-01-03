@@ -138,8 +138,8 @@ fn test_event_with_device_id() {
     let event3 = KeyEvent::press(KeyCode::A);
 
     // Verify device IDs are preserved
-    assert_eq!(event1.device_id().as_deref(), Some("device-1"));
-    assert_eq!(event2.device_id().as_deref(), Some("device-2"));
+    assert_eq!(event1.device_id(), Some("device-1"));
+    assert_eq!(event2.device_id(), Some("device-2"));
     assert_eq!(event3.device_id(), None);
 
     // Verify events are independent

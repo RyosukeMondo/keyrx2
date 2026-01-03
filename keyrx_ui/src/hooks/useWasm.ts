@@ -77,7 +77,6 @@ export function useWasm() {
         // Try to dynamically import the WASM module
         // The path will be correct once WASM is built (Task 25-26)
         console.info('[WASM] Fetching module...');
-        // @ts-expect-error - WASM module doesn't exist until build:wasm runs
         const module = await import('@/wasm/pkg/keyrx_core.js').catch(() => {
           throw new Error('WASM module not found. Run build:wasm to compile the WASM module.');
         });

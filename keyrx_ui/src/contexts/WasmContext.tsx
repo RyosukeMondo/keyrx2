@@ -37,7 +37,6 @@ export function WasmProvider({ children }: { children: React.ReactNode }) {
 
       try {
         console.info('[WASM] Fetching module...');
-        // @ts-expect-error - WASM module doesn't exist until build:wasm runs
         const module = await import('@/wasm/pkg/keyrx_core.js').catch(() => {
           throw new Error('WASM module not found. Run build:wasm to compile the WASM module.');
         });

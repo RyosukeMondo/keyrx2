@@ -16,7 +16,9 @@ import { useUnifiedApi } from './useUnifiedApi';
 import type { ServerMessage, RpcError } from '../types/rpc';
 
 // Store the mock implementation
-let mockWebSocketInstance: any;
+let mockSendMessage: ReturnType<typeof vi.fn>;
+let mockLastMessage: { data: string } | null = null;
+let mockReadyState = 1; // OPEN
 
 // Mock react-use-websocket
 vi.mock('react-use-websocket', () => {
@@ -30,9 +32,9 @@ vi.mock('react-use-websocket', () => {
 
   return {
     default: vi.fn(() => ({
-      sendMessage: vi.fn(),
-      lastMessage: null,
-      readyState: 1,
+      sendMessage: mockSendMessage,
+      lastMessage: mockLastMessage,
+      readyState: mockReadyState,
     })),
     ReadyState,
   };
@@ -48,6 +50,10 @@ describe('useUnifiedApi', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     uuidCounter = 0;
+    // Reset mock state
+    mockSendMessage = vi.fn();
+    mockLastMessage = null;
+    mockReadyState = 1; // OPEN
   });
 
   describe('Connection and Handshake (AC1)', () => {
@@ -60,7 +66,7 @@ describe('useUnifiedApi', () => {
     });
 
     it('should track readyState from WebSocket', () => {
-      mockWebSocketInstance.readyState = 0; // CONNECTING
+      mockReadyState = 0; // CONNECTING
       const { result } = renderHook(() => useUnifiedApi('ws://localhost:3030'));
 
       expect(result.current.readyState).toBe(0);
@@ -74,15 +80,12 @@ describe('useUnifiedApi', () => {
       // Execute query (will timeout but that's ok for this test)
       result.current.query('get_profiles').catch(() => {});
 
-      const useWebSocket = vi.mocked(require('react-use-websocket').default);
-      const mockInstance = useWebSocket.mock.results[0].value;
-
       await waitFor(() => {
-        expect(mockInstance.sendMessage).toHaveBeenCalled();
+        expect(mockSendMessage).toHaveBeenCalled();
       });
 
       // Verify message structure
-      const sentMessage = mockInstance.sendMessage.mock.calls[0][0];
+      const sentMessage = mockSendMessage.mock.calls[0][0];
       expect(sentMessage).toContain('"type":"query"');
       expect(sentMessage).toContain('"method":"get_profiles"');
       expect(sentMessage).toContain('"id":"test-uuid-0"');
@@ -94,17 +97,17 @@ describe('useUnifiedApi', () => {
       result.current.command('activate_profile', { name: 'Gaming' }).catch(() => {});
 
       await waitFor(() => {
-        expect(mockWebSocketInstance.sendMessage).toHaveBeenCalled();
+        expect(mockSendMessage).toHaveBeenCalled();
       });
 
-      const sentMessage = mockWebSocketInstance.sendMessage.mock.calls[0][0];
+      const sentMessage = mockSendMessage.mock.calls[0][0];
       expect(sentMessage).toContain('"type":"command"');
       expect(sentMessage).toContain('"method":"activate_profile"');
       expect(sentMessage).toContain('"params":{"name":"Gaming"}');
     });
 
     it('should reject query when WebSocket is not connected', async () => {
-      mockWebSocketInstance.readyState = 3; // CLOSED
+      mockReadyState = 3; // CLOSED
       const { result } = renderHook(() => useUnifiedApi('ws://localhost:3030'));
 
       let queryError: Error | null = null;
@@ -125,9 +128,9 @@ describe('useUnifiedApi', () => {
       const handler = vi.fn();
       result.current.subscribe('daemon-state', handler);
 
-      expect(mockWebSocketInstance.sendMessage).toHaveBeenCalled();
+      expect(mockSendMessage).toHaveBeenCalled();
 
-      const sentMessage = mockWebSocketInstance.sendMessage.mock.calls[0][0];
+      const sentMessage = mockSendMessage.mock.calls[0][0];
       expect(sentMessage).toContain('"type":"subscribe"');
       expect(sentMessage).toContain('"channel":"daemon-state"');
     });
@@ -137,12 +140,12 @@ describe('useUnifiedApi', () => {
 
       result.current.subscribe('daemon-state', vi.fn());
 
-      mockWebSocketInstance.sendMessage.mockClear();
+      mockSendMessage.mockClear();
 
       result.current.subscribe('daemon-state', vi.fn());
 
       // Should not send another subscribe message
-      expect(mockWebSocketInstance.sendMessage).not.toHaveBeenCalled();
+      expect(mockSendMessage).not.toHaveBeenCalled();
     });
 
     it('should unsubscribe from channel', () => {
@@ -151,13 +154,13 @@ describe('useUnifiedApi', () => {
       const handler = vi.fn();
       const unsubscribe = result.current.subscribe('daemon-state', handler);
 
-      mockWebSocketInstance.sendMessage.mockClear();
+      mockSendMessage.mockClear();
 
       unsubscribe();
 
-      expect(mockWebSocketInstance.sendMessage).toHaveBeenCalled();
+      expect(mockSendMessage).toHaveBeenCalled();
 
-      const sentMessage = mockWebSocketInstance.sendMessage.mock.calls[0][0];
+      const sentMessage = mockSendMessage.mock.calls[0][0];
       expect(sentMessage).toContain('"type":"unsubscribe"');
       expect(sentMessage).toContain('"channel":"daemon-state"');
     });
@@ -171,7 +174,7 @@ describe('useUnifiedApi', () => {
       result.current.query('method2').catch(() => {});
       result.current.query('method3').catch(() => {});
 
-      const calls = mockWebSocketInstance.sendMessage.mock.calls;
+      const calls = mockSendMessage.mock.calls;
       expect(calls.length).toBe(3);
 
       // Each call should have a different UUID
@@ -216,12 +219,12 @@ describe('useUnifiedApi', () => {
       result.current.subscribe('events', vi.fn());
       result.current.subscribe('latency', vi.fn());
 
-      mockWebSocketInstance.sendMessage.mockClear();
+      mockSendMessage.mockClear();
 
       unmount();
 
       // Should send unsubscribe for each channel
-      const unsubscribeCalls = mockWebSocketInstance.sendMessage.mock.calls.filter(
+      const unsubscribeCalls = mockSendMessage.mock.calls.filter(
         (call: any[]) => call[0].includes('"type":"unsubscribe"')
       );
 
@@ -233,7 +236,8 @@ describe('useUnifiedApi', () => {
     it('should include error callbacks in config', () => {
       renderHook(() => useUnifiedApi('ws://localhost:3030'));
 
-      const config = mockUseWebSocket.mock.calls[0][1];
+      const useWebSocket = vi.mocked(require('react-use-websocket').default);
+      const config = useWebSocket.mock.calls[0][1];
       expect(config.onError).toBeDefined();
       expect(config.onClose).toBeDefined();
     });

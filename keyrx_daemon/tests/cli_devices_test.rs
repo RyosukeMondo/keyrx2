@@ -6,6 +6,7 @@ use serde_json::Value;
 use tempfile::TempDir;
 
 /// Helper to create a test command with a temporary registry.
+#[allow(deprecated)]
 fn devices_cmd(temp_dir: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("keyrx_daemon").unwrap();
 

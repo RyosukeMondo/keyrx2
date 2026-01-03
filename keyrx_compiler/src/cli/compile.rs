@@ -31,8 +31,15 @@ pub enum CompileError {
 impl fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ParseError(err) => write!(f, "Parse error: {:?}", err),
-            Self::SerializeError(err) => write!(f, "Serialization error: {:?}", err),
+            Self::ParseError(err) => {
+                // Use user-friendly error formatting instead of Debug output
+                write!(
+                    f,
+                    "{}",
+                    crate::error::formatting::format_error_user_friendly(err)
+                )
+            }
+            Self::SerializeError(err) => write!(f, "{}", err),
             Self::IoError(err) => write!(f, "I/O error: {}", err),
         }
     }

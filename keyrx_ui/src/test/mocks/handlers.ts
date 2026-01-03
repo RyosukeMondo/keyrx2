@@ -26,7 +26,7 @@ const mockDevices: DeviceEntry[] = [
   },
 ];
 
-const mockProfiles: ProfileEntry[] = [
+const initialProfiles: ProfileEntry[] = [
   {
     name: 'default',
     displayName: 'Default Profile',
@@ -43,10 +43,12 @@ const mockProfiles: ProfileEntry[] = [
   },
 ];
 
+let mockProfiles: ProfileEntry[] = JSON.parse(JSON.stringify(initialProfiles));
+
 export const handlers = [
   // Device endpoints
   http.get('/api/devices', () => {
-    return HttpResponse.json(mockDevices);
+    return HttpResponse.json({ devices: mockDevices });
   }),
 
   http.put('/api/devices/:id/name', async ({ request, params }) => {
@@ -247,3 +249,15 @@ export const handlers = [
     });
   }),
 ];
+
+/**
+ * Reset mock data to initial state
+ * Call this in afterEach to ensure test isolation
+ */
+export function resetMockData() {
+  mockProfiles.length = 0;
+  mockProfiles.push(...JSON.parse(JSON.stringify(initialProfiles)));
+
+  // Note: mockDevices is const so it doesn't get mutated
+  // If it ever needs resetting, add it here
+}

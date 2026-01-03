@@ -312,8 +312,8 @@ export const KeyConfigDialog: React.FC<KeyConfigDialogProps> = ({
                     <Input
                       type="number"
                       value={String(step.duration || 0)}
-                      onChange={(e) =>
-                        updateMacroStep(index, 'duration', Number(e.target.value))
+                      onChange={(value) =>
+                        updateMacroStep(index, 'duration', Number(value))
                       }
                       aria-label={`Macro step ${index + 1} delay duration`}
                     />

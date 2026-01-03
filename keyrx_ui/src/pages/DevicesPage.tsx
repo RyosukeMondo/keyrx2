@@ -8,6 +8,7 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useUnifiedApi } from '../hooks/useUnifiedApi';
 import { RpcClient } from '../api/rpc';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface Device {
   id: string;
@@ -355,7 +356,7 @@ export const DevicesPage: React.FC<DevicesPageProps> = ({ className = '' }) => {
         setDevices(transformedDevices);
       } catch (err) {
         console.error('Failed to fetch devices:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch devices');
+        setError(getErrorMessage(err, 'Failed to fetch devices'));
       } finally {
         setLoading(false);
       }

@@ -42,7 +42,7 @@ export function useSetKeyMapping(profile: string) {
       }>(queryKey);
 
       // Optimistically update cache
-      queryClient.setQueryData(queryKey, (old) => {
+      queryClient.setQueryData(queryKey, (old: { keyMappings: Record<string, KeyMapping>; activeLayer: string } | undefined) => {
         if (!old) return old;
         return {
           ...old,
@@ -91,7 +91,7 @@ export function useDeleteKeyMapping(profile: string) {
       }>(queryKey);
 
       // Optimistically remove key mapping
-      queryClient.setQueryData(queryKey, (old) => {
+      queryClient.setQueryData(queryKey, (old: { keyMappings: Record<string, KeyMapping>; activeLayer: string } | undefined) => {
         if (!old) return old;
         const { [key]: removed, ...remainingMappings } = old.keyMappings;
         return {

@@ -5,6 +5,7 @@ use axum::{
     routing::{delete, get, post, put},
     Json, Router,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -28,13 +29,34 @@ pub fn routes() -> Router<Arc<AppState>> {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ProfileResponse {
     name: String,
     rhai_path: String,
     krx_path: String,
-    modified_at: u64,
+    #[serde(serialize_with = "serialize_systemtime_as_rfc3339")]
+    modified_at: std::time::SystemTime,
+    #[serde(serialize_with = "serialize_systemtime_as_rfc3339")]
+    created_at: std::time::SystemTime,
     layer_count: usize,
+    #[serde(rename = "deviceCount")]
+    device_count: usize,
+    #[serde(rename = "keyCount")]
+    key_count: usize,
     is_active: bool,
+}
+
+/// Serialize SystemTime as RFC 3339 / ISO 8601 string
+fn serialize_systemtime_as_rfc3339<S>(
+    time: &std::time::SystemTime,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    use serde::Serialize;
+    let datetime: DateTime<Utc> = (*time).into();
+    datetime.to_rfc3339().serialize(serializer)
 }
 
 #[derive(Serialize)]
@@ -60,12 +82,11 @@ async fn list_profiles() -> Result<Json<ProfilesListResponse>, ApiError> {
             name: meta.name.clone(),
             rhai_path: meta.rhai_path.display().to_string(),
             krx_path: meta.krx_path.display().to_string(),
-            modified_at: meta
-                .modified_at
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
+            modified_at: meta.modified_at,
+            created_at: meta.modified_at, // Use modified_at as created_at for now
             layer_count: meta.layer_count,
+            device_count: 0, // TODO: Track device count per profile
+            key_count: 0,    // TODO: Parse Rhai config to count key mappings
             is_active: active_profile.as_ref() == Some(&meta.name),
         })
         .collect();
@@ -290,5 +311,119 @@ fn query_active_profile() -> Option<String> {
             device_count: _,
         } => active_profile,
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, UNIX_EPOCH};
+
+    #[test]
+    fn test_serialize_systemtime_as_rfc3339() {
+        // Create a known timestamp: 2024-01-01T00:00:00Z
+        let timestamp = UNIX_EPOCH + Duration::from_secs(1704067200);
+
+        // Serialize to JSON
+        let json_value = serde_json::to_value(&ProfileResponse {
+            name: "test".to_string(),
+            rhai_path: "/test.rhai".to_string(),
+            krx_path: "/test.krx".to_string(),
+            modified_at: timestamp,
+            created_at: timestamp,
+            layer_count: 1,
+            device_count: 0,
+            key_count: 0,
+            is_active: false,
+        })
+        .unwrap();
+
+        // Check that modifiedAt is a string in ISO 8601 / RFC 3339 format
+        let modified_at_str = json_value["modifiedAt"].as_str().unwrap();
+
+        // Should be in format: YYYY-MM-DDTHH:MM:SS.sssZ or similar RFC 3339
+        assert!(
+            modified_at_str.contains('T'),
+            "Timestamp should contain 'T' separator: {}",
+            modified_at_str
+        );
+        assert!(
+            modified_at_str.ends_with('Z')
+                || modified_at_str.contains('+')
+                || modified_at_str.contains('-'),
+            "Timestamp should have timezone (Z or offset): {}",
+            modified_at_str
+        );
+
+        // Verify it can be parsed back by JavaScript Date constructor
+        // RFC 3339 format is guaranteed to be parseable by new Date()
+        assert!(
+            modified_at_str.len() >= 20, // Minimum length for ISO 8601
+            "Timestamp too short: {}",
+            modified_at_str
+        );
+    }
+
+    #[test]
+    fn test_profile_response_camel_case_fields() {
+        let timestamp = UNIX_EPOCH + Duration::from_secs(1704067200);
+
+        let response = ProfileResponse {
+            name: "gaming".to_string(),
+            rhai_path: "/profiles/gaming.rhai".to_string(),
+            krx_path: "/profiles/gaming.krx".to_string(),
+            modified_at: timestamp,
+            created_at: timestamp,
+            layer_count: 3,
+            device_count: 2,
+            key_count: 127,
+            is_active: true,
+        };
+
+        let json_value = serde_json::to_value(&response).unwrap();
+
+        // Verify camelCase field names
+        assert!(
+            json_value["modifiedAt"].is_string(),
+            "modifiedAt should be a string"
+        );
+        assert!(
+            json_value["createdAt"].is_string(),
+            "createdAt should be a string"
+        );
+        assert!(
+            json_value["layerCount"].is_number(),
+            "layerCount should be a number"
+        );
+        assert!(
+            json_value["deviceCount"].is_number(),
+            "deviceCount should be a number"
+        );
+        assert!(
+            json_value["keyCount"].is_number(),
+            "keyCount should be a number"
+        );
+        assert!(
+            json_value["isActive"].is_boolean(),
+            "isActive should be a boolean"
+        );
+
+        // Verify snake_case fields are NOT present
+        assert!(
+            json_value.get("modified_at").is_none(),
+            "Should not have snake_case modified_at"
+        );
+        assert!(
+            json_value.get("created_at").is_none(),
+            "Should not have snake_case created_at"
+        );
+        assert!(
+            json_value.get("layer_count").is_none(),
+            "Should not have snake_case layer_count"
+        );
+        assert!(
+            json_value.get("is_active").is_none(),
+            "Should not have snake_case is_active"
+        );
     }
 }
