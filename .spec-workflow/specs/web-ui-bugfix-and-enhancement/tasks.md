@@ -208,7 +208,7 @@
 
 ### Task 19: Write accessibility tests with axe-core
 
-- [ ] 19. Write accessibility tests for all pages with axe-core
+- [-] 19. Write accessibility tests for all pages with axe-core
   - File: `keyrx_ui/tests/accessibility/pages.a11y.test.tsx` (NEW or extend existing)
   - Purpose: Ensure WCAG 2.2 Level AA compliance with 0 violations
   - _Leverage: `@axe-core/react` or `jest-axe`, existing accessibility test setup_

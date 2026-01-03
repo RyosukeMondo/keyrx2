@@ -467,7 +467,7 @@ export const SimulatorPage: React.FC = () => {
       </div>
 
       {/* Profile Selector */}
-      <Card>
+      <Card aria-label="Profile configuration selector">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <label
             htmlFor="profile-selector"
@@ -573,10 +573,10 @@ export const SimulatorPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* State Display */}
-        <Card className="lg:col-span-1">
-          <h3 className="text-base md:text-lg font-semibold text-slate-100 mb-3">
+        <Card className="lg:col-span-1" aria-labelledby="simulator-state-heading">
+          <h2 id="simulator-state-heading" className="text-base md:text-lg font-semibold text-slate-100 mb-3">
             State Inspector
-          </h3>
+          </h2>
           {isUsingProfileConfig && wasmState ? (
             <StateIndicatorPanel state={wasmState} />
           ) : (
@@ -593,9 +593,9 @@ export const SimulatorPage: React.FC = () => {
               </div>
 
               <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-2">
+                <h3 className="text-sm font-medium text-slate-300 mb-2">
                   Modifiers
-                </h4>
+                </h3>
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(state.modifiers).map(([key, active]) => (
                     <div
@@ -614,9 +614,9 @@ export const SimulatorPage: React.FC = () => {
               </div>
 
               <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-2">
+                <h3 className="text-sm font-medium text-slate-300 mb-2">
                   Locks
-                </h4>
+                </h3>
                 <div className="grid grid-cols-1 gap-2">
                   {Object.entries(state.locks).map(([key, active]) => (
                     <div
@@ -648,13 +648,13 @@ export const SimulatorPage: React.FC = () => {
         </Card>
 
         {/* Event Log */}
-        <Card className="lg:col-span-2">
-          <h3 className="text-base md:text-lg font-semibold text-slate-100 mb-3">
+        <Card className="lg:col-span-2" aria-labelledby="simulator-event-log-heading">
+          <h2 id="simulator-event-log-heading" className="text-base md:text-lg font-semibold text-slate-100 mb-3">
             Event Log
             <span className="text-xs md:text-sm font-normal text-slate-400 ml-2">
               (last {Math.min(events.length, MAX_EVENTS)} events)
             </span>
-          </h3>
+          </h2>
           <div className="bg-slate-900 rounded-md p-3 md:p-4 h-48 md:h-64 overflow-y-auto font-mono text-xs">
             {events.length === 0 ? (
               <div className="flex items-center justify-center h-full text-slate-500">
@@ -693,10 +693,10 @@ export const SimulatorPage: React.FC = () => {
       </div>
 
       {/* Keyboard Visualizer */}
-      <Card>
-        <h3 className="text-base md:text-lg font-semibold text-slate-100 mb-4">
+      <Card aria-labelledby="interactive-keyboard-heading">
+        <h2 id="interactive-keyboard-heading" className="text-base md:text-lg font-semibold text-slate-100 mb-4">
           Interactive Keyboard
-        </h3>
+        </h2>
         <div className="flex justify-center overflow-x-auto md:overflow-x-visible">
           <KeyboardVisualizer
             layout="ANSI_104"

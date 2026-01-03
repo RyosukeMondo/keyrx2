@@ -243,6 +243,7 @@ export const MetricsPage: React.FC = () => {
               className={`w-3 h-3 rounded-full ${
                 connected ? 'bg-green-500' : 'bg-red-500'
               }`}
+              role="status"
               aria-label={connected ? 'Connected' : 'Disconnected'}
             />
             <span className="text-sm text-slate-400">
@@ -259,7 +260,7 @@ export const MetricsPage: React.FC = () => {
       </header>
 
       {/* Active Profile Header */}
-      <Card padding="md">
+      <Card padding="md" aria-label="Active profile information">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-500/10 rounded-lg">
             <Activity className="w-5 h-5 text-blue-500" aria-hidden="true" />
@@ -342,7 +343,7 @@ export const MetricsPage: React.FC = () => {
           </div>
         </Card>
 
-        <Card padding="md">
+        <Card padding="md" aria-label="Minimum latency">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
             <div className="p-2 sm:p-3 bg-yellow-500/10 rounded-lg">
               <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
@@ -356,7 +357,7 @@ export const MetricsPage: React.FC = () => {
           </div>
         </Card>
 
-        <Card padding="md">
+        <Card padding="md" aria-label="Maximum latency">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
             <div className="p-2 sm:p-3 bg-red-500/10 rounded-lg">
               <Cpu className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
@@ -372,9 +373,9 @@ export const MetricsPage: React.FC = () => {
       </section>
 
       {/* Latency Chart */}
-      <Card>
+      <Card aria-labelledby="latency-chart-heading">
         <div className="mb-4">
-          <h2 className="text-lg md:text-xl font-semibold text-slate-100">
+          <h2 id="latency-chart-heading" className="text-lg md:text-xl font-semibold text-slate-100">
             Latency Over Time
           </h2>
           <p className="text-xs md:text-sm text-slate-400 mt-1">Last 60 seconds</p>
@@ -429,9 +430,9 @@ export const MetricsPage: React.FC = () => {
       </Card>
 
       {/* Event Log */}
-      <Card>
+      <Card aria-labelledby="event-log-heading">
         <div className="mb-4">
-          <h2 className="text-lg md:text-xl font-semibold text-slate-100">Event Log</h2>
+          <h2 id="event-log-heading" className="text-lg md:text-xl font-semibold text-slate-100">Event Log</h2>
           <p className="text-xs md:text-sm text-slate-400 mt-1">
             Recent keyboard events ({eventLog.length} total)
           </p>
@@ -459,9 +460,9 @@ export const MetricsPage: React.FC = () => {
       </Card>
 
       {/* State Inspector */}
-      <Card>
+      <Card aria-labelledby="state-inspector-heading">
         <div className="mb-4">
-          <h2 className="text-lg md:text-xl font-semibold text-slate-100">
+          <h2 id="state-inspector-heading" className="text-lg md:text-xl font-semibold text-slate-100">
             State Inspector
           </h2>
           <p className="text-xs md:text-sm text-slate-400 mt-1">
