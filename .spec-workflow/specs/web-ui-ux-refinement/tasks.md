@@ -74,7 +74,7 @@
 
 ### Phase 0.4: WebSocket Contract Tests
 
-- [ ] 0.4.1. Define Zod schemas for WebSocket messages
+- [-] 0.4.1. Define Zod schemas for WebSocket messages
   - Files: `keyrx_ui/tests/contract/schemas.ts`
   - Define DeviceConnectedEventSchema
   - Define ProfileActivatedEventSchema
