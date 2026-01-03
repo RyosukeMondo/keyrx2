@@ -1,12 +1,14 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { KeyboardVisualizer } from '../components/KeyboardVisualizer';
 import { KeyMapping } from '../components/KeyButton';
+import { StateIndicatorPanel } from '../components/StateIndicatorPanel';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { useProfiles } from '../hooks/useProfiles';
 import { useGetProfileConfig } from '../hooks/useProfileConfig';
-import { useWasm } from '../hooks/useWasm';
+import { useWasm, type SimulationInput } from '../hooks/useWasm';
 import { getErrorMessage } from '../utils/errorUtils';
+import type { DaemonState } from '../types/rpc';
 
 interface SimulatorEvent {
   timestamp: string;
@@ -59,9 +61,10 @@ export const SimulatorPage: React.FC = () => {
   const [selectedProfile, setSelectedProfile] = useState<string>('');
   const { data: profiles, isLoading: isLoadingProfiles } = useProfiles();
   const { data: profileConfig, isLoading: isLoadingConfig } = useGetProfileConfig(selectedProfile);
-  const { isWasmReady, isLoading: isLoadingWasm, validateConfig } = useWasm();
+  const { isWasmReady, isLoading: isLoadingWasm, validateConfig, runSimulation } = useWasm();
   const [configLoadError, setConfigLoadError] = useState<string | null>(null);
   const [isUsingProfileConfig, setIsUsingProfileConfig] = useState(false);
+  const [wasmState, setWasmState] = useState<DaemonState | null>(null);
 
   // Set the first profile as selected when profiles load
   useEffect(() => {
@@ -134,7 +137,7 @@ export const SimulatorPage: React.FC = () => {
   }, []);
 
   const handleKeyPress = useCallback(
-    (keyCode: string) => {
+    async (keyCode: string) => {
       if (isPaused) return;
 
       lastActivityRef.current = Date.now();
@@ -149,46 +152,103 @@ export const SimulatorPage: React.FC = () => {
         message: `Press ${keyCode}`,
       });
 
-      // Check if key has tap-hold configuration
-      const mapping = keyMappings.get(keyCode);
-      if (mapping?.type === 'tap_hold' && mapping.threshold) {
-        // Start hold timer
-        const timerId = window.setTimeout(() => {
+      // If WASM is ready and we have a valid profile config, use WASM simulation
+      if (isUsingProfileConfig && profileConfig && isWasmReady && runSimulation) {
+        try {
+          const input: SimulationInput = {
+            events: [
+              {
+                keycode: keyCode,
+                event_type: 'press',
+                timestamp_us: Date.now() * 1000,
+              },
+            ],
+          };
+
+          const result = await runSimulation(profileConfig.source, input);
+
+          if (result) {
+            // Update state from WASM result
+            setWasmState({
+              modifiers: result.final_state.active_modifiers.map((id) => `MD_${id.toString().padStart(2, '0')}`),
+              locks: result.final_state.active_locks.map((id) => `LK_${id.toString().padStart(2, '0')}`),
+              layer: result.final_state.active_layer || 'Base',
+            });
+
+            // Add output events to log
+            result.outputs.forEach((output) => {
+              addEvent({
+                type: 'output',
+                key: output.keycode,
+                message: `Output ${output.keycode} (${output.event_type})`,
+              });
+            });
+
+            // Update state display
+            setState({
+              activeLayer: result.final_state.active_layer || 'MD_00 (Base)',
+              modifiers: {
+                ctrl: result.final_state.active_modifiers.includes(0),
+                shift: result.final_state.active_modifiers.includes(1),
+                alt: result.final_state.active_modifiers.includes(2),
+                gui: result.final_state.active_modifiers.includes(3),
+              },
+              locks: {
+                capsLock: result.final_state.active_locks.includes(0),
+                numLock: result.final_state.active_locks.includes(1),
+                scrollLock: result.final_state.active_locks.includes(2),
+              },
+            });
+          }
+        } catch (err) {
+          console.error('WASM simulation error:', err);
           addEvent({
-            type: 'wait',
-            key: keyCode,
-            message: `→Wait ${mapping.threshold}ms (hold)`,
+            type: 'output',
+            message: `WASM Error: ${getErrorMessage(err, 'Simulation failed')}`,
           });
+        }
+      } else {
+        // Fallback to mock simulation
+        const mapping = keyMappings.get(keyCode);
+        if (mapping?.type === 'tap_hold' && mapping.threshold) {
+          // Start hold timer
+          const timerId = window.setTimeout(() => {
+            addEvent({
+              type: 'wait',
+              key: keyCode,
+              message: `→Wait ${mapping.threshold}ms (hold)`,
+            });
+            addEvent({
+              type: 'output',
+              key: keyCode,
+              message: `Output ${mapping.holdAction} (hold)`,
+            });
+
+            // Update modifiers if applicable
+            if (mapping.holdAction === 'Ctrl') {
+              setState((prev) => ({
+                ...prev,
+                modifiers: { ...prev.modifiers, ctrl: true },
+              }));
+            }
+          }, mapping.threshold);
+
+          setHoldTimers((prev) => new Map(prev).set(keyCode, timerId));
+        } else {
+          // Simple key press output
           addEvent({
             type: 'output',
             key: keyCode,
-            message: `Output ${mapping.holdAction} (hold)`,
+            message: `Output ${mapping?.tapAction || keyCode}`,
           });
-
-          // Update modifiers if applicable
-          if (mapping.holdAction === 'Ctrl') {
-            setState((prev) => ({
-              ...prev,
-              modifiers: { ...prev.modifiers, ctrl: true },
-            }));
-          }
-        }, mapping.threshold);
-
-        setHoldTimers((prev) => new Map(prev).set(keyCode, timerId));
-      } else {
-        // Simple key press output
-        addEvent({
-          type: 'output',
-          key: keyCode,
-          message: `Output ${mapping?.tapAction || keyCode}`,
-        });
+        }
       }
     },
-    [isPaused, keyMappings, addEvent]
+    [isPaused, keyMappings, addEvent, isUsingProfileConfig, profileConfig, isWasmReady, runSimulation]
   );
 
   const handleKeyRelease = useCallback(
-    (keyCode: string) => {
+    async (keyCode: string) => {
       if (isPaused) return;
 
       lastActivityRef.current = Date.now();
@@ -200,27 +260,6 @@ export const SimulatorPage: React.FC = () => {
         return next;
       });
 
-      // Clear hold timer if exists
-      const timerId = holdTimers.get(keyCode);
-      if (timerId !== undefined) {
-        clearTimeout(timerId);
-        setHoldTimers((prev) => {
-          const next = new Map(prev);
-          next.delete(keyCode);
-          return next;
-        });
-
-        // If timer was still running, it was a tap
-        const mapping = keyMappings.get(keyCode);
-        if (mapping?.type === 'tap_hold') {
-          addEvent({
-            type: 'output',
-            key: keyCode,
-            message: `Output ${mapping.tapAction} (tap)`,
-          });
-        }
-      }
-
       // Add release event
       addEvent({
         type: 'release',
@@ -228,16 +267,95 @@ export const SimulatorPage: React.FC = () => {
         message: `Release ${keyCode}`,
       });
 
-      // Update modifiers if applicable
-      const mapping = keyMappings.get(keyCode);
-      if (mapping?.type === 'tap_hold' && mapping.holdAction === 'Ctrl') {
-        setState((prev) => ({
-          ...prev,
-          modifiers: { ...prev.modifiers, ctrl: false },
-        }));
+      // If WASM is ready and we have a valid profile config, use WASM simulation
+      if (isUsingProfileConfig && profileConfig && isWasmReady && runSimulation) {
+        try {
+          const input: SimulationInput = {
+            events: [
+              {
+                keycode: keyCode,
+                event_type: 'release',
+                timestamp_us: Date.now() * 1000,
+              },
+            ],
+          };
+
+          const result = await runSimulation(profileConfig.source, input);
+
+          if (result) {
+            // Update state from WASM result
+            setWasmState({
+              modifiers: result.final_state.active_modifiers.map((id) => `MD_${id.toString().padStart(2, '0')}`),
+              locks: result.final_state.active_locks.map((id) => `LK_${id.toString().padStart(2, '0')}`),
+              layer: result.final_state.active_layer || 'Base',
+            });
+
+            // Add output events to log
+            result.outputs.forEach((output) => {
+              addEvent({
+                type: 'output',
+                key: output.keycode,
+                message: `Output ${output.keycode} (${output.event_type})`,
+              });
+            });
+
+            // Update state display
+            setState({
+              activeLayer: result.final_state.active_layer || 'MD_00 (Base)',
+              modifiers: {
+                ctrl: result.final_state.active_modifiers.includes(0),
+                shift: result.final_state.active_modifiers.includes(1),
+                alt: result.final_state.active_modifiers.includes(2),
+                gui: result.final_state.active_modifiers.includes(3),
+              },
+              locks: {
+                capsLock: result.final_state.active_locks.includes(0),
+                numLock: result.final_state.active_locks.includes(1),
+                scrollLock: result.final_state.active_locks.includes(2),
+              },
+            });
+          }
+        } catch (err) {
+          console.error('WASM simulation error:', err);
+          addEvent({
+            type: 'output',
+            message: `WASM Error: ${getErrorMessage(err, 'Simulation failed')}`,
+          });
+        }
+      } else {
+        // Fallback to mock simulation
+        // Clear hold timer if exists
+        const timerId = holdTimers.get(keyCode);
+        if (timerId !== undefined) {
+          clearTimeout(timerId);
+          setHoldTimers((prev) => {
+            const next = new Map(prev);
+            next.delete(keyCode);
+            return next;
+          });
+
+          // If timer was still running, it was a tap
+          const mapping = keyMappings.get(keyCode);
+          if (mapping?.type === 'tap_hold') {
+            addEvent({
+              type: 'output',
+              key: keyCode,
+              message: `Output ${mapping.tapAction} (tap)`,
+            });
+          }
+        }
+
+        // Update modifiers if applicable
+        const mapping = keyMappings.get(keyCode);
+        if (mapping?.type === 'tap_hold' && mapping.holdAction === 'Ctrl') {
+          setState((prev) => ({
+            ...prev,
+            modifiers: { ...prev.modifiers, ctrl: false },
+          }));
+        }
       }
     },
-    [isPaused, holdTimers, keyMappings, addEvent]
+    [isPaused, holdTimers, keyMappings, addEvent, isUsingProfileConfig, profileConfig, isWasmReady, runSimulation]
   );
 
   const handleKeyClick = useCallback(
@@ -268,6 +386,7 @@ export const SimulatorPage: React.FC = () => {
         scrollLock: false,
       },
     });
+    setWasmState(null);
     setIsPaused(false);
     holdTimers.forEach((timerId) => clearTimeout(timerId));
     setHoldTimers(new Map());
@@ -406,10 +525,12 @@ export const SimulatorPage: React.FC = () => {
               </span>
             )}
             {!isLoadingConfig && isUsingProfileConfig && (
-              <span className="text-green-400">✓ Profile config active</span>
+              <span className="text-green-400 font-medium">
+                ✓ WASM Simulator Active
+              </span>
             )}
             {!isLoadingConfig && profileConfig && !isUsingProfileConfig && !configLoadError && (
-              <span className="text-yellow-400">⚠ Using mock data (WASM not ready)</span>
+              <span className="text-yellow-400">⚠ Using mock simulation (WASM not ready)</span>
             )}
             {!isWasmReady && !isLoadingWasm && (
               <span className="text-yellow-400">
@@ -453,68 +574,77 @@ export const SimulatorPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* State Display */}
         <Card className="lg:col-span-1">
-          <div className="space-y-3 md:space-y-4">
-            <div>
-              <h3 className="text-base md:text-lg font-semibold text-slate-100 mb-3">
-                State
-              </h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-400">Active Layer:</span>
-                  <span className="text-sm font-mono text-slate-100">
-                    {state.activeLayer}
-                  </span>
+          <h3 className="text-base md:text-lg font-semibold text-slate-100 mb-3">
+            State Inspector
+          </h3>
+          {isUsingProfileConfig && wasmState ? (
+            <StateIndicatorPanel state={wasmState} />
+          ) : (
+            <div className="space-y-3 md:space-y-4">
+              <div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-400">Active Layer:</span>
+                    <span className="text-sm font-mono text-slate-100">
+                      {state.activeLayer}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div>
-              <h4 className="text-sm font-medium text-slate-300 mb-2">
-                Modifiers
-              </h4>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(state.modifiers).map(([key, active]) => (
-                  <div
-                    key={key}
-                    className={`px-3 py-2 rounded text-xs font-mono text-center transition-colors ${
-                      active
-                        ? 'bg-green-500 text-white'
-                        : 'bg-slate-700 text-slate-400'
-                    }`}
-                  >
-                    {key.charAt(0).toUpperCase() + key.slice(1)}{' '}
-                    {active ? '✓' : ''}
-                  </div>
-                ))}
+              <div>
+                <h4 className="text-sm font-medium text-slate-300 mb-2">
+                  Modifiers
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(state.modifiers).map(([key, active]) => (
+                    <div
+                      key={key}
+                      className={`px-3 py-2 rounded text-xs font-mono text-center transition-colors ${
+                        active
+                          ? 'bg-green-500 text-white'
+                          : 'bg-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {key.charAt(0).toUpperCase() + key.slice(1)}{' '}
+                      {active ? '✓' : ''}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <h4 className="text-sm font-medium text-slate-300 mb-2">
-                Locks
-              </h4>
-              <div className="grid grid-cols-1 gap-2">
-                {Object.entries(state.locks).map(([key, active]) => (
-                  <div
-                    key={key}
-                    className={`px-3 py-2 rounded text-xs font-mono text-center transition-colors ${
-                      active
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-slate-700 text-slate-400'
-                    }`}
-                  >
-                    {key
-                      .replace(/([A-Z])/g, ' $1')
-                      .trim()
-                      .split(' ')
-                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                      .join(' ')}{' '}
-                    {active ? '✓' : ''}
-                  </div>
-                ))}
+              <div>
+                <h4 className="text-sm font-medium text-slate-300 mb-2">
+                  Locks
+                </h4>
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(state.locks).map(([key, active]) => (
+                    <div
+                      key={key}
+                      className={`px-3 py-2 rounded text-xs font-mono text-center transition-colors ${
+                        active
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {key
+                        .replace(/([A-Z])/g, ' $1')
+                        .trim()
+                        .split(' ')
+                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                        .join(' ')}{' '}
+                      {active ? '✓' : ''}
+                    </div>
+                  ))}
+                </div>
               </div>
+              {!isUsingProfileConfig && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Using mock state. Select a valid profile to see WASM state.
+                </p>
+              )}
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Event Log */}

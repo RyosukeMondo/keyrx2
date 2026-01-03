@@ -61,7 +61,7 @@
 
 ### Task 6: Enhance SimulatorPage with profile selector and WASM
 
-- [ ] 6. Enhance SimulatorPage with profile selector and WASM integration
+- [x] 6. Enhance SimulatorPage with profile selector and WASM integration
   - File: `keyrx_ui/src/pages/SimulatorPage.tsx`
   - Purpose: Move WASM simulation to dedicated page with profile selection
   - _Leverage: `useWasm` hook, `KeyboardVisualizer` component, `StateIndicatorPanel`, `useProfiles` hook, `Dropdown`_
