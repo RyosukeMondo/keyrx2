@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/web-ui-bugfix-and-enhancement/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-03T07:32:35.958Z",
+      "trigger": "initial",
+      "approvalId": "approval_1767425555825_ckxbe34td",
+      "approvalTitle": "Design Document - Web UI Bugfix and Enhancement"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-01-03T07:40:58.344Z",
+      "trigger": "approved",
+      "approvalId": "approval_1767425555825_ckxbe34td",
+      "approvalTitle": "Design Document - Web UI Bugfix and Enhancement"
+    }
+  ]
+}

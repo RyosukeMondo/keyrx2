@@ -37,7 +37,7 @@
 
 ### Task 4: Create ProfileHeader component for ConfigPage
 
-- [ ] 4. Create ProfileHeader component for ConfigPage
+- [x] 4. Create ProfileHeader component for ConfigPage
   - File: `keyrx_ui/src/components/config/ProfileHeader.tsx` (NEW)
   - Purpose: Display profile context in ConfigPage header (name, active badge, profile selector)
   - _Leverage: `Dropdown.tsx`, `Badge` component or styled span, `useProfiles` hook_
