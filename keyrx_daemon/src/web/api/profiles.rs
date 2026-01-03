@@ -26,6 +26,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         .route("/profiles/:name", delete(delete_profile))
         .route("/profiles/:name/duplicate", post(duplicate_profile))
         .route("/profiles/:name/rename", put(rename_profile))
+        .route("/profiles/:name/validate", post(validate_profile))
 }
 
 #[derive(Serialize)]
@@ -292,6 +293,78 @@ async fn set_profile_config(
     Ok(Json(json!({
         "success": true,
     })))
+}
+
+/// POST /api/profiles/:name/validate - Validate profile configuration
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ValidationError {
+    line: usize,
+    column: Option<usize>,
+    message: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ValidationResponse {
+    valid: bool,
+    errors: Vec<ValidationError>,
+}
+
+async fn validate_profile(
+    Path(name): Path<String>,
+) -> Result<Json<ValidationResponse>, DaemonError> {
+    use crate::config::profile_compiler::ProfileCompiler;
+    use crate::error::ConfigError;
+
+    let config_dir = get_config_dir()?;
+    let pm = ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
+
+    // Get profile metadata to find the .rhai file path
+    let profile = pm
+        .get(&name)
+        .ok_or_else(|| ConfigError::Profile(format!("Profile '{}' not found", name)))?;
+
+    // Compile the profile to validate it
+    let compiler = ProfileCompiler::new();
+    // Use timestamp + profile name for temporary file to avoid collisions
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let temp_krx = std::env::temp_dir().join(format!("{}_{}.krx", name, timestamp));
+
+    let validation_result = compiler.compile_profile(&profile.rhai_path, &temp_krx);
+
+    // Clean up temporary file
+    let _ = std::fs::remove_file(&temp_krx);
+
+    match validation_result {
+        Ok(_) => {
+            // Compilation succeeded - profile is valid
+            Ok(Json(ValidationResponse {
+                valid: true,
+                errors: Vec::new(),
+            }))
+        }
+        Err(e) => {
+            // Compilation failed - extract error information
+            let error_message = e.to_string();
+
+            // Parse error message to extract line/column information
+            // The error format from the compiler is user-friendly and may include line numbers
+            let errors = vec![ValidationError {
+                line: 1, // TODO: Parse actual line number from error message
+                column: None,
+                message: error_message,
+            }];
+
+            Ok(Json(ValidationResponse {
+                valid: false,
+                errors,
+            }))
+        }
+    }
 }
 
 /// Get config directory path

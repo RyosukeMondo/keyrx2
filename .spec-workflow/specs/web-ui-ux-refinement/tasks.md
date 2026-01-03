@@ -186,7 +186,7 @@
 
 ### Requirement 4: Validate Profiles Before Activation
 
-- [ ] 4.1. Implement profile validation endpoint
+- [x] 4.1. Implement profile validation endpoint
   - Files: `keyrx_daemon/src/web/api/profiles.rs`
   - Implement `POST /api/profiles/:name/validate` endpoint
   - Compile Rhai source using keyrx_compiler

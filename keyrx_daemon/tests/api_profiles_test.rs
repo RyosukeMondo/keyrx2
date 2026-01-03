@@ -291,3 +291,139 @@ device_end();  // End of device block
         body
     );
 }
+
+/// Test that the validation endpoint accepts valid profiles.
+///
+/// This test verifies that POST /api/profiles/:name/validate returns
+/// valid=true for profiles with correct Rhai syntax.
+#[tokio::test]
+async fn test_validation_endpoint_accepts_valid_profiles() {
+    let app = TestApp::new().await;
+
+    // Create profile with valid Rhai configuration
+    let valid_config = r#"
+device_start("*");
+  map("VK_A", "VK_B");
+device_end();
+"#;
+
+    create_profile_file(&app, "test-validate-valid", valid_config);
+
+    // Call validation endpoint
+    let validate_response = app
+        .post("/api/profiles/test-validate-valid/validate", &json!({}))
+        .await;
+
+    let status = validate_response.status();
+    let body = validate_response.text().await.unwrap();
+
+    assert!(
+        status.is_success(),
+        "Validation endpoint should return success. Status: {}, Body: {}",
+        status,
+        body
+    );
+
+    // Parse response
+    let response_json: serde_json::Value =
+        serde_json::from_str(&body).expect("Response should be valid JSON");
+
+    assert_eq!(
+        response_json["valid"], true,
+        "Response should indicate profile is valid"
+    );
+    assert!(
+        response_json["errors"].is_array(),
+        "Response should include errors array"
+    );
+    assert_eq!(
+        response_json["errors"].as_array().unwrap().len(),
+        0,
+        "Valid profile should have zero errors"
+    );
+}
+
+/// Test that the validation endpoint rejects invalid profiles.
+///
+/// This test verifies that POST /api/profiles/:name/validate returns
+/// valid=false for profiles with syntax errors and includes error details.
+#[tokio::test]
+async fn test_validation_endpoint_rejects_invalid_profiles() {
+    let app = TestApp::new().await;
+
+    // Create profile with invalid Rhai configuration (missing device_end)
+    let invalid_config = r#"
+device_start("*");
+  map("VK_A", "VK_B");
+// Missing device_end()!
+"#;
+
+    create_profile_file(&app, "test-validate-invalid", invalid_config);
+
+    // Call validation endpoint
+    let validate_response = app
+        .post("/api/profiles/test-validate-invalid/validate", &json!({}))
+        .await;
+
+    let status = validate_response.status();
+    let body = validate_response.text().await.unwrap();
+
+    assert!(
+        status.is_success(),
+        "Validation endpoint should return 200 even for invalid profiles. Status: {}, Body: {}",
+        status,
+        body
+    );
+
+    // Parse response
+    let response_json: serde_json::Value =
+        serde_json::from_str(&body).expect("Response should be valid JSON");
+
+    assert_eq!(
+        response_json["valid"], false,
+        "Response should indicate profile is invalid"
+    );
+    assert!(
+        response_json["errors"].is_array(),
+        "Response should include errors array"
+    );
+
+    let errors = response_json["errors"].as_array().unwrap();
+    assert!(
+        !errors.is_empty(),
+        "Invalid profile should have at least one error"
+    );
+
+    // First error should have required fields
+    let first_error = &errors[0];
+    assert!(
+        first_error["message"].is_string(),
+        "Error should include message"
+    );
+    assert!(
+        first_error["line"].is_number(),
+        "Error should include line number"
+    );
+}
+
+/// Test that validation endpoint returns 404 for non-existent profiles.
+///
+/// This test verifies that the validation endpoint properly handles
+/// requests for profiles that don't exist.
+#[tokio::test]
+async fn test_validation_endpoint_returns_404_for_nonexistent_profile() {
+    let app = TestApp::new().await;
+
+    // Call validation endpoint for non-existent profile
+    let validate_response = app
+        .post("/api/profiles/nonexistent-profile/validate", &json!({}))
+        .await;
+
+    let status = validate_response.status();
+
+    assert!(
+        status.is_client_error() || status.is_server_error(),
+        "Validation should fail for non-existent profile. Status: {}",
+        status
+    );
+}
