@@ -129,7 +129,7 @@
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
   - _Prompt: Implement the task for spec error-handling-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Build Engineer with expertise in clippy lint configuration | Task: Upgrade clippy lints in Cargo.toml from "warn" to "deny" for unwrap_used and expect_used following requirements 6.1-6.5. This enforces no new unwraps can be added. Run cargo clippy to verify no violations. | Restrictions: Ensure all existing unwraps are either eliminated or have #[allow] attributes with SAFETY comments, do not break CI build | Success: Clippy lints set to deny, cargo clippy passes with no unwrap violations. Edit tasks.md [-] → [x], log with artifacts (lint configuration changes)_
 
-- [ ] 14. Add SAFETY comments for legitimate unwraps
+- [x] 14. Add SAFETY comments for legitimate unwraps
   - Files: Audit all remaining unwraps in codebase via `cargo clippy --workspace`
   - Add #[allow(clippy::unwrap_used)] with SAFETY comment explaining why unwrap is safe
   - Document legitimate cases: mutex poisoning, static regexes, known-valid array indices
