@@ -224,7 +224,7 @@
   - _Requirements: Requirement 4 (Validate Profiles Before Activation and Fix Template)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React UI Developer with accessibility expertise | Task: Add validation badge to ProfileCard.tsx using useProfileValidation hook, with tooltip and disabled state | Restrictions: Must show clear visual feedback, tooltip must be accessible, [Activate] button must be disabled for invalid profiles | _Leverage: useProfileValidation() hook from task 4.3, existing Badge and Tooltip components | _Requirements: Requirement 4 (Validate Profiles Before Activation and Fix Template) | Success: Validation status displays clearly, tooltip shows error details, invalid profiles cannot be activated | Instructions: 1. Mark [-]. 2. Add validation UI. 3. Log (taskId="4.4", filesModified, artifacts with components). 4. Mark [x]._
 
-- [ ] 4.5. Add template selector to profile creation modal
+- [x] 4.5. Add template selector to profile creation modal
   - Files: `keyrx_ui/src/pages/ProfilesPage.tsx`
   - Add template dropdown to create profile modal
   - Options: Blank, Simple Remap, CapsLock→Escape, Vim Navigation, Gaming

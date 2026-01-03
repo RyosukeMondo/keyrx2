@@ -25,7 +25,7 @@ export interface ProfileMetadata {
   isActive: boolean;
 }
 
-export type Template = 'blank' | 'qwerty' | 'dvorak' | 'colemak';
+export type Template = 'blank' | 'simple_remap' | 'capslock_escape' | 'vim_navigation' | 'gaming';
 
 export interface ActivationResult {
   success: boolean;

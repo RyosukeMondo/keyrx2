@@ -72,6 +72,7 @@ export const ProfilesPage: React.FC = () => {
 
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileDescription, setNewProfileDescription] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<'blank' | 'simple_remap' | 'capslock_escape' | 'vim_navigation' | 'gaming'>('blank');
   const [nameError, setNameError] = useState('');
   const [activationError, setActivationError] = useState<string | null>(null);
 
@@ -98,12 +99,13 @@ export const ProfilesPage: React.FC = () => {
     try {
       await createProfileMutation.mutateAsync({
         name: newProfileName,
-        template: 'blank', // Default to blank template
+        template: selectedTemplate,
       });
 
       setCreateModalOpen(false);
       setNewProfileName('');
       setNewProfileDescription('');
+      setSelectedTemplate('blank'); // Reset to default
       setNameError('');
     } catch (err) {
       setNameError(getErrorMessage(err, 'Failed to create profile'));
@@ -174,6 +176,7 @@ export const ProfilesPage: React.FC = () => {
     setCreateModalOpen(false);
     setNewProfileName('');
     setNewProfileDescription('');
+    setSelectedTemplate('blank');
     setNameError('');
   };
 
@@ -288,6 +291,30 @@ export const ProfilesPage: React.FC = () => {
             error={nameError}
             maxLength={50}
           />
+
+          {/* Template Selector */}
+          <div className="flex flex-col gap-2">
+            <label htmlFor="template-select" className="text-sm font-medium text-slate-300">
+              Starting Template
+            </label>
+            <select
+              id="template-select"
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value as typeof selectedTemplate)}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              aria-label="Select profile template"
+            >
+              <option value="blank">Blank - Empty configuration</option>
+              <option value="simple_remap">Simple Remap - Basic key remapping examples</option>
+              <option value="capslock_escape">CapsLock→Escape - CapsLock as Escape key</option>
+              <option value="vim_navigation">Vim Navigation - HJKL arrow keys layer</option>
+              <option value="gaming">Gaming - Optimized for gaming</option>
+            </select>
+            <p className="text-xs text-slate-400">
+              Choose a starting template for your profile configuration
+            </p>
+          </div>
+
           <Input
             type="text"
             value={newProfileDescription}
