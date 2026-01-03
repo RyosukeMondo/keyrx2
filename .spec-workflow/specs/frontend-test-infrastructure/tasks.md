@@ -147,7 +147,7 @@
   - _Requirements: Requirement 4 (Fix Component Integration Tests)_
   - _Prompt: Implement the task for spec frontend-test-infrastructure, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Component Test Engineer | Task: Fix ActiveProfileCard integration test by replacing manual WebSocket mocking with MSW handlers | Restrictions: Remove manual WebSocket mocks, use setDaemonState() helper for events, verify component renders updated profile name | _Leverage: MSW WebSocket from Phase 1.1, setDaemonState() helper, waitFor() for async assertions | _Requirements: Requirement 4 (Fix Component Integration Tests) - WebSocket state updates | Success: Test passes consistently, component updates via WebSocket, no manual mocking code | Instructions: 1. Mark [-]. 2. Fix test. 3. Log (taskId="4.1.1"). 4. Mark [x]._
 
-- [ ] 4.1.2. Fix DeviceListCard integration test
+- [x] 4.1.2. Fix DeviceListCard integration test
   - Files: `keyrx_ui/src/components/dashboard/DeviceListCard.test.tsx`
   - Replace manual WebSocket mock with MSW handlers
   - Use `sendServerMessage()` to simulate device_connected events
