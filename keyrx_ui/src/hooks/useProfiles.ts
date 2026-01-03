@@ -75,12 +75,21 @@ export function useActivateProfile() {
       }
     },
 
-    onSuccess: () => {
-      // Invalidate profiles, config, daemon state, and active profile queries
-      queryClient.invalidateQueries({ queryKey: queryKeys.profiles });
-      queryClient.invalidateQueries({ queryKey: ['config'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.daemonState });
-      queryClient.invalidateQueries({ queryKey: queryKeys.activeProfile });
+    onSuccess: (result, _variables, context) => {
+      // Only invalidate cache if there are no compilation errors
+      // If there are errors, rollback to previous state
+      if (result.errors && result.errors.length > 0) {
+        // Rollback optimistic update on compilation error
+        if (context?.previousProfiles) {
+          queryClient.setQueryData(queryKeys.profiles, context.previousProfiles);
+        }
+      } else {
+        // Success - invalidate profiles, config, daemon state, and active profile queries
+        queryClient.invalidateQueries({ queryKey: queryKeys.profiles });
+        queryClient.invalidateQueries({ queryKey: ['config'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.daemonState });
+        queryClient.invalidateQueries({ queryKey: queryKeys.activeProfile });
+      }
     },
   });
 }
