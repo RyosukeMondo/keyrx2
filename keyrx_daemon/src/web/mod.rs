@@ -1,4 +1,5 @@
 pub mod api;
+pub mod error;
 pub mod events;
 pub mod handlers;
 pub mod rpc_types;
