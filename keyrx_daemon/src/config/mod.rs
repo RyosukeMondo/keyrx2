@@ -3,6 +3,7 @@
 //! This module provides components for managing device metadata,
 //! profiles, layouts, and configuration generation.
 
+pub mod device;
 pub mod device_registry;
 pub mod layout_manager;
 pub mod profile_compiler;
@@ -10,6 +11,7 @@ pub mod profile_manager;
 pub mod rhai_generator;
 pub mod simulation_engine;
 
+pub use device::{DeviceConfig, Scope};
 pub use device_registry::{DeviceEntry, DeviceRegistry, DeviceScope, DeviceValidationError};
 pub use layout_manager::{KeyboardLayout, LayoutError, LayoutManager, LayoutSource};
 pub use profile_compiler::{CompilationError, CompilationResult, ProfileCompiler};
