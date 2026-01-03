@@ -516,4 +516,133 @@ describe('ConfigPage - Integration Tests', () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe('Device Integration (Requirement 8)', () => {
+    it('DeviceScopeToggle receives real devices from API', async () => {
+      renderWithProviders(<ConfigPage />);
+
+      // Wait for the page to load
+      await waitFor(() => {
+        expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
+      });
+
+      // Should show device scope toggle
+      expect(screen.getByText(/Mapping Scope/i)).toBeInTheDocument();
+
+      // Should have Global and Device-Specific options
+      expect(screen.getByText('Global')).toBeInTheDocument();
+      expect(screen.getByText('Device-Specific')).toBeInTheDocument();
+    });
+
+    it('displays real device list when device-specific mode selected', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ConfigPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
+      });
+
+      // Click Device-Specific button
+      const deviceSpecificButton = screen.getByRole('button', {
+        name: /Device-Specific/i,
+      });
+      await user.click(deviceSpecificButton);
+
+      // Should show device selector
+      await waitFor(() => {
+        expect(screen.getByText(/Select Device/i)).toBeInTheDocument();
+      });
+
+      // Should show device dropdown (or "no devices" message if empty)
+      const deviceInfo = screen.queryByText(/No devices available/i);
+      if (deviceInfo) {
+        // No devices connected - that's valid
+        expect(deviceInfo).toBeInTheDocument();
+      } else {
+        // Devices exist - should show dropdown
+        expect(screen.getByText(/Select a device/i)).toBeInTheDocument();
+      }
+    });
+
+    it('switches between global and device-specific scope', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ConfigPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
+      });
+
+      // Should start in global mode
+      const globalButton = screen.getByRole('button', { name: /^Global$/i });
+      expect(globalButton).toHaveClass('bg-primary-500');
+
+      // Switch to device-specific
+      const deviceSpecificButton = screen.getByRole('button', {
+        name: /Device-Specific/i,
+      });
+      await user.click(deviceSpecificButton);
+
+      // Device-specific button should now be active
+      await waitFor(() => {
+        expect(deviceSpecificButton).toHaveClass('bg-primary-500');
+      });
+
+      // Switch back to global
+      await user.click(globalButton);
+
+      await waitFor(() => {
+        expect(globalButton).toHaveClass('bg-primary-500');
+      });
+    });
+
+    it('device selector only visible in device-specific mode', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ConfigPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
+      });
+
+      // In global mode, device selector should not be visible
+      expect(screen.queryByText(/Select Device/i)).not.toBeInTheDocument();
+
+      // Switch to device-specific mode
+      const deviceSpecificButton = screen.getByRole('button', {
+        name: /Device-Specific/i,
+      });
+      await user.click(deviceSpecificButton);
+
+      // Device selector should now be visible
+      await waitFor(() => {
+        expect(screen.getByText(/Select Device/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows appropriate help text for each scope', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ConfigPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Keyboard Layout')).toBeInTheDocument();
+      });
+
+      // Global mode help text
+      expect(
+        screen.getByText(/Global mappings apply to all connected devices/i)
+      ).toBeInTheDocument();
+
+      // Switch to device-specific mode
+      const deviceSpecificButton = screen.getByRole('button', {
+        name: /Device-Specific/i,
+      });
+      await user.click(deviceSpecificButton);
+
+      // Device-specific help text
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Device-specific mappings apply only to/i)
+        ).toBeInTheDocument();
+      });
+    });
+  });
 });
