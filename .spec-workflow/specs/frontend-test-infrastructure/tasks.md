@@ -260,7 +260,7 @@
 
 ### 6.2. Remove Deprecated Code
 
-- [ ] 6.2.1. Remove jest-websocket-mock dependency
+- [x] 6.2.1. Remove jest-websocket-mock dependency
   - Files: `keyrx_ui/package.json`, `keyrx_ui/tests/helpers/websocket.ts`
   - Remove `jest-websocket-mock` from devDependencies in package.json
   - Delete `tests/helpers/websocket.ts` (deprecated in favor of MSW WebSocket)
