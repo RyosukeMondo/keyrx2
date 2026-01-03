@@ -72,7 +72,7 @@
   - _Requirements: Requirement 2 (Separate Test Categories with Vitest Config)_
   - _Prompt: Implement the task for spec frontend-test-infrastructure, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Vitest Configuration Specialist | Task: Create base Vitest configuration in keyrx_ui/vitest.config.ts by extracting and organizing test settings from vite.config.ts | Restrictions: Do not break existing build config, ensure test config is separated from build config, use mergeConfig() for proper config composition | _Leverage: Vitest defineConfig() and mergeConfig() APIs, existing vite.config.ts test settings | _Requirements: Requirement 2 (Separate Test Categories with Vitest Config) - Base config for reuse | Success: Base config exports cleanly, can be imported by other configs, no duplication of settings | Instructions: 1. Mark [-]. 2. Create vitest.config.ts. 3. Log (taskId="2.1.1"). 4. Mark [x]._
 
-- [ ] 2.1.2. Create unit test configuration
+- [x] 2.1.2. Create unit test configuration
   - Files: `keyrx_ui/vitest.unit.config.ts`
   - Import and merge base vitest.config.ts
   - Include only unit test files (src/**/*.test.{ts,tsx}, exclude integration/a11y/e2e/performance)
