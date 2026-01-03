@@ -94,7 +94,7 @@
 
 ### 2.2. Update npm Scripts
 
-- [ ] 2.2.1. Update package.json test scripts
+- [x] 2.2.1. Update package.json test scripts
   - Files: `keyrx_ui/package.json`
   - Update `test` script to use vitest.unit.config.ts (fast by default)
   - Update `test:watch` to use vitest.unit.config.ts
