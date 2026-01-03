@@ -195,7 +195,7 @@
   - _Requirements: Requirement 4 (Validate Profiles Before Activation and Fix Template)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust API Developer with compiler integration expertise | Task: Implement profile validation endpoint POST /api/profiles/:name/validate in keyrx_daemon/src/web/api/profiles.rs | Restrictions: Must use keyrx_compiler for validation, return structured errors with line numbers, handle compilation failures gracefully | _Leverage: keyrx_compiler for Rhai compilation, existing profile API patterns | _Requirements: Requirement 4 (Validate Profiles Before Activation and Fix Template) | Success: Endpoint validates profiles correctly, errors include line numbers, invalid syntax is caught before activation | Instructions: 1. Mark [-]. 2. Implement endpoint. 3. Log (taskId="4.1", filesModified, artifacts with apiEndpoints). 4. Mark [x]._
 
-- [ ] 4.2. Update profile creation to use valid templates
+- [x] 4.2. Update profile creation to use valid templates
   - Files: `keyrx_daemon/src/web/api/profiles.rs` (modify create_profile function)
   - Load template from keyrx_daemon/templates/*.rhai
   - Verify template compiles before creating profile
