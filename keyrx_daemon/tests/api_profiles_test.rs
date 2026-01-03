@@ -14,6 +14,7 @@ mod common;
 
 use common::test_app::TestApp;
 use serde_json::json;
+use serial_test::serial;
 use std::fs;
 
 /// Helper function to create a profile file directly in the filesystem.
@@ -34,6 +35,7 @@ fn create_profile_file(app: &TestApp, name: &str, content: &str) {
 /// 1. The profile can be activated via POST /api/profiles/:name/activate
 /// 2. Activation returns success with compilation metadata
 #[tokio::test]
+#[serial]
 async fn test_valid_profile_compiles_successfully() {
     let app = TestApp::new().await;
 
@@ -80,6 +82,7 @@ device_end();
 /// This test verifies that profiles with invalid Rhai syntax are rejected
 /// during activation and return error messages.
 #[tokio::test]
+#[serial]
 async fn test_invalid_profile_returns_compilation_errors() {
     let app = TestApp::new().await;
 
@@ -122,6 +125,7 @@ device_start("*");
 /// This test verifies that profiles using the deprecated layer() function
 /// (instead of device_start/device_end) are rejected with clear error messages.
 #[tokio::test]
+#[serial]
 async fn test_invalid_layer_syntax_rejected() {
     let app = TestApp::new().await;
 
@@ -162,6 +166,7 @@ map("VK_A", "VK_B");
 /// This test verifies that compilation errors include context that helps
 /// users understand what went wrong.
 #[tokio::test]
+#[serial]
 async fn test_compilation_errors_are_helpful() {
     let app = TestApp::new().await;
 
@@ -204,6 +209,7 @@ device_end();
 /// This test verifies that the compilation system can handle multiple
 /// profiles without cross-contamination.
 #[tokio::test]
+#[serial]
 async fn test_multiple_profiles_compile_independently() {
     let app = TestApp::new().await;
 
@@ -257,6 +263,7 @@ device_end();
 /// This test verifies that the compiler correctly handles comments and
 /// various whitespace formatting.
 #[tokio::test]
+#[serial]
 async fn test_profile_with_comments_and_whitespace() {
     let app = TestApp::new().await;
 
@@ -297,6 +304,7 @@ device_end();  // End of device block
 /// This test verifies that POST /api/profiles/:name/validate returns
 /// valid=true for profiles with correct Rhai syntax.
 #[tokio::test]
+#[serial]
 async fn test_validation_endpoint_accepts_valid_profiles() {
     let app = TestApp::new().await;
 
@@ -348,6 +356,7 @@ device_end();
 /// This test verifies that POST /api/profiles/:name/validate returns
 /// valid=false for profiles with syntax errors and includes error details.
 #[tokio::test]
+#[serial]
 async fn test_validation_endpoint_rejects_invalid_profiles() {
     let app = TestApp::new().await;
 
@@ -411,6 +420,7 @@ device_start("*");
 /// This test verifies that the validation endpoint properly handles
 /// requests for profiles that don't exist.
 #[tokio::test]
+#[serial]
 async fn test_validation_endpoint_returns_404_for_nonexistent_profile() {
     let app = TestApp::new().await;
 

@@ -3,19 +3,16 @@
 //! Tests verify that device configuration (layout and scope) persists to filesystem
 //! and loads correctly on daemon restart.
 //!
-//! # Running Tests
+//! # Note on Serial Execution
 //!
-//! These tests must be run serially because they modify the global HOME environment
-//! variable to point to isolated test directories:
-//!
-//! ```bash
-//! cargo test -p keyrx_daemon --test api_devices_test -- --test-threads=1
-//! ```
+//! These tests use `#[serial]` attribute to run serially because they modify
+//! the global HOME environment variable. The serial_test crate ensures proper isolation.
 
 mod common;
 
 use common::test_app::TestApp;
 use serde_json::json;
+use serial_test::serial;
 
 /// Helper function to register a device in the registry
 async fn register_device(app: &TestApp, device_id: &str) {
@@ -42,6 +39,7 @@ async fn register_device(app: &TestApp, device_id: &str) {
 
 /// Test that device layout persists to filesystem
 #[tokio::test]
+#[serial]
 async fn test_device_layout_save_persists_to_filesystem() {
     let app = TestApp::new().await;
     let device_id = "test-keyboard-001";
@@ -87,6 +85,7 @@ async fn test_device_layout_save_persists_to_filesystem() {
 
 /// Test that device scope persists to filesystem
 #[tokio::test]
+#[serial]
 async fn test_device_scope_save_persists_to_filesystem() {
     let app = TestApp::new().await;
     let device_id = "test-keyboard-002";
@@ -129,6 +128,7 @@ async fn test_device_scope_save_persists_to_filesystem() {
 
 /// Test that device config persists correctly and can be read back
 #[tokio::test]
+#[serial]
 async fn test_device_config_loads_correctly_on_restart() {
     let app = TestApp::new().await;
     let device_id = "test-keyboard-003";
@@ -189,6 +189,7 @@ async fn test_device_config_loads_correctly_on_restart() {
 
 /// Test that multiple device configurations persist independently
 #[tokio::test]
+#[serial]
 async fn test_multiple_devices_persist_independently() {
     let app = TestApp::new().await;
 
@@ -257,6 +258,7 @@ async fn test_multiple_devices_persist_independently() {
 
 /// Test that device name persists correctly
 #[tokio::test]
+#[serial]
 async fn test_device_name_persists_correctly() {
     let app = TestApp::new().await;
     let device_id = "test-keyboard-004";
@@ -287,6 +289,7 @@ async fn test_device_name_persists_correctly() {
 
 /// Test that registry uses atomic writes (no corruption)
 #[tokio::test]
+#[serial]
 async fn test_device_registry_atomic_writes() {
     let app = TestApp::new().await;
     let device_id = "test-keyboard-005";
@@ -325,6 +328,7 @@ async fn test_device_registry_atomic_writes() {
 
 /// Test that invalid scope values are rejected
 #[tokio::test]
+#[serial]
 async fn test_invalid_scope_rejected() {
     let app = TestApp::new().await;
     let device_id = "test-keyboard-006";
@@ -345,6 +349,7 @@ async fn test_invalid_scope_rejected() {
 
 /// Test that device can be forgotten (removed from registry)
 #[tokio::test]
+#[serial]
 async fn test_device_forget_removes_from_registry() {
     let app = TestApp::new().await;
     let device_id = "test-keyboard-007";

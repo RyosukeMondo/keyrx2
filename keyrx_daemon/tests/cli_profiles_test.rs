@@ -99,19 +99,19 @@ fn test_profiles_create_qmk() {
         .arg("create")
         .arg("qmk-test")
         .arg("--template")
-        .arg("qmk-layers")
+        .arg("vim_navigation") // Updated to use valid template
         .assert()
         .success();
 
-    // Verify profile file contains layer definitions
+    // Verify profile file contains device configuration
     let profile_path = temp_dir
         .path()
         .join("keyrx")
         .join("profiles")
         .join("qmk-test.rhai");
     let content = fs::read_to_string(profile_path).unwrap();
-    assert!(content.contains("layer(\"base\""));
-    assert!(content.contains("layer(\"lower\""));
+    assert!(content.contains("device_start"));
+    assert!(content.contains("device_end"));
 }
 
 #[test]
@@ -168,7 +168,7 @@ fn test_profiles_list_with_profiles() {
         .arg("create")
         .arg("profile2")
         .arg("--template")
-        .arg("qmk-layers")
+        .arg("vim_navigation")
         .assert()
         .success();
 

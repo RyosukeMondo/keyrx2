@@ -230,8 +230,10 @@ impl TestApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[tokio::test]
+    #[serial]
     async fn test_app_creates_isolated_config() {
         let app = TestApp::new().await;
         let config_path = app.config_path();
@@ -242,6 +244,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_app_http_helpers_work() {
         let app = TestApp::new().await;
 
@@ -254,6 +257,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_multiple_apps_isolated() {
         // Create two test apps in parallel
         let app1 = TestApp::new().await;
