@@ -239,7 +239,7 @@
 
 **Note**: This is a substantial redesign and can be deferred to a separate spec. Marking as optional for this iteration.
 
-- [ ] 5.1. Design QMK-style key mapping interface
+- [x] 5.1. Design QMK-style key mapping interface
   - Research QMK Configurator UI patterns
   - Design drag-and-drop key palette (VK_, MD_, LK_)
   - Design key mapping dialog (Simple, Tap-Hold, Macro, Layer Switch)
