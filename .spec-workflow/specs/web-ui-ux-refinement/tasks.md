@@ -204,7 +204,7 @@
   - _Requirements: Requirement 4 (Validate Profiles Before Activation and Fix Template)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Backend Developer with template system expertise | Task: Update create_profile function to use valid templates from keyrx_daemon/templates/, verifying compilation before creating profile | Restrictions: Must verify template compiles before use, support all 5 template types, use include_str! for template loading | _Leverage: Template files from task 0.2.1, include_str! macro for compile-time inclusion | _Requirements: Requirement 4 (Validate Profiles Before Activation and Fix Template) | Success: Profile creation uses valid templates, templates compile successfully, users never get invalid syntax | Instructions: 1. Mark [-]. 2. Update creation logic. 3. Log (taskId="4.2", filesModified, artifacts with functions). 4. Mark [x]._
 
-- [ ] 4.3. Create useProfileValidation hook
+- [x] 4.3. Create useProfileValidation hook
   - Files: `keyrx_ui/src/hooks/useProfileValidation.ts`
   - Implement query hook calling GET /api/profiles/:name/validation
   - Cache validation results for 1 minute
