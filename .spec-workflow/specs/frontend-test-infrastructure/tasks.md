@@ -215,7 +215,7 @@
   - _Requirements: Requirement 6 (Update E2E Test Configuration)_
   - _Prompt: Implement the task for spec frontend-test-infrastructure, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Playwright Performance Engineer | Task: Configure Playwright test sharding and browser projects in keyrx_ui/playwright.config.ts for parallel E2E execution | Restrictions: Configure chromium and firefox projects, enable sharding for CI, set retries (1 in CI, 0 local), capture traces/screenshots on failure only | _Leverage: Playwright projects, sharding, and trace configuration | _Requirements: Requirement 6 (Update E2E Test Configuration) - Parallel E2E execution | Success: E2E tests run in parallel across browsers, CI shards tests for speed, failures captured with traces | Instructions: 1. Mark [-]. 2. Configure sharding. 3. Log (taskId="5.1.2"). 4. Mark [x]._
 
-- [ ] 5.1.3. Verify E2E tests don't run with unit tests
+- [x] 5.1.3. Verify E2E tests don't run with unit tests
   - Files: `keyrx_ui/vitest.unit.config.ts`, `keyrx_ui/vitest.integration.config.ts`
   - Verify e2e/** is excluded from Vitest configs
   - Add tests/e2e/** and tests/performance/** to exclude patterns
