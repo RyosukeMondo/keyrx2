@@ -1,8 +1,6 @@
 //! Integration tests for ProfileManager
 
-use keyrx_daemon::config::profile_manager::{
-    ProfileError, ProfileManager, ProfileTemplate,
-};
+use keyrx_daemon::config::profile_manager::{ProfileError, ProfileManager, ProfileTemplate};
 use std::fs;
 use tempfile::TempDir;
 

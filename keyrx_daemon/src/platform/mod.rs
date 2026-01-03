@@ -330,7 +330,9 @@ pub fn create_platform() -> PlatformResult<Box<dyn Platform>> {
 
     #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     {
-        Err(PlatformError::Unsupported)
+        Err(PlatformError::Unsupported {
+            operation: format!("Platform creation on {}", std::env::consts::OS),
+        })
     }
 }
 
@@ -752,9 +754,9 @@ mod tests {
 
         fn capture_input(&mut self) -> PlatformResult<KeyEvent> {
             if !self.initialized {
-                return Err(PlatformError::InitializationFailed(
-                    "Platform not initialized".to_string(),
-                ));
+                return Err(PlatformError::InitializationFailed {
+                    reason: "Platform not initialized".to_string(),
+                });
             }
 
             if self.event_index < self.events.len() {
@@ -768,9 +770,9 @@ mod tests {
 
         fn inject_output(&mut self, _event: KeyEvent) -> PlatformResult<()> {
             if !self.initialized {
-                return Err(PlatformError::InitializationFailed(
-                    "Platform not initialized".to_string(),
-                ));
+                return Err(PlatformError::InitializationFailed {
+                    reason: "Platform not initialized".to_string(),
+                });
             }
             Ok(())
         }
@@ -862,14 +864,14 @@ mod tests {
         let result = platform.capture_input();
         assert!(matches!(
             result,
-            Err(PlatformError::InitializationFailed(_))
+            Err(PlatformError::InitializationFailed { .. })
         ));
 
         // inject_output should fail before initialization
         let result = platform.inject_output(KeyEvent::press(KeyCode::A));
         assert!(matches!(
             result,
-            Err(PlatformError::InitializationFailed(_))
+            Err(PlatformError::InitializationFailed { .. })
         ));
     }
 

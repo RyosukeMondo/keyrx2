@@ -215,10 +215,12 @@ impl RawInputManager {
         );
 
         if hwnd == 0 as _ {
-            return Err(PlatformError::InitializationFailed(format!(
-                "Failed to create message window: {}",
-                std::io::Error::last_os_error()
-            )));
+            return Err(PlatformError::InitializationFailed {
+                reason: format!(
+                    "Failed to create message window: {}",
+                    std::io::Error::last_os_error()
+                ),
+            });
         }
 
         Ok(hwnd)
@@ -233,10 +235,12 @@ impl RawInputManager {
         };
 
         if RegisterRawInputDevices(&rid, 1, size_of::<RAWINPUTDEVICE>() as u32) == 0 {
-            return Err(PlatformError::InitializationFailed(format!(
-                "RegisterRawInputDevices failed: {}",
-                std::io::Error::last_os_error()
-            )));
+            return Err(PlatformError::InitializationFailed {
+                reason: format!(
+                    "RegisterRawInputDevices failed: {}",
+                    std::io::Error::last_os_error()
+                ),
+            });
         }
 
         Ok(())

@@ -128,9 +128,10 @@ impl Platform for WindowsPlatform {
     fn initialize(&mut self) -> PlatformResult<()> {
         log::info!("Initializing Windows platform");
 
-        self.init().map_err(|e| {
-            PlatformError::InitializationFailed(format!("Windows platform init failed: {}", e))
-        })?;
+        self.init()
+            .map_err(|e| PlatformError::InitializationFailed {
+                reason: format!("Windows platform init failed: {}", e),
+            })?;
 
         log::info!("Windows platform initialized");
         Ok(())

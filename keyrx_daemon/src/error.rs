@@ -21,10 +21,40 @@ pub enum PlatformError {
     Poisoned(String),
 
     /// Platform initialization failed.
-    #[error("Platform initialization failed: {0}")]
-    InitializationFailed(String),
+    #[error("Platform initialization failed: {reason}")]
+    InitializationFailed {
+        /// Reason for initialization failure.
+        reason: String,
+    },
 
-    /// Device operation failed.
+    /// Device access failed (e.g., permission denied, device not found).
+    #[error("Failed to access device '{device}': {reason}. {suggestion}")]
+    DeviceAccess {
+        /// Name or path of the device that failed to be accessed.
+        device: String,
+        /// Reason for the access failure.
+        reason: String,
+        /// Suggestion for how to resolve the issue.
+        suggestion: String,
+    },
+
+    /// Keyboard event injection failed.
+    #[error("Failed to inject keyboard event: {reason}. {suggestion}")]
+    InjectionFailed {
+        /// Reason for injection failure.
+        reason: String,
+        /// Suggestion for recovery or resolution.
+        suggestion: String,
+    },
+
+    /// Requested platform operation is not supported.
+    #[error("Operation not supported on this platform: {operation}")]
+    Unsupported {
+        /// Description of the unsupported operation.
+        operation: String,
+    },
+
+    /// Device operation failed (legacy variant, prefer more specific variants).
     #[error("Device operation failed: {0}")]
     DeviceError(String),
 
@@ -355,8 +385,28 @@ mod tests {
         let err = PlatformError::Poisoned("test mutex".into());
         assert!(matches!(err, PlatformError::Poisoned(_)));
 
-        let err = PlatformError::InitializationFailed("failed to init".into());
-        assert!(matches!(err, PlatformError::InitializationFailed(_)));
+        let err = PlatformError::InitializationFailed {
+            reason: "failed to init".into(),
+        };
+        assert!(matches!(err, PlatformError::InitializationFailed { .. }));
+
+        let err = PlatformError::DeviceAccess {
+            device: "/dev/input/event0".into(),
+            reason: "permission denied".into(),
+            suggestion: "Run with sudo or add user to input group".into(),
+        };
+        assert!(matches!(err, PlatformError::DeviceAccess { .. }));
+
+        let err = PlatformError::InjectionFailed {
+            reason: "uinput device not available".into(),
+            suggestion: "Ensure uinput kernel module is loaded".into(),
+        };
+        assert!(matches!(err, PlatformError::InjectionFailed { .. }));
+
+        let err = PlatformError::Unsupported {
+            operation: "hotkey capture".into(),
+        };
+        assert!(matches!(err, PlatformError::Unsupported { .. }));
 
         let err = PlatformError::DeviceError("device not found".into());
         assert!(matches!(err, PlatformError::DeviceError(_)));
@@ -435,6 +485,33 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("Mutex poisoned"));
         assert!(msg.contains("test mutex"));
+
+        let err = PlatformError::DeviceAccess {
+            device: "/dev/input/event0".into(),
+            reason: "permission denied".into(),
+            suggestion: "Run with sudo".into(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("Failed to access device"));
+        assert!(msg.contains("/dev/input/event0"));
+        assert!(msg.contains("permission denied"));
+        assert!(msg.contains("Run with sudo"));
+
+        let err = PlatformError::InjectionFailed {
+            reason: "uinput unavailable".into(),
+            suggestion: "Load uinput module".into(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("Failed to inject"));
+        assert!(msg.contains("uinput unavailable"));
+        assert!(msg.contains("Load uinput module"));
+
+        let err = PlatformError::Unsupported {
+            operation: "hotkey capture".into(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("not supported"));
+        assert!(msg.contains("hotkey capture"));
     }
 
     #[test]

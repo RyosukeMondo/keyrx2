@@ -30,7 +30,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
   - _Prompt: Implement the task for spec error-handling-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Senior Rust Developer with expertise in error hierarchies and type design | Task: Extend DaemonError in keyrx_daemon/src/error.rs with comprehensive error variants (ConfigError, PlatformError, WebError, CliError) following requirements 2.1-2.5. Use #[from] attribute for automatic conversions. Integrate with CoreError from keyrx_core. | Restrictions: Maintain existing error variants for backward compatibility, ensure error chain is preserved, avoid circular dependencies | Success: DaemonError compiles with all variants, automatic From conversions work, error messages are descriptive. Edit tasks.md [-] → [x], log with artifacts (error enum, From implementations)_
 
-- [ ] 4. Create ConfigError types
+- [x] 4. Create ConfigError types
   - Files: keyrx_daemon/src/config/error.rs (create new), keyrx_daemon/src/config/mod.rs (modify)
   - Define ConfigError enum with variants: FileNotFound, ParseError, InvalidProfile, CompilationFailed
   - Add rich context fields (path, name, reason) to each variant
@@ -40,7 +40,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
   - _Prompt: Implement the task for spec error-handling-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Backend Developer with expertise in configuration management and error handling | Task: Create ConfigError enum in keyrx_daemon/src/config/error.rs with FileNotFound, ParseError, InvalidProfile, CompilationFailed variants following requirements 4.1-4.5. Include rich context fields (paths, names, reasons) in each variant. | Restrictions: Do not expose sensitive configuration data in errors, sanitize file paths, maintain structured error information | Success: ConfigError compiles, error messages include actionable context, exported from config module. Edit tasks.md [-] → [x], log with artifacts (error types, field definitions)_
 
-- [ ] 5. Create PlatformError types
+- [x] 5. Create PlatformError types
   - Files: keyrx_daemon/src/platform/error.rs (create new), keyrx_daemon/src/platform/mod.rs (modify)
   - Define PlatformError enum with variants: DeviceAccess, InjectionFailed, Unsupported, InitializationFailed
   - Include device names, reasons, and suggestions in error messages

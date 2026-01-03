@@ -370,7 +370,9 @@ impl crate::platform::Platform for LinuxPlatform {
 
         // Call the existing init method
         self.init(&[wildcard_config])
-            .map_err(|e| PlatformError::InitializationFailed(e.to_string()))
+            .map_err(|e| PlatformError::InitializationFailed {
+                reason: e.to_string(),
+            })
     }
 
     fn capture_input(
@@ -379,9 +381,12 @@ impl crate::platform::Platform for LinuxPlatform {
         use crate::platform::PlatformError;
 
         // Get device manager
-        let device_manager = self.device_manager.as_mut().ok_or_else(|| {
-            PlatformError::InitializationFailed("device manager not initialized".to_string())
-        })?;
+        let device_manager =
+            self.device_manager
+                .as_mut()
+                .ok_or_else(|| PlatformError::InitializationFailed {
+                    reason: "device manager not initialized".to_string(),
+                })?;
 
         // Try to get the next event from any device
         // In the Platform trait model, we need to return ONE event, not process all devices
@@ -414,21 +419,30 @@ impl crate::platform::Platform for LinuxPlatform {
     ) -> crate::platform::PlatformResult<()> {
         use crate::platform::PlatformError;
 
-        let output_device = self.output_device.as_mut().ok_or_else(|| {
-            PlatformError::InitializationFailed("output device not initialized".to_string())
-        })?;
+        let output_device =
+            self.output_device
+                .as_mut()
+                .ok_or_else(|| PlatformError::InitializationFailed {
+                    reason: "output device not initialized".to_string(),
+                })?;
 
         output_device
             .inject_event(event)
-            .map_err(|e| PlatformError::InjectionFailed(e.to_string()))
+            .map_err(|e| PlatformError::InjectionFailed {
+                reason: e.to_string(),
+                suggestion: "Check uinput device permissions and kernel module".to_string(),
+            })
     }
 
     fn list_devices(&self) -> crate::platform::PlatformResult<Vec<crate::platform::DeviceInfo>> {
         use crate::platform::{DeviceInfo, PlatformError};
 
-        let device_manager = self.device_manager.as_ref().ok_or_else(|| {
-            PlatformError::InitializationFailed("device manager not initialized".to_string())
-        })?;
+        let device_manager =
+            self.device_manager
+                .as_ref()
+                .ok_or_else(|| PlatformError::InitializationFailed {
+                    reason: "device manager not initialized".to_string(),
+                })?;
 
         // devices() returns an iterator, so we can map over it directly
         let devices = device_manager

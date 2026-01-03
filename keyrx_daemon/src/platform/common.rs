@@ -60,12 +60,15 @@ pub struct DeviceInfo {
 /// including device access, initialization, and I/O errors.
 #[derive(Error, Debug)]
 pub enum PlatformError {
-    /// The requested platform is not supported on this system.
+    /// The requested platform operation is not supported on this system.
     ///
     /// This error occurs when trying to use platform-specific functionality
     /// on an unsupported operating system.
-    #[error("Platform not supported on this operating system")]
-    Unsupported,
+    #[error("Operation not supported on this platform: {operation}")]
+    Unsupported {
+        /// Description of the unsupported operation.
+        operation: String,
+    },
 
     /// The specified device was not found.
     ///
@@ -74,7 +77,22 @@ pub enum PlatformError {
     #[error("Device not found: {0}")]
     DeviceNotFound(String),
 
-    /// Permission denied when accessing a device or resource.
+    /// Failed to access a device.
+    ///
+    /// This error occurs when device access is denied or fails.
+    /// On Linux, this usually means the user is not in the `input` group.
+    /// On Windows, this means the process lacks administrator privileges.
+    #[error("Failed to access device '{device}': {reason}. {suggestion}")]
+    DeviceAccess {
+        /// Name or path of the device that failed to be accessed.
+        device: String,
+        /// Reason for the access failure.
+        reason: String,
+        /// Suggestion for how to resolve the issue.
+        suggestion: String,
+    },
+
+    /// Permission denied when accessing a device or resource (legacy variant).
     ///
     /// On Linux, this usually means the user is not in the `input` group.
     /// On Windows, this means the process lacks administrator privileges.
@@ -90,8 +108,11 @@ pub enum PlatformError {
     ///
     /// This error occurs when the platform cannot be initialized due to
     /// missing resources, failed system calls, or other setup issues.
-    #[error("Platform initialization failed: {0}")]
-    InitializationFailed(String),
+    #[error("Platform initialization failed: {reason}")]
+    InitializationFailed {
+        /// Reason for initialization failure.
+        reason: String,
+    },
 
     /// Mutex was poisoned (another thread panicked while holding the lock).
     ///
@@ -107,12 +128,17 @@ pub enum PlatformError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// Event injection failed.
+    /// Keyboard event injection failed.
     ///
     /// This occurs when attempting to inject a keyboard event but the
-    /// operation fails (e.g., output device not initialized).
-    #[error("Event injection failed: {0}")]
-    InjectionFailed(String),
+    /// operation fails (e.g., output device not initialized, uinput unavailable).
+    #[error("Failed to inject keyboard event: {reason}. {suggestion}")]
+    InjectionFailed {
+        /// Reason for injection failure.
+        reason: String,
+        /// Suggestion for recovery or resolution.
+        suggestion: String,
+    },
 }
 
 /// Convenience type alias for Results using PlatformError.
