@@ -156,7 +156,7 @@
   - _Requirements: Requirement 3 (Persist DevicesPage Layout and Scope Selection)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Backend Developer with Axum web framework expertise | Task: Implement PATCH /api/devices/:serial endpoint in keyrx_daemon/src/web/api/devices.rs, persisting device configuration to filesystem | Restrictions: Must persist to correct directory (~/.config/keyrx/devices/), handle filesystem errors gracefully, validate serial parameter | _Leverage: Existing REST API patterns, serde_json for config serialization, dirs crate for config directory | _Requirements: Requirement 3 (Persist DevicesPage Layout and Scope Selection) | Success: Endpoint accepts layout and scope, data persists to filesystem, config loads correctly on daemon restart | Instructions: 1. Mark [-]. 2. Implement endpoint. 3. Log (taskId="3.1", filesModified/Created, artifacts with apiEndpoints). 4. Mark [x]._
 
-- [ ] 3.2. Create DeviceConfig model
+- [x] 3.2. Create DeviceConfig model
   - Files: `keyrx_daemon/src/config/device.rs`
   - Define DeviceConfig struct with serial, layout, scope fields
   - Implement Default trait
