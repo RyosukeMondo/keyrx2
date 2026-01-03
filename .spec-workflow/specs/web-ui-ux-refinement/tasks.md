@@ -21,8 +21,8 @@
   - _Requirements: 0.C (Device Persistence Integration Testing)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Integration Test Developer with expertise in filesystem I/O testing | Task: Implement comprehensive device persistence integration tests in keyrx_daemon/tests/integration/api_devices_test.rs, verifying layout and scope save to filesystem and load correctly | Restrictions: Must verify actual filesystem writes, do not mock filesystem operations, ensure cleanup after tests | _Leverage: helpers::TestApp for test fixtures, serde_json for config validation | _Requirements: Requirement 0.C (Device Persistence Integration Testing) | Success: Tests verify data persists to correct file paths, config loads correctly, filesystem cleanup works | Instructions: 1. Mark task [-] in tasks.md. 2. Implement tests. 3. Log with log-implementation tool (taskId="0.1.2", artifacts with functions tested). 4. Mark task [x] in tasks.md._
 
-- [ ] 0.1.3. Implement profile validation integration tests
-  - Files: `keyrx_daemon/tests/integration/api_profiles_test.rs`
+- [x] 0.1.3. Implement profile validation integration tests
+  - Files: `keyrx_daemon/tests/api_profiles_test.rs`
   - Test: Valid profile template compiles successfully
   - Test: Invalid profile template returns compilation errors
   - Test: Profile validation endpoint returns structured errors
