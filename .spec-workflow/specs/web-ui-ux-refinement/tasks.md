@@ -74,7 +74,7 @@
 
 ### Phase 0.4: WebSocket Contract Tests
 
-- [-] 0.4.1. Define Zod schemas for WebSocket messages
+- [x] 0.4.1. Define Zod schemas for WebSocket messages
   - Files: `keyrx_ui/tests/contract/schemas.ts`
   - Define DeviceConnectedEventSchema
   - Define ProfileActivatedEventSchema
@@ -84,7 +84,7 @@
   - _Requirements: 0.E (WebSocket Contract Testing)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: TypeScript Developer specializing in schema validation and runtime type checking | Task: Define comprehensive Zod schemas for WebSocket messages in keyrx_ui/tests/contract/schemas.ts, covering all event types | Restrictions: Must define schemas for ALL WebSocket message types, export inferred TypeScript types, ensure schemas are strict and validate all required fields | _Leverage: zod library for schema definition | _Requirements: Requirement 0.E (WebSocket Contract Testing) | Success: Schemas cover all WebSocket events, TypeScript types are correctly inferred, schemas are strict and comprehensive | Instructions: 1. Mark [-]. 2. Define schemas. 3. Log (taskId="0.4.1", artifacts with classes/functions). 4. Mark [x]._
 
-- [ ] 0.4.2. Implement WebSocket contract tests
+- [x] 0.4.2. Implement WebSocket contract tests
   - Files: `keyrx_ui/tests/contract/websocket.test.ts`
   - Test: device_connected message validates against schema
   - Test: profile_activated message validates against schema
