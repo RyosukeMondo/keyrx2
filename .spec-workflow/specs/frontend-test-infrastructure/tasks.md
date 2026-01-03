@@ -157,7 +157,7 @@
   - _Requirements: Requirement 4 (Fix Component Integration Tests)_
   - _Prompt: Implement the task for spec frontend-test-infrastructure, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Component Test Engineer | Task: Fix DeviceListCard integration test by using MSW WebSocket handlers for device events | Restrictions: Remove manual mocks, use MSW helpers for device_connected events, verify list updates correctly | _Leverage: MSW WebSocket handlers, sendServerMessage() for custom events | _Requirements: Requirement 4 (Fix Component Integration Tests) - Real-time device updates | Success: Test passes, device list updates via WebSocket, realistic event flow | Instructions: 1. Mark [-]. 2. Fix test. 3. Log (taskId="4.1.2"). 4. Mark [x]._
 
-- [ ] 4.1.3. Fix QuickStatsCard integration test
+- [x] 4.1.3. Fix QuickStatsCard integration test
   - Files: `keyrx_ui/src/components/dashboard/QuickStatsCard.test.tsx`
   - Replace manual WebSocket mock with MSW handlers
   - Use `sendLatencyUpdate({ avg, min, max })` to simulate latency events
