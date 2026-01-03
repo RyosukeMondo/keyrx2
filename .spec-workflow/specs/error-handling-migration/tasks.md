@@ -180,7 +180,7 @@
   - _Requirements: 7.1, 7.2, 7.3_
   - _Prompt: Implement the task for spec error-handling-migration, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Integration Test Engineer with expertise in error flow testing | Task: Create integration tests in keyrx_daemon/tests/ verifying error propagation through full call stack following requirements 7.1-7.3. Test CLI → Service → Platform flow and Web → Handler → Service flow. Verify errors include context at each layer. Test error recovery scenarios. | Restrictions: Use real daemon components not mocks, ensure tests are reliable, avoid flaky tests | Success: Integration tests pass, error propagation verified, context preserved through layers. Edit tasks.md [-] → [x], log with artifacts (integration test files, error flows tested)_
 
-- [ ] 19. Verify production error behavior
+- [x] 19. Verify production error behavior
   - Files: Run daemon with intentional errors in production-like environment
   - Test missing config file scenario
   - Test invalid profile syntax scenario
