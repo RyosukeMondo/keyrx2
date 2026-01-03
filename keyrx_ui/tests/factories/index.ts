@@ -92,6 +92,32 @@ export function createProfile(overrides?: Partial<ProfileMetadata>): ProfileMeta
 }
 
 /**
+ * Active Profile type for ActiveProfileCard component.
+ */
+export interface ActiveProfile {
+  name: string;
+  layers: number;
+  mappings: number;
+  modifiedAt: string;
+}
+
+/**
+ * Create a realistic ActiveProfile object.
+ *
+ * @example
+ *   const profile = createActiveProfile();
+ *   const customProfile = createActiveProfile({ layers: 3 });
+ */
+export function createActiveProfile(overrides?: Partial<ActiveProfile>): ActiveProfile {
+  return {
+    name: overrides?.name ?? faker.word.adjective() + '-' + faker.word.noun(),
+    layers: overrides?.layers ?? faker.number.int({ min: 1, max: 5 }),
+    mappings: overrides?.mappings ?? faker.number.int({ min: 0, max: 104 }),
+    modifiedAt: overrides?.modifiedAt ?? faker.date.recent().toISOString(),
+  };
+}
+
+/**
  * Create multiple profiles.
  *
  * @example

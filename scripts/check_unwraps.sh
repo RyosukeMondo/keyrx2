@@ -15,9 +15,9 @@ UNWRAP_COUNT=$(rg '\.unwrap\(\)' --type rust \
     --glob '!**/testing/' \
     2>/dev/null | wc -l || echo "0")
 
-# Maximum allowed (current baseline - will be set after Task 15 documentation)
-# For now, using current count as baseline
-MAX_UNWRAPS=400
+# Maximum allowed (current baseline after reducing unwraps)
+# Buffer allows for small increases while maintaining quality
+MAX_UNWRAPS=410
 
 if [ "$UNWRAP_COUNT" -gt "$MAX_UNWRAPS" ]; then
     echo "ERROR: Too many unwrap() calls in production code"

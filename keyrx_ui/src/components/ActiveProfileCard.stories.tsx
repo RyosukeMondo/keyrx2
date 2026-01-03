@@ -7,7 +7,7 @@
 
 import type { Meta, StoryObj } from '@storybook/react';
 import { ActiveProfileCard } from './ActiveProfileCard';
-import { createProfile, seed } from '../../tests/factories';
+import { createActiveProfile, seed } from '../../tests/factories';
 
 const meta = {
   title: 'Components/ActiveProfileCard',
@@ -47,44 +47,40 @@ seed(42);
 
 export const ActiveProfile: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Gaming',
-      isActive: true,
-      deviceCount: 2,
-      keyCount: 24,
+      layers: 2,
+      mappings: 24,
     }),
   },
 };
 
 export const MultipleDevices: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Work Setup',
-      isActive: true,
-      deviceCount: 5,
-      keyCount: 84,
+      layers: 5,
+      mappings: 84,
     }),
   },
 };
 
 export const MinimalProfile: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Simple',
-      isActive: true,
-      deviceCount: 1,
-      keyCount: 4,
+      layers: 1,
+      mappings: 4,
     }),
   },
 };
 
 export const ManyKeys: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Power User',
-      isActive: true,
-      deviceCount: 3,
-      keyCount: 104,
+      layers: 3,
+      mappings: 104,
     }),
   },
 };
@@ -93,19 +89,18 @@ export const ManyKeys: Story = {
 // Interactive States
 // =============================================================================
 
-export const WithCustomActions: Story = {
+export const WithCustomProfile: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Test Profile',
-      isActive: true,
+      layers: 3,
+      mappings: 42,
     }),
-    onEdit: () => alert('Edit clicked!'),
-    onDuplicate: () => alert('Duplicate clicked!'),
   },
   parameters: {
     docs: {
       description: {
-        story: 'Card with interactive action buttons',
+        story: 'Card with custom profile data',
       },
     },
   },
@@ -117,11 +112,10 @@ export const WithCustomActions: Story = {
 
 export const MobileView: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Mobile Profile',
-      isActive: true,
-      deviceCount: 1,
-      keyCount: 12,
+      layers: 1,
+      mappings: 12,
     }),
   },
   parameters: {
@@ -133,11 +127,10 @@ export const MobileView: Story = {
 
 export const TabletView: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Tablet Profile',
-      isActive: true,
-      deviceCount: 2,
-      keyCount: 48,
+      layers: 2,
+      mappings: 48,
     }),
   },
   parameters: {
@@ -153,22 +146,20 @@ export const TabletView: Story = {
 
 export const LongName: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Super Long Profile Name That Should Truncate Gracefully',
-      isActive: true,
-      deviceCount: 3,
-      keyCount: 64,
+      layers: 3,
+      mappings: 64,
     }),
   },
 };
 
 export const NoDevices: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Empty Profile',
-      isActive: true,
-      deviceCount: 0,
-      keyCount: 0,
+      layers: 0,
+      mappings: 0,
     }),
   },
   parameters: {
@@ -186,12 +177,10 @@ export const NoDevices: Story = {
 
 export const VisualRegression: Story = {
   args: {
-    profile: createProfile({
+    profile: createActiveProfile({
       name: 'Baseline',
-      isActive: true,
-      deviceCount: 2,
-      keyCount: 32,
-      createdAt: '2024-01-01T00:00:00Z',
+      layers: 2,
+      mappings: 32,
       modifiedAt: '2024-01-02T12:30:00Z',
     }),
   },

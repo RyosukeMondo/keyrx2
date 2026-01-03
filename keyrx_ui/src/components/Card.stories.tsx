@@ -28,14 +28,14 @@ const meta = {
   },
   tags: ['autodocs'],
   argTypes: {
-    elevation: {
+    variant: {
       control: 'select',
-      options: ['none', 'low', 'medium', 'high'],
-      description: 'Shadow elevation level',
+      options: ['default', 'elevated'],
+      description: 'Card visual variant',
     },
     padding: {
       control: 'select',
-      options: ['none', 'small', 'medium', 'large'],
+      options: ['sm', 'md', 'lg'],
       description: 'Internal padding size',
     },
   },
@@ -61,7 +61,7 @@ export const Default: Story = {
 
 export const WithElevation: Story = {
   args: {
-    elevation: 'medium',
+    variant: 'elevated',
     children: (
       <>
         <h3>Elevated Card</h3>
@@ -71,13 +71,13 @@ export const WithElevation: Story = {
   },
 };
 
-export const NoPadding: Story = {
+export const SmallPadding: Story = {
   args: {
-    padding: 'none',
+    padding: 'sm',
     children: (
-      <div style={{ background: '#f0f0f0', padding: '16px' }}>
-        <h3>Custom Padding</h3>
-        <p>This card has no default padding, allowing full control.</p>
+      <div>
+        <h3>Small Padding</h3>
+        <p>This card has small padding.</p>
       </div>
     ),
   },
@@ -97,10 +97,10 @@ export const ProfileCard: Story = {
           <strong>Devices:</strong> 2 | <strong>Keys:</strong> 24
         </p>
         <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
-          <Button variant="primary" size="small">
+          <Button variant="primary" size="sm" aria-label="Activate gaming profile" onClick={() => {}}>
             Activate
           </Button>
-          <Button variant="secondary" size="small">
+          <Button variant="secondary" size="sm" aria-label="Edit gaming profile" onClick={() => {}}>
             Edit
           </Button>
         </div>
@@ -123,7 +123,7 @@ export const DeviceCard: Story = {
               ● Connected
             </p>
           </div>
-          <Button variant="secondary" size="small">
+          <Button variant="secondary" size="sm" aria-label="Configure device" onClick={() => {}}>
             Configure
           </Button>
         </div>
@@ -184,9 +184,11 @@ export const EmptyState: Story = {
         <p style={{ fontSize: '48px', margin: '0 0 16px 0' }}>📋</p>
         <h3>No profiles yet</h3>
         <p>Create your first profile to get started</p>
-        <Button variant="primary" style={{ marginTop: '16px' }}>
-          Create Profile
-        </Button>
+        <div style={{ marginTop: '16px' }}>
+          <Button variant="primary" aria-label="Create new profile" onClick={() => {}}>
+            Create Profile
+          </Button>
+        </div>
       </div>
     ),
   },
@@ -204,9 +206,11 @@ export const ErrorState: Story = {
         <p style={{ color: '#660000', margin: 0 }}>
           Failed to connect to daemon. Please ensure the daemon is running.
         </p>
-        <Button variant="danger" size="small" style={{ marginTop: '12px' }}>
-          Retry Connection
-        </Button>
+        <div style={{ marginTop: '12px' }}>
+          <Button variant="danger" size="sm" aria-label="Retry connection" onClick={() => {}}>
+            Retry Connection
+          </Button>
+        </div>
       </div>
     ),
   },

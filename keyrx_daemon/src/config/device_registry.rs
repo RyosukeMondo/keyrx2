@@ -282,9 +282,10 @@ fn validate_layout_name(layout: &str) -> Result<(), DeviceValidationError> {
 
 /// Get current Unix timestamp in seconds
 fn current_timestamp() -> u64 {
+    // SAFETY: SystemTime::now() is always after UNIX_EPOCH on modern systems
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("System time is before UNIX_EPOCH")
         .as_secs()
 }
 

@@ -6,7 +6,6 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
 import { Button } from './Button';
 
 const meta = {
@@ -33,12 +32,12 @@ const meta = {
   argTypes: {
     variant: {
       control: 'select',
-      options: ['primary', 'secondary', 'danger'],
+      options: ['primary', 'secondary', 'danger', 'ghost'],
       description: 'Visual style variant',
     },
     size: {
       control: 'select',
-      options: ['small', 'medium', 'large'],
+      options: ['sm', 'md', 'lg'],
       description: 'Button size',
     },
     disabled: {
@@ -51,7 +50,8 @@ const meta = {
     },
   },
   args: {
-    onClick: fn(),
+    onClick: () => {},
+    'aria-label': 'Button',
   },
 } satisfies Meta<typeof Button>;
 
@@ -66,6 +66,7 @@ export const Primary: Story = {
   args: {
     children: 'Primary Button',
     variant: 'primary',
+    'aria-label': 'Primary action button',
   },
 };
 
@@ -73,6 +74,7 @@ export const Secondary: Story = {
   args: {
     children: 'Secondary Button',
     variant: 'secondary',
+    'aria-label': 'Secondary action button',
   },
 };
 
@@ -80,6 +82,7 @@ export const Danger: Story = {
   args: {
     children: 'Delete',
     variant: 'danger',
+    'aria-label': 'Delete item',
   },
 };
 
@@ -90,21 +93,24 @@ export const Danger: Story = {
 export const Small: Story = {
   args: {
     children: 'Small Button',
-    size: 'small',
+    size: 'sm',
+    'aria-label': 'Small button',
   },
 };
 
 export const Medium: Story = {
   args: {
     children: 'Medium Button',
-    size: 'medium',
+    size: 'md',
+    'aria-label': 'Medium button',
   },
 };
 
 export const Large: Story = {
   args: {
     children: 'Large Button',
-    size: 'large',
+    size: 'lg',
+    'aria-label': 'Large button',
   },
 };
 
@@ -116,6 +122,7 @@ export const Disabled: Story = {
   args: {
     children: 'Disabled Button',
     disabled: true,
+    'aria-label': 'Disabled button',
   },
 };
 
@@ -123,6 +130,7 @@ export const Loading: Story = {
   args: {
     children: 'Loading...',
     disabled: true,
+    'aria-label': 'Loading button',
   },
 };
 
@@ -138,13 +146,15 @@ export const WithIcon: Story = {
       </>
     ),
     variant: 'primary',
+    'aria-label': 'Add new profile',
   },
 };
 
 export const FullWidth: Story = {
   args: {
     children: 'Full Width Button',
-    style: { width: '100%' },
+    'aria-label': 'Full width button',
+    className: 'w-full',
   },
 };
 
