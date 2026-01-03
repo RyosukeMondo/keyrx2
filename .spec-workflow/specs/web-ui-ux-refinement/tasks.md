@@ -105,7 +105,7 @@
   - _Requirements: 0.F (End-to-End User Flow Testing), Requirement 4 (Validate Profiles Before Activation)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Automation Engineer with Playwright expertise | Task: Implement profile creation E2E test in keyrx_ui/e2e/profile-flow.spec.ts, testing complete user flow from creation to activation | Restrictions: Must test full user workflow, verify UI feedback at each step, ensure tests are reliable and not flaky | _Leverage: Playwright for E2E testing, existing test configuration | _Requirements: Requirement 0.F (End-to-End User Flow Testing), Requirement 4 (Validate Profiles Before Activation) | Success: E2E test covers complete profile creation flow, validation errors are caught, [Active] badge persists correctly | Instructions: 1. Mark [-]. 2. Implement E2E test. 3. Log (taskId="0.5.1"). 4. Mark [x]._
 
-- [ ] 0.5.2. Implement device configuration E2E test
+- [x] 0.5.2. Implement device configuration E2E test
   - Files: `keyrx_ui/e2e/device-flow.spec.ts`
   - Test: Select device layout → Navigate away → Return → Verify persistence
   - Test: Select device scope → Verify save feedback → Verify persistence
