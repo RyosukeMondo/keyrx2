@@ -136,7 +136,7 @@
   - _Requirements: Requirement 1 (Remove WASM from Configuration Editor)_
   - _Prompt: Implement the task for spec web-ui-ux-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Hook Developer with React Query expertise | Task: Create useValidateConfig hook in keyrx_ui/src/hooks/useValidateConfig.ts, implementing backend validation via REST API | Restrictions: Must use React Query for caching, handle loading and error states, follow existing hook patterns | _Leverage: useUnifiedApi() for API base URL, React Query for state management | _Requirements: Requirement 1 (Remove WASM from Configuration Editor) | Success: Hook calls backend API correctly, returns structured validation errors, integrates with existing error handling | Instructions: 1. Mark [-]. 2. Implement hook. 3. Log (taskId="1.2", filesCreated, artifacts with functions). 4. Mark [x]._
 
-- [ ] 1.3. Integrate backend validation in ConfigPage
+- [x] 1.3. Integrate backend validation in ConfigPage
   - Files: `keyrx_ui/src/pages/ConfigPage.tsx`
   - Replace WASM validation with useValidateConfig() hook
   - Update validation callback to use backend API

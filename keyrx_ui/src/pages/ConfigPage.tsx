@@ -25,6 +25,7 @@ import { useGetProfileConfig, useSetProfileConfig } from '@/hooks/useProfileConf
 import { useUnifiedApi } from '@/hooks/useUnifiedApi';
 import { useDevices } from '@/hooks/useDevices';
 import { useProfiles } from '@/hooks/useProfiles';
+import { useValidateConfig } from '@/hooks/useValidateConfig';
 
 interface ConfigPageProps {
   profileName?: string;
@@ -48,6 +49,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const api = useUnifiedApi();
   const { data: profileConfig, isLoading: isLoadingConfig, error: configError } = useGetProfileConfig(profileName);
   const { mutateAsync: setProfileConfig } = useSetProfileConfig();
+  const { mutateAsync: validateConfig } = useValidateConfig();
 
   // Fetch real devices and profiles
   const { data: devicesData, isLoading: isLoadingDevices } = useDevices();
@@ -65,6 +67,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const [activeDragKey, setActiveDragKey] = useState<AssignableKey | null>(null);
   const [connectionTimeout, setConnectionTimeout] = useState(false);
   const [dragAnnouncement, setDragAnnouncement] = useState<string>('');
+  const [isValidating, setIsValidating] = useState(false);
 
   // Configure drag-and-drop sensors with keyboard support
   const sensors = useSensors(
@@ -130,10 +133,33 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
     }
   }, [profileConfig]);
 
+  // Backend validation - runs when code changes with debouncing
+  useEffect(() => {
+    if (!configCode || activeTab !== 'code') {
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsValidating(true);
+      try {
+        const result = await validateConfig(configCode);
+        setValidationErrors(result.errors);
+      } catch (error) {
+        // If validation API call fails, clear errors
+        console.debug('Backend validation failed:', error);
+        setValidationErrors([]);
+      } finally {
+        setIsValidating(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [configCode, activeTab, validateConfig]);
+
   // Auto-save configuration
   const { isSaving, error: saveError, lastSavedAt } = useAutoSave(configCode, {
     saveFn: async (code) => {
-      // Save configuration (validation will be handled by backend in future task)
+      // Save configuration (validation is performed separately via backend API)
       await setProfileConfig({ name: profileName, source: code });
     },
     debounceMs: 500,
@@ -150,7 +176,8 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
     }
   }, [api.isConnected, connectionTimeout]);
 
-  // Handle validation callback from Monaco
+  // Handle validation callback from Monaco (WASM validation)
+  // This receives WASM validation errors from MonacoEditor
   const handleValidation = useCallback((errors: ValidationError[]) => {
     setValidationErrors(errors);
   }, []);
@@ -304,7 +331,21 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           </div>
 
           {/* Save Status Indicator */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {isValidating && (
+              <span className="text-sm text-slate-400 flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Validating...
+              </span>
+            )}
+            {!isValidating && validationErrors.length === 0 && configCode && activeTab === 'code' && (
+              <span className="text-sm text-green-400">
+                ✓ Valid
+              </span>
+            )}
             {isSaving && (
               <span className="text-sm text-slate-400 flex items-center gap-2">
                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
