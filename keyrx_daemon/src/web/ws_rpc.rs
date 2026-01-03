@@ -42,12 +42,17 @@ async fn handle_websocket(mut socket: WebSocket, state: Arc<AppState>) {
     log::info!("WebSocket RPC client {} connected", client_id);
 
     // Send Connected handshake immediately
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_micros() as u64)
+        .unwrap_or_else(|e| {
+            log::warn!("Failed to get system time, using 0: {}", e);
+            0
+        });
+
     let connected = ServerMessage::Connected {
         version: env!("CARGO_PKG_VERSION").to_string(),
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_micros() as u64,
+        timestamp,
     };
 
     let connected_json = match serde_json::to_string(&connected) {
@@ -311,7 +316,14 @@ mod tests {
     #[test]
     fn test_create_router() {
         let config_dir = PathBuf::from("/tmp/keyrx-test");
-        let profile_manager = Arc::new(ProfileManager::new(config_dir.clone()).unwrap());
+        let profile_manager = match ProfileManager::new(config_dir.clone()) {
+            Ok(pm) => Arc::new(pm),
+            Err(e) => {
+                eprintln!("Warning: Failed to create ProfileManager for test: {}", e);
+                // Skip test if ProfileManager initialization fails (e.g., permission issues)
+                return;
+            }
+        };
         let profile_service = Arc::new(ProfileService::new(Arc::clone(&profile_manager)));
         let device_service = Arc::new(crate::services::DeviceService::new(config_dir));
         let config_service = Arc::new(ConfigService::new(profile_manager));

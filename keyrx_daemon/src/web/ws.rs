@@ -46,7 +46,7 @@ async fn handle_websocket(mut socket: WebSocket, event_tx: broadcast::Sender<Dae
             "version": env!("CARGO_PKG_VERSION"),
             "timestamp": std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or_default()
                 .as_secs(),
         }
     });
@@ -88,7 +88,7 @@ async fn handle_websocket(mut socket: WebSocket, event_tx: broadcast::Sender<Dae
                     "payload": {
                         "timestamp": std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
+                            .unwrap_or_default()
                             .as_secs(),
                     }
                 });
