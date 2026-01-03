@@ -15,7 +15,7 @@
 
 ### Task 2: Verify DevicesPage layout auto-save functionality
 
-- [ ] 2. Verify DevicesPage layout auto-save functionality
+- [x] 2. Verify DevicesPage layout auto-save functionality
   - File: `keyrx_ui/src/pages/DevicesPage.tsx` (verification only, may not need changes)
   - Purpose: Test and verify existing auto-save implementation works correctly
   - _Leverage: `keyrx_ui/src/hooks/useAutoSave.ts` (already implemented), `RpcClient.setDeviceLayout` method_
