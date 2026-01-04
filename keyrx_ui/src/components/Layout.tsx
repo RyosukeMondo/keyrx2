@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
+import { VERSION, BUILD_TIME } from '../version';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -75,8 +76,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Desktop Sidebar (>= 768px) - Fixed left */}
       <div className="hidden md:block fixed top-0 left-0 bottom-0 w-64 border-r border-slate-700 z-30">
         {/* Brand header */}
-        <div className="h-16 flex items-center px-6 bg-slate-800 border-b border-slate-700">
+        <div className="h-16 flex flex-col justify-center px-6 bg-slate-800 border-b border-slate-700">
           <span className="text-xl font-bold text-primary-500">KeyRx2</span>
+          <span className="text-xs text-slate-500" title={`Built: ${BUILD_TIME}`}>
+            v{VERSION} • {new Date(BUILD_TIME).toLocaleString()}
+          </span>
         </div>
         <Sidebar className="h-[calc(100vh-4rem)]" />
       </div>
