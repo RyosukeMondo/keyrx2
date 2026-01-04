@@ -2,30 +2,41 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { waitFor } from '@testing-library/react';
 import { WebSocketManager, getWebSocketInstance, closeWebSocketInstance } from './websocket';
 import type { EventRecord, DaemonState, LatencyStats } from '../types';
+import {
+  setupMockWebSocket,
+  cleanupMockWebSocket,
+  getMockWebSocket,
+  simulateConnected,
+  WS_URL,
+} from '../../tests/testUtils';
 
 describe('WebSocketManager', () => {
   let wsManager: WebSocketManager;
 
-  beforeEach(() => {
-    // MSW WebSocket handlers are set up globally in test setup
-    // No need for fake timers - MSW handles connections synchronously
+  beforeEach(async () => {
+    // Set up jest-websocket-mock server for WebSocket testing
+    await setupMockWebSocket();
   });
 
   afterEach(() => {
     if (wsManager) {
       wsManager.close();
     }
+    cleanupMockWebSocket();
     vi.restoreAllMocks();
   });
 
   describe('Connection', () => {
     it('should connect to WebSocket server', async () => {
       const onOpen = vi.fn();
-      wsManager = new WebSocketManager({}, { onOpen });
+      wsManager = new WebSocketManager({ url: WS_URL }, { onOpen });
 
       wsManager.connect();
 
-      // MSW establishes connection synchronously
+      // Wait for WebSocket connection to jest-websocket-mock server
+      const server = getMockWebSocket();
+      await server.connected;
+
       await waitFor(() => {
         expect(onOpen).toHaveBeenCalled();
         expect(wsManager.isConnected()).toBe(true);
@@ -35,9 +46,11 @@ describe('WebSocketManager', () => {
 
     it('should not create duplicate connections', async () => {
       const onOpen = vi.fn();
-      wsManager = new WebSocketManager({}, { onOpen });
+      wsManager = new WebSocketManager({ url: WS_URL }, { onOpen });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(onOpen).toHaveBeenCalled());
 
       // Try to connect again
@@ -50,9 +63,11 @@ describe('WebSocketManager', () => {
 
     it('should disconnect cleanly', async () => {
       const onClose = vi.fn();
-      wsManager = new WebSocketManager({}, { onClose });
+      wsManager = new WebSocketManager({ url: WS_URL }, { onClose });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
       wsManager.disconnect();
@@ -66,9 +81,11 @@ describe('WebSocketManager', () => {
 
     it('should not reconnect after close()', async () => {
       const onOpen = vi.fn();
-      wsManager = new WebSocketManager({}, { onOpen });
+      wsManager = new WebSocketManager({ url: WS_URL }, { onOpen });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(onOpen).toHaveBeenCalled());
 
       wsManager.close();
@@ -86,12 +103,14 @@ describe('WebSocketManager', () => {
   describe('Message Handling', () => {
     it('should handle event messages', async () => {
       const onEvent = vi.fn();
-      wsManager = new WebSocketManager({}, { onEvent });
+      wsManager = new WebSocketManager({ url: WS_URL }, { onEvent });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
-      // Simulate incoming event message via MSW
+      // Send event message from mock server
       const mockEvent: EventRecord = {
         id: '1',
         timestamp: '2024-01-01T00:00:00Z',
@@ -101,16 +120,10 @@ describe('WebSocketManager', () => {
         latencyUs: 100,
       };
 
-      // Access internal ws to trigger onmessage
-      const ws = (wsManager as any).ws as WebSocket;
-      ws.onmessage!(
-        new MessageEvent('message', {
-          data: JSON.stringify({
-            type: 'event',
-            payload: mockEvent,
-          }),
-        })
-      );
+      server.send({
+        type: 'event',
+        payload: mockEvent,
+      });
 
       await waitFor(() => {
         expect(onEvent).toHaveBeenCalledWith(mockEvent);
@@ -119,9 +132,11 @@ describe('WebSocketManager', () => {
 
     it('should handle state messages', async () => {
       const onState = vi.fn();
-      wsManager = new WebSocketManager({}, { onState });
+      wsManager = new WebSocketManager({ url: WS_URL }, { onState });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
       const mockState: DaemonState = {
@@ -132,15 +147,10 @@ describe('WebSocketManager', () => {
         uptime: 1000,
       };
 
-      const ws = (wsManager as any).ws as WebSocket;
-      ws.onmessage!(
-        new MessageEvent('message', {
-          data: JSON.stringify({
-            type: 'state',
-            payload: mockState,
-          }),
-        })
-      );
+      server.send({
+        type: 'state',
+        payload: mockState,
+      });
 
       await waitFor(() => {
         expect(onState).toHaveBeenCalledWith(mockState);
@@ -149,9 +159,11 @@ describe('WebSocketManager', () => {
 
     it('should handle latency messages', async () => {
       const onLatency = vi.fn();
-      wsManager = new WebSocketManager({}, { onLatency });
+      wsManager = new WebSocketManager({ url: WS_URL }, { onLatency });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
       const mockLatency: LatencyStats = {
@@ -165,15 +177,10 @@ describe('WebSocketManager', () => {
         timestamp: '2024-01-01T00:00:00Z',
       };
 
-      const ws = (wsManager as any).ws as WebSocket;
-      ws.onmessage!(
-        new MessageEvent('message', {
-          data: JSON.stringify({
-            type: 'latency',
-            payload: mockLatency,
-          }),
-        })
-      );
+      server.send({
+        type: 'latency',
+        payload: mockLatency,
+      });
 
       await waitFor(() => {
         expect(onLatency).toHaveBeenCalledWith(mockLatency);
@@ -182,11 +189,14 @@ describe('WebSocketManager', () => {
 
     it('should handle invalid JSON gracefully', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      wsManager = new WebSocketManager({});
+      wsManager = new WebSocketManager({ url: WS_URL });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
+      // Send invalid JSON from server (use sendText for non-JSON)
       const ws = (wsManager as any).ws as WebSocket;
       ws.onmessage!(
         new MessageEvent('message', {
@@ -207,6 +217,7 @@ describe('WebSocketManager', () => {
 
       wsManager = new WebSocketManager(
         {
+          url: WS_URL,
           reconnectInterval: 1000,
           reconnectDecay: 2,
           maxReconnectInterval: 10000,
@@ -215,6 +226,8 @@ describe('WebSocketManager', () => {
       );
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
       // Close the connection
@@ -236,6 +249,7 @@ describe('WebSocketManager', () => {
       const states: string[] = [];
       wsManager = new WebSocketManager(
         {
+          url: WS_URL,
           maxReconnectAttempts: 2,
           reconnectInterval: 100,
         },
@@ -286,9 +300,11 @@ describe('WebSocketManager', () => {
 
     it('should not reconnect if disabled', async () => {
       const onConnectionStateChange = vi.fn();
-      wsManager = new WebSocketManager({ reconnect: false }, { onConnectionStateChange });
+      wsManager = new WebSocketManager({ url: WS_URL, reconnect: false }, { onConnectionStateChange });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
       const ws = (wsManager as any).ws as WebSocket;
@@ -336,9 +352,11 @@ describe('WebSocketManager', () => {
       const onConnectionStateChange = vi.fn((state) => states.push(state));
       const onOpen = vi.fn();
 
-      wsManager = new WebSocketManager({}, { onConnectionStateChange, onOpen });
+      wsManager = new WebSocketManager({ url: WS_URL }, { onConnectionStateChange, onOpen });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       expect(states).toContain('connecting');
 
       await waitFor(() => {
@@ -357,9 +375,11 @@ describe('WebSocketManager', () => {
 
   describe('Send Messages', () => {
     it('should send string messages', async () => {
-      wsManager = new WebSocketManager({});
+      wsManager = new WebSocketManager({ url: WS_URL });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
       const ws = (wsManager as any).ws as WebSocket;
@@ -371,9 +391,11 @@ describe('WebSocketManager', () => {
     });
 
     it('should send object messages as JSON', async () => {
-      wsManager = new WebSocketManager({});
+      wsManager = new WebSocketManager({ url: WS_URL });
 
       wsManager.connect();
+      const server = getMockWebSocket();
+      await server.connected;
       await waitFor(() => expect(wsManager.isConnected()).toBe(true));
 
       const ws = (wsManager as any).ws as WebSocket;
@@ -387,7 +409,7 @@ describe('WebSocketManager', () => {
 
     it('should not send when disconnected', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      wsManager = new WebSocketManager({});
+      wsManager = new WebSocketManager({ url: WS_URL });
 
       wsManager.send('test');
 

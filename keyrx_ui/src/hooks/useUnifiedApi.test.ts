@@ -1,7 +1,7 @@
 /**
  * Tests for useUnifiedApi hook
  *
- * This test file verifies the WebSocket RPC communication hook implementation using MSW WebSocket handlers.
+ * This test file verifies the WebSocket RPC communication hook implementation using jest-websocket-mock.
  * It tests key acceptance criteria from REQ-1:
  * - AC1: Connection and Connected handshake
  * - AC3: Subscription and event handling
@@ -14,7 +14,16 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useUnifiedApi } from './useUnifiedApi';
-import { setDaemonState, sendLatencyUpdate, sendKeyEvent } from '../test/mocks/websocketHelpers';
+import {
+  setupMockWebSocket,
+  cleanupMockWebSocket,
+  getMockWebSocket,
+  simulateConnected,
+  sendDaemonStateUpdate,
+  sendLatencyUpdate,
+  sendKeyEvent,
+  WS_URL,
+} from '../../tests/testUtils';
 
 // Mock uuid for deterministic test IDs
 let uuidCounter = 0;
@@ -23,18 +32,20 @@ vi.mock('uuid', () => ({
 }));
 
 describe('useUnifiedApi', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     uuidCounter = 0;
+    await setupMockWebSocket();
   });
 
   afterEach(() => {
     vi.clearAllTimers();
+    cleanupMockWebSocket();
   });
 
   describe('Connection and Handshake (AC1)', () => {
     it('should initialize with connection state', async () => {
-      const { result } = renderHook(() => useUnifiedApi());
+      const { result } = renderHook(() => useUnifiedApi(WS_URL));
 
       // Initially not connected (waiting for 'connected' message from MSW)
       expect(result.current.isConnected).toBe(false);
@@ -46,9 +57,15 @@ describe('useUnifiedApi', () => {
     });
 
     it('should become connected after receiving connected message', async () => {
-      const { result } = renderHook(() => useUnifiedApi());
+      const { result } = renderHook(() => useUnifiedApi(WS_URL));
 
-      // MSW WebSocket handler automatically sends 'connected' message
+      // Wait for WebSocket to connect to mock server
+      const server = getMockWebSocket();
+      await server.connected;
+
+      // Send 'connected' handshake message
+      await simulateConnected();
+
       // Wait for isConnected to become true
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
@@ -58,7 +75,12 @@ describe('useUnifiedApi', () => {
 
   describe('Subscription Management (AC3)', () => {
     it('should subscribe to channel and receive initial state', async () => {
-      const { result } = renderHook(() => useUnifiedApi());
+      const { result } = renderHook(() => useUnifiedApi(WS_URL));
+
+      // Wait for server connection
+      const server = getMockWebSocket();
+      await server.connected;
+      await simulateConnected();
 
       // Wait for connection
       await waitFor(() => {
@@ -68,7 +90,9 @@ describe('useUnifiedApi', () => {
       const handler = vi.fn();
       result.current.subscribe('daemon-state', handler);
 
-      // MSW sends initial state on subscription
+      // Send initial state for subscription
+      sendDaemonStateUpdate({ layer: 'base', activeProfile: 'default' });
+
       await waitFor(() => {
         expect(handler).toHaveBeenCalled();
       }, { timeout: 2000 });
@@ -79,7 +103,12 @@ describe('useUnifiedApi', () => {
     });
 
     it('should receive subscription events from WebSocket helpers', async () => {
-      const { result } = renderHook(() => useUnifiedApi());
+      const { result } = renderHook(() => useUnifiedApi(WS_URL));
+
+      // Wait for server connection
+      const server = getMockWebSocket();
+      await server.connected;
+      await simulateConnected();
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
@@ -88,6 +117,9 @@ describe('useUnifiedApi', () => {
       const handler = vi.fn();
       result.current.subscribe('daemon-state', handler);
 
+      // Send initial state
+      sendDaemonStateUpdate({ layer: 'base', activeProfile: 'default' });
+
       // Wait for initial state
       await waitFor(() => {
         expect(handler).toHaveBeenCalled();
@@ -95,8 +127,8 @@ describe('useUnifiedApi', () => {
 
       const callCountBefore = handler.mock.calls.length;
 
-      // Simulate state change using MSW helper
-      setDaemonState({ activeProfile: 'gaming', layer: 'fn' });
+      // Simulate state change using jest-websocket-mock helper
+      sendDaemonStateUpdate({ activeProfile: 'gaming', layer: 'fn' });
 
       // Wait for event to be received
       await waitFor(() => {
@@ -110,7 +142,12 @@ describe('useUnifiedApi', () => {
     });
 
     it('should handle multiple handlers for same channel', async () => {
-      const { result } = renderHook(() => useUnifiedApi());
+      const { result } = renderHook(() => useUnifiedApi(WS_URL));
+
+      // Wait for server connection
+      const server = getMockWebSocket();
+      await server.connected;
+      await simulateConnected();
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
@@ -122,6 +159,9 @@ describe('useUnifiedApi', () => {
       result.current.subscribe('latency', handler1);
       result.current.subscribe('latency', handler2);
 
+      // Send initial latency data
+      sendLatencyUpdate({ min: 50, avg: 100, max: 200, p95: 150, p99: 180 });
+
       // Clear any initial subscription events
       await waitFor(() => {
         expect(handler1).toHaveBeenCalled();
@@ -129,7 +169,7 @@ describe('useUnifiedApi', () => {
       handler1.mockClear();
       handler2.mockClear();
 
-      // Send latency update using MSW helper
+      // Send latency update using jest-websocket-mock helper
       sendLatencyUpdate({ min: 100, avg: 200, max: 500, p95: 400, p99: 450 });
 
       // Both handlers should receive the event
@@ -145,7 +185,12 @@ describe('useUnifiedApi', () => {
     });
 
     it('should support all subscription channels', async () => {
-      const { result } = renderHook(() => useUnifiedApi());
+      const { result } = renderHook(() => useUnifiedApi(WS_URL));
+
+      // Wait for server connection
+      const server = getMockWebSocket();
+      await server.connected;
+      await simulateConnected();
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
@@ -156,8 +201,12 @@ describe('useUnifiedApi', () => {
       const latencyHandler = vi.fn();
 
       result.current.subscribe('daemon-state', stateHandler);
-      result.current.subscribe('events', eventsHandler);
+      result.current.subscribe('key-events', eventsHandler);
       result.current.subscribe('latency', latencyHandler);
+
+      // Send initial messages to each channel
+      sendDaemonStateUpdate({ layer: 'base', activeProfile: 'default' });
+      sendLatencyUpdate({ min: 50, avg: 100, max: 200, p95: 150, p99: 180 });
 
       // Wait for initial subscription messages
       await waitFor(() => {
@@ -166,7 +215,7 @@ describe('useUnifiedApi', () => {
       });
 
       // Send events to each channel
-      setDaemonState({ layer: 'test' });
+      sendDaemonStateUpdate({ layer: 'test' });
       sendKeyEvent({ keyCode: 'KEY_A', eventType: 'press', input: 'KEY_A', output: 'KEY_B', latency: 100 });
       sendLatencyUpdate({ min: 100, avg: 200, max: 300, p95: 250, p99: 280 });
 
@@ -179,7 +228,12 @@ describe('useUnifiedApi', () => {
     });
 
     it('should unsubscribe from channel', async () => {
-      const { result } = renderHook(() => useUnifiedApi());
+      const { result } = renderHook(() => useUnifiedApi(WS_URL));
+
+      // Wait for server connection
+      const server = getMockWebSocket();
+      await server.connected;
+      await simulateConnected();
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
@@ -187,6 +241,9 @@ describe('useUnifiedApi', () => {
 
       const handler = vi.fn();
       const unsubscribe = result.current.subscribe('daemon-state', handler);
+
+      // Send initial state
+      sendDaemonStateUpdate({ layer: 'base', activeProfile: 'default' });
 
       // Wait for initial state
       await waitFor(() => {
@@ -202,7 +259,7 @@ describe('useUnifiedApi', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Send state change
-      setDaemonState({ activeProfile: 'test', layer: 'test' });
+      sendDaemonStateUpdate({ activeProfile: 'test', layer: 'test' });
 
       // Wait a bit more
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -214,7 +271,12 @@ describe('useUnifiedApi', () => {
 
   describe('Cleanup on Unmount (AC10)', () => {
     it('should unsubscribe all channels on unmount', async () => {
-      const { result, unmount } = renderHook(() => useUnifiedApi());
+      const { result, unmount } = renderHook(() => useUnifiedApi(WS_URL));
+
+      // Wait for server connection
+      const server = getMockWebSocket();
+      await server.connected;
+      await simulateConnected();
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
@@ -225,8 +287,12 @@ describe('useUnifiedApi', () => {
       const handler3 = vi.fn();
 
       result.current.subscribe('daemon-state', handler1);
-      result.current.subscribe('events', handler2);
+      result.current.subscribe('key-events', handler2);
       result.current.subscribe('latency', handler3);
+
+      // Send initial events
+      sendDaemonStateUpdate({ layer: 'base', activeProfile: 'default' });
+      sendLatencyUpdate({ min: 50, avg: 100, max: 200, p95: 150, p99: 180 });
 
       // Wait for initial events
       await waitFor(() => {
@@ -246,7 +312,7 @@ describe('useUnifiedApi', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Send events after unmount
-      setDaemonState({ activeProfile: 'test' });
+      sendDaemonStateUpdate({ activeProfile: 'test' });
       sendKeyEvent({ keyCode: 'KEY_A', eventType: 'press', input: 'KEY_A', output: 'KEY_A', latency: 100 });
       sendLatencyUpdate({ min: 100, avg: 200, max: 300, p95: 250, p99: 280 });
 
@@ -262,10 +328,15 @@ describe('useUnifiedApi', () => {
 
   describe('Error Handling (AC6)', () => {
     it('should track connection state', async () => {
-      const { result } = renderHook(() => useUnifiedApi());
+      const { result } = renderHook(() => useUnifiedApi(WS_URL));
 
       // Initially lastError should be null
       expect(result.current.lastError).toBeNull();
+
+      // Wait for server connection
+      const server = getMockWebSocket();
+      await server.connected;
+      await simulateConnected();
 
       // Wait for connection
       await waitFor(() => {

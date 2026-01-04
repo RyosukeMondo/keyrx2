@@ -165,27 +165,41 @@ export function renderWithProviders(
 }
 
 // =============================================================================
-// WebSocket Testing Helpers (MSW-based)
+// WebSocket Testing Helpers (jest-websocket-mock)
 // =============================================================================
 
 /**
  * WebSocket Testing Helpers
  *
- * These utilities use MSW (Mock Service Worker) v2 for robust WebSocket testing.
- * MSW automatically intercepts WebSocket connections and provides type-safe message handling.
+ * HYBRID MOCKING APPROACH:
+ * - HTTP mocking: MSW (automatic, globally configured)
+ * - WebSocket mocking: jest-websocket-mock (per-test setup)
+ *
+ * These utilities use jest-websocket-mock for robust WebSocket testing because:
+ * - Better react-use-websocket compatibility (passes assertIsWebSocket check)
+ * - Proven track record with WebSocket testing
+ * - Automatic integration with React Testing Library's act()
  *
  * Basic Usage Pattern:
  * ```typescript
- * import { renderWithProviders, setDaemonState, sendLatencyUpdate, waitForWebSocketConnection } from '../tests/testUtils';
+ * import { renderWithProviders, setupMockWebSocket, cleanupMockWebSocket, sendDaemonStateUpdate } from '../tests/testUtils';
+ *
+ * beforeEach(async () => {
+ *   await setupMockWebSocket();
+ * });
+ *
+ * afterEach(() => {
+ *   cleanupMockWebSocket();
+ * });
  *
  * test('handles WebSocket messages', async () => {
  *   const { getByText } = renderWithProviders(<MyComponent />);
  *
- *   // Wait for WebSocket connection (optional, MSW connects automatically)
- *   await waitForWebSocketConnection();
+ *   // Simulate connection handshake
+ *   await simulateConnected();
  *
- *   // Simulate daemon state update
- *   setDaemonState({ activeProfile: 'gaming', layer: 'fn' });
+ *   // Send daemon state update
+ *   sendDaemonStateUpdate({ running: true, activeProfile: 'gaming' });
  *
  *   // Assert component updated
  *   await waitFor(() => {
@@ -195,23 +209,35 @@ export function renderWithProviders(
  * ```
  *
  * Available WebSocket Helpers:
- * - `setDaemonState(state)` - Simulate daemon state changes (profile, layer, modifiers)
+ * - `setupMockWebSocket()` - Create WebSocket mock server (call in beforeEach)
+ * - `cleanupMockWebSocket()` - Clean up mock server (call in afterEach)
+ * - `simulateConnected(sessionId?)` - Simulate connection handshake
+ * - `sendDaemonStateUpdate(state)` - Simulate daemon state changes
  * - `sendLatencyUpdate(stats)` - Simulate latency metric broadcasts
  * - `sendKeyEvent(event)` - Simulate key press/release events
- * - `sendServerMessage(channel, data)` - Low-level: send custom messages
- * - `waitForWebSocketConnection()` - Wait for connection (usually not needed)
- * - `simulateDisconnect()` - Simulate WebSocket disconnect (TODO: not yet implemented)
+ * - `sendServerMessage(message)` - Low-level: send custom messages
+ * - `simulateDisconnect()` - Simulate WebSocket disconnect
+ * - `simulateError(error?)` - Simulate connection error
+ * - `waitForMessage(expectedMessage)` - Wait for client to send message
+ * - `assertReceivedMessages(messages)` - Assert client sent messages
  *
- * See `keyrx_ui/src/test/mocks/websocketHelpers.ts` for detailed documentation and examples.
+ * See `tests/helpers/websocket.ts` for detailed documentation and examples.
  */
 export {
-  setDaemonState,
+  setupMockWebSocket,
+  getMockWebSocket,
+  cleanupMockWebSocket,
+  sendServerMessage,
+  simulateConnected,
+  sendDaemonStateUpdate,
   sendLatencyUpdate,
   sendKeyEvent,
-  sendServerMessage,
-  waitForWebSocketConnection,
   simulateDisconnect,
-} from '../src/test/mocks/websocketHelpers';
+  simulateError,
+  waitForMessage,
+  assertReceivedMessages,
+  WS_URL,
+} from './helpers/websocket';
 
 /**
  * Re-export testing utilities for convenience

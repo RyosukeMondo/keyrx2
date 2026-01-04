@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use crate::config::device_registry::{DeviceRegistry, DeviceScope};
+use crate::config::device_registry::{DeviceEntry, DeviceRegistry, DeviceScope};
 use crate::error::DaemonError;
 use crate::web::AppState;
 
@@ -221,6 +221,26 @@ async fn update_device_config(
     let registry_path = config_dir.join("devices.json");
 
     let mut registry = DeviceRegistry::load(&registry_path)?;
+
+    // Auto-register device if it doesn't exist
+    if registry.get(&id).is_none() {
+        log::info!("Auto-registering device: {}", id);
+        let entry = DeviceEntry {
+            id: id.clone(),
+            name: id.clone(), // Use ID as default name
+            serial: None,
+            scope: DeviceScope::Global,
+            layout: None,
+            last_seen: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        };
+        registry.register(entry).map_err(|e| {
+            use crate::error::RegistryError;
+            RegistryError::CorruptedRegistry(e.to_string())
+        })?;
+    }
 
     // Update layout if provided
     if let Some(layout) = &payload.layout {
