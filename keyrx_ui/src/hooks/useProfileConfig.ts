@@ -17,7 +17,7 @@ export function useGetProfileConfig(name: string) {
   return useQuery({
     queryKey: queryKeys.config(name),
     queryFn: () => client.getProfileConfig(name),
-    enabled: !!name, // Only fetch if name is provided
+    enabled: !!name && api.isConnected, // Only fetch if name is provided and WebSocket connected
   });
 }
 
