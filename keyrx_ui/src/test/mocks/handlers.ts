@@ -4,7 +4,19 @@
  */
 
 import { http, HttpResponse } from 'msw';
-import type { DeviceEntry, ProfileEntry } from '../../types';
+import type { DeviceEntry } from '../../types';
+
+interface MockProfile {
+  name: string;
+  rhaiPath: string;
+  krxPath: string;
+  modifiedAt: string;
+  createdAt: string;
+  layerCount: number;
+  deviceCount: number;
+  keyCount: number;
+  isActive: boolean;
+}
 
 // Mock data
 const mockDevices: DeviceEntry[] = [
@@ -28,24 +40,32 @@ const mockDevices: DeviceEntry[] = [
   },
 ];
 
-const initialProfiles: ProfileEntry[] = [
+const initialProfiles: MockProfile[] = [
   {
     name: 'default',
-    displayName: 'Default Profile',
+    rhaiPath: '/home/user/.config/keyrx/profiles/default.rhai',
+    krxPath: '/home/user/.config/keyrx/profiles/default.krx',
     isActive: true,
     createdAt: '2024-01-01T00:00:00Z',
     modifiedAt: '2024-01-01T00:00:00Z',
+    layerCount: 1,
+    deviceCount: 0,
+    keyCount: 0,
   },
   {
     name: 'gaming',
-    displayName: 'Gaming Profile',
+    rhaiPath: '/home/user/.config/keyrx/profiles/gaming.rhai',
+    krxPath: '/home/user/.config/keyrx/profiles/gaming.krx',
     isActive: false,
     createdAt: '2024-01-02T00:00:00Z',
     modifiedAt: '2024-01-02T00:00:00Z',
+    layerCount: 2,
+    deviceCount: 0,
+    keyCount: 15,
   },
 ];
 
-let mockProfiles: ProfileEntry[] = JSON.parse(JSON.stringify(initialProfiles));
+let mockProfiles: MockProfile[] = JSON.parse(JSON.stringify(initialProfiles));
 
 export const handlers = [
   // Device endpoints
@@ -125,7 +145,7 @@ export const handlers = [
   http.post('/api/profiles', async ({ request }) => {
     const body = (await request.json()) as {
       name: string;
-      displayName: string;
+      template: string;
     };
 
     // Check for duplicate
@@ -136,16 +156,30 @@ export const handlers = [
       );
     }
 
-    const newProfile: ProfileEntry = {
+    const newProfile: MockProfile = {
       name: body.name,
-      displayName: body.displayName,
+      rhaiPath: `/home/user/.config/keyrx/profiles/${body.name}.rhai`,
+      krxPath: `/home/user/.config/keyrx/profiles/${body.name}.krx`,
       isActive: false,
       createdAt: new Date().toISOString(),
       modifiedAt: new Date().toISOString(),
+      layerCount: 1,
+      deviceCount: 0,
+      keyCount: 0,
     };
 
     mockProfiles.push(newProfile);
-    return HttpResponse.json({ success: true });
+    return HttpResponse.json({
+      name: newProfile.name,
+      rhaiPath: newProfile.rhaiPath,
+      krxPath: newProfile.krxPath,
+      modifiedAt: newProfile.modifiedAt,
+      createdAt: newProfile.createdAt,
+      layerCount: newProfile.layerCount,
+      deviceCount: newProfile.deviceCount,
+      keyCount: newProfile.keyCount,
+      isActive: newProfile.isActive,
+    });
   }),
 
   http.post('/api/profiles/:name/activate', ({ params }) => {
@@ -166,7 +200,11 @@ export const handlers = [
 
     // Activate the target profile
     profile.isActive = true;
-    return HttpResponse.json({ success: true });
+    return HttpResponse.json({
+      success: true,
+      compile_time_ms: 42,
+      reload_time_ms: 10,
+    });
   }),
 
   http.delete('/api/profiles/:name', ({ params }) => {

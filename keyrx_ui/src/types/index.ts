@@ -18,6 +18,8 @@ export type LayoutPreset = 'ANSI_104' | 'ISO_105' | 'JIS_109' | 'HHKB' | 'NUMPAD
 // Profile Management Types
 export interface ProfileMetadata {
   name: string;
+  rhaiPath: string;
+  krxPath: string;
   createdAt: string;
   modifiedAt: string;
   deviceCount: number;

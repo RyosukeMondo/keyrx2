@@ -88,12 +88,17 @@ export const ProfileConfigRpcSchema = z.object({
   source: z.string(),
 }).passthrough();
 
-// Profile information from RPC
+// Profile information from RPC (used in list responses)
 export const ProfileRpcInfoSchema = z.object({
   name: z.string(),
-  layer_count: z.number(),
-  active: z.boolean(),
-  modified_at_secs: z.number(),
+  rhaiPath: z.string(),
+  krxPath: z.string(),
+  modifiedAt: z.string(), // ISO 8601 timestamp
+  createdAt: z.string(), // ISO 8601 timestamp
+  layerCount: z.number(),
+  deviceCount: z.number(),
+  keyCount: z.number(),
+  isActive: z.boolean(),
 }).passthrough();
 
 // Activation result

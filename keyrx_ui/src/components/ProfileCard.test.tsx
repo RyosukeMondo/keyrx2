@@ -139,4 +139,95 @@ describe('ProfileCard', () => {
       screen.getByRole('button', { name: /Delete profile Test Profile/i })
     ).toBeInTheDocument();
   });
+
+  describe('Rhai path display', () => {
+    it('displays Rhai file path when provided', () => {
+      renderWithProviders(
+        <ProfileCard
+          {...defaultProps}
+          rhaiPath="/home/user/.config/keyrx/profiles/gaming.rhai"
+        />
+      );
+
+      // Should display truncated path (with ~ replacement)
+      expect(screen.getByText(/gaming\.rhai/)).toBeInTheDocument();
+    });
+
+    it('does not display Rhai path when not provided', () => {
+      const { container } = renderWithProviders(<ProfileCard {...defaultProps} />);
+
+      // Should not find any file icon or path text
+      expect(container.querySelector('[data-lucide="file-code"]')).not.toBeInTheDocument();
+    });
+
+    it('shows tooltip with full path on hover', async () => {
+      const fullPath = '/home/user/.config/keyrx/profiles/gaming.rhai';
+      renderWithProviders(
+        <ProfileCard {...defaultProps} rhaiPath={fullPath} />
+      );
+
+      // Tooltip component should exist with the full path
+      const pathButton = screen.getByRole('button', {
+        name: new RegExp(`Edit configuration file: ${fullPath}`),
+      });
+      expect(pathButton).toBeInTheDocument();
+    });
+
+    it('calls onEdit when Rhai path is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <ProfileCard
+          {...defaultProps}
+          rhaiPath="/home/user/.config/keyrx/profiles/gaming.rhai"
+        />
+      );
+
+      const pathButton = screen.getByRole('button', {
+        name: /Edit configuration file/,
+      });
+      await user.click(pathButton);
+
+      expect(mockOnEdit).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows warning icon when file does not exist', () => {
+      const { container } = renderWithProviders(
+        <ProfileCard
+          {...defaultProps}
+          rhaiPath="/home/user/.config/keyrx/profiles/missing.rhai"
+          fileExists={false}
+        />
+      );
+
+      // Should have AlertTriangle icon with "File not found" label
+      const warningIcon = container.querySelector('[aria-label="File not found"]');
+      expect(warningIcon).toBeInTheDocument();
+    });
+
+    it('does not show warning icon when file exists', () => {
+      const { container } = renderWithProviders(
+        <ProfileCard
+          {...defaultProps}
+          rhaiPath="/home/user/.config/keyrx/profiles/gaming.rhai"
+          fileExists={true}
+        />
+      );
+
+      // Should not have AlertTriangle icon with "File not found" label
+      const warningIcon = container.querySelector('[aria-label="File not found"]');
+      expect(warningIcon).not.toBeInTheDocument();
+    });
+
+    it('truncates long paths for display', () => {
+      const longPath =
+        '/home/user/.config/keyrx/profiles/very-long-profile-name-that-should-be-truncated.rhai';
+      renderWithProviders(
+        <ProfileCard {...defaultProps} rhaiPath={longPath} />
+      );
+
+      // Should display truncated version with ellipsis
+      const displayText = screen.getByText(/\.rhai/);
+      expect(displayText.textContent).toContain('...');
+    });
+  });
 });

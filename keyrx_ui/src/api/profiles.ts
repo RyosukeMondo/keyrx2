@@ -22,14 +22,16 @@ export async function fetchProfiles(): Promise<ProfileMetadata[]> {
   const response = await apiClient.get<{ profiles: ProfileMetadata[] }>('/api/profiles');
   const validated = validateApiResponse(ProfileListResponseSchema, response, 'GET /api/profiles');
 
-  // Map RPC profile info to ProfileMetadata format
+  // Map response to ProfileMetadata format
   return validated.profiles.map((p) => ({
     name: p.name,
-    createdAt: new Date(p.modified_at_secs * 1000).toISOString(), // Use modifiedAt as createdAt fallback
-    modifiedAt: new Date(p.modified_at_secs * 1000).toISOString(),
-    deviceCount: 0, // RPC doesn't provide this, use placeholder
-    keyCount: p.layer_count, // Use layer count as approximation for key count
-    isActive: p.active,
+    rhaiPath: p.rhaiPath,
+    krxPath: p.krxPath,
+    createdAt: p.createdAt,
+    modifiedAt: p.modifiedAt,
+    deviceCount: p.deviceCount,
+    keyCount: p.keyCount,
+    isActive: p.isActive,
   }));
 }
 

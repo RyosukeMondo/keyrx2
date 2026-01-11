@@ -2,14 +2,17 @@ import React from 'react';
 import { Card } from './Card';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';
-import { Check, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Check, AlertTriangle, CheckCircle2, FileCode } from 'lucide-react';
 import { useProfileValidation } from '../hooks/useProfileValidation';
+import { truncatePath } from '../utils/pathUtils';
 
 export interface ProfileCardProps {
   name: string;
   description?: string;
   isActive: boolean;
   lastModified?: string;
+  rhaiPath?: string;
+  fileExists?: boolean;
   onActivate: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -32,6 +35,8 @@ export const ProfileCard = React.memo<ProfileCardProps>(
     description,
     isActive,
     lastModified,
+    rhaiPath,
+    fileExists = true,
     onActivate,
     onEdit,
     onDelete,
@@ -43,6 +48,9 @@ export const ProfileCard = React.memo<ProfileCardProps>(
     const isValid = validationResult?.valid ?? true; // Default to valid if not yet loaded
     const validationErrors = validationResult?.errors ?? [];
     const firstError = validationErrors[0];
+
+    // Format Rhai path for display
+    const displayPath = rhaiPath ? truncatePath(rhaiPath, 40) : null;
 
     return (
       <Card
@@ -75,6 +83,33 @@ export const ProfileCard = React.memo<ProfileCardProps>(
           <p className="text-sm text-slate-400 mb-3 line-clamp-2">
             {description}
           </p>
+        )}
+
+        {/* Rhai File Path */}
+        {rhaiPath && (
+          <div className="mb-3">
+            <Tooltip content={rhaiPath} position="top">
+              <button
+                onClick={onEdit}
+                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-400 transition-colors group max-w-full"
+                aria-label={`Edit configuration file: ${rhaiPath}`}
+              >
+                <FileCode
+                  size={14}
+                  className="flex-shrink-0 group-hover:text-blue-400"
+                  aria-hidden="true"
+                />
+                <span className="truncate font-mono">{displayPath}</span>
+                {!fileExists && (
+                  <AlertTriangle
+                    size={14}
+                    className="flex-shrink-0 text-yellow-500"
+                    aria-label="File not found"
+                  />
+                )}
+              </button>
+            </Tooltip>
+          </div>
         )}
 
         {/* Validation Status Badge */}

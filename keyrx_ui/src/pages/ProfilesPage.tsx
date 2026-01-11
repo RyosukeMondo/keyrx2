@@ -19,6 +19,8 @@ interface Profile {
   description?: string;
   isActive: boolean;
   lastModified: string;
+  rhaiPath?: string;
+  fileExists?: boolean;
 }
 
 /**
@@ -62,6 +64,8 @@ export const ProfilesPage: React.FC = () => {
         minute: '2-digit',
         hour12: false,
       }),
+      rhaiPath: p.rhaiPath,
+      fileExists: true, // Assume file exists if returned by API
     }));
   }, [profilesData]);
 
@@ -265,6 +269,8 @@ export const ProfilesPage: React.FC = () => {
             description={profile.description}
             isActive={profile.isActive}
             lastModified={profile.lastModified}
+            rhaiPath={profile.rhaiPath}
+            fileExists={profile.fileExists}
             onActivate={() => handleActivateProfile(profile.id)}
             onEdit={() => handleEditProfile(profile)}
             onDelete={() => handleDeleteProfile(profile)}
