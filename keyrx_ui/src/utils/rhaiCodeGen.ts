@@ -362,15 +362,17 @@ function getFirstDeviceLineOrEnd(ast: RhaiAST): number {
  * This is a utility function that can re-format existing Rhai code
  * to match project standards. It works by parsing and regenerating.
  *
+ * Note: This function is now implemented in rhaiFormatter.ts to avoid
+ * circular dependencies. Use that module for formatting functionality.
+ *
+ * @deprecated Use formatRhaiScript from rhaiFormatter.ts instead
  * @param script - Rhai script to format
  * @param options - Formatting options
  * @returns Formatted script
  */
 export function formatRhaiScript(script: string, options?: FormatOptions): string {
-  // Import parseRhaiScript to avoid circular dependency
-  // This function is meant to be used in conjunction with the parser
-  // In practice, calling code should parse first, then generate
+  // This function is deprecated - use rhaiFormatter.formatRhaiScript instead
   throw new Error(
-    'formatRhaiScript should be called by first parsing with parseRhaiScript, then generating with generateRhaiScript'
+    'formatRhaiScript has been moved to rhaiFormatter.ts. Please import from there instead.'
   );
 }
