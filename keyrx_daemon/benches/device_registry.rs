@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use keyrx_daemon::config::device_registry::{DeviceEntry, DeviceRegistry, DeviceScope};
+use keyrx_daemon::config::device_registry::{DeviceEntry, DeviceRegistry};
 use tempfile::TempDir;
 
 /// Benchmark device registry save operation (atomic write).
@@ -13,14 +13,13 @@ fn benchmark_device_registry_save(c: &mut Criterion) {
 
     // Add 10 devices to simulate realistic workload
     for i in 0..10 {
-        let entry = DeviceEntry {
-            id: format!("device_{}", i),
-            name: format!("Keyboard {}", i),
-            serial: Some(format!("SN{:04}", i)),
-            scope: DeviceScope::DeviceSpecific,
-            layout: Some("ansi_104".to_string()),
-            last_seen: 1700000000 + i,
-        };
+        let entry = DeviceEntry::new(
+            format!("device_{}", i),
+            format!("Keyboard {}", i),
+            Some(format!("SN{:04}", i)),
+            Some("ansi_104".to_string()),
+            1700000000 + i,
+        );
 
         registry.register(entry).expect("Failed to register device");
     }
@@ -45,18 +44,13 @@ fn benchmark_device_registry_load(c: &mut Criterion) {
 
     // Add 50 devices for more realistic load testing
     for i in 0..50 {
-        let entry = DeviceEntry {
-            id: format!("device_{}", i),
-            name: format!("Keyboard {}", i),
-            serial: Some(format!("SN{:04}", i)),
-            scope: if i % 2 == 0 {
-                DeviceScope::DeviceSpecific
-            } else {
-                DeviceScope::Global
-            },
-            layout: Some("ansi_104".to_string()),
-            last_seen: 1700000000 + i,
-        };
+        let entry = DeviceEntry::new(
+            format!("device_{}", i),
+            format!("Keyboard {}", i),
+            Some(format!("SN{:04}", i)),
+            Some("ansi_104".to_string()),
+            1700000000 + i,
+        );
 
         registry.register(entry).expect("Failed to register device");
     }
@@ -83,14 +77,13 @@ fn benchmark_device_registry_get(c: &mut Criterion) {
 
     // Add 100 devices
     for i in 0..100 {
-        let entry = DeviceEntry {
-            id: format!("device_{}", i),
-            name: format!("Keyboard {}", i),
-            serial: Some(format!("SN{:04}", i)),
-            scope: DeviceScope::DeviceSpecific,
-            layout: Some("ansi_104".to_string()),
-            last_seen: 1700000000 + i,
-        };
+        let entry = DeviceEntry::new(
+            format!("device_{}", i),
+            format!("Keyboard {}", i),
+            Some(format!("SN{:04}", i)),
+            Some("ansi_104".to_string()),
+            1700000000 + i,
+        );
 
         registry.register(entry).expect("Failed to register device");
     }
@@ -113,14 +106,13 @@ fn benchmark_device_registry_list(c: &mut Criterion) {
 
     // Add 100 devices
     for i in 0..100 {
-        let entry = DeviceEntry {
-            id: format!("device_{}", i),
-            name: format!("Keyboard {}", i),
-            serial: Some(format!("SN{:04}", i)),
-            scope: DeviceScope::DeviceSpecific,
-            layout: Some("ansi_104".to_string()),
-            last_seen: 1700000000 + i,
-        };
+        let entry = DeviceEntry::new(
+            format!("device_{}", i),
+            format!("Keyboard {}", i),
+            Some(format!("SN{:04}", i)),
+            Some("ansi_104".to_string()),
+            1700000000 + i,
+        );
 
         registry.register(entry).expect("Failed to register device");
     }
@@ -140,14 +132,13 @@ fn benchmark_device_registry_rename(c: &mut Criterion) {
 
     let mut registry = DeviceRegistry::new(registry_path);
 
-    let entry = DeviceEntry {
-        id: "device_test".to_string(),
-        name: "Original Name".to_string(),
-        serial: Some("SN0001".to_string()),
-        scope: DeviceScope::DeviceSpecific,
-        layout: Some("ansi_104".to_string()),
-        last_seen: 1700000000,
-    };
+    let entry = DeviceEntry::new(
+        "device_test".to_string(),
+        "Original Name".to_string(),
+        Some("SN0001".to_string()),
+        Some("ansi_104".to_string()),
+        1700000000,
+    );
 
     registry.register(entry).expect("Failed to register device");
 

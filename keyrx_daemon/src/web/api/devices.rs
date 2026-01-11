@@ -10,7 +10,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use validator::Validate;
 
-use crate::config::device_registry::{DeviceEntry, DeviceRegistry, DeviceScope};
+use crate::config::device_registry::{DeviceEntry, DeviceRegistry};
 use crate::error::DaemonError;
 use crate::web::AppState;
 
@@ -18,7 +18,6 @@ pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/devices", get(list_devices))
         .route("/devices/:id/name", put(rename_device))
-        .route("/devices/:id/scope", put(set_device_scope))
         .route("/devices/:id/layout", put(set_device_layout))
         .route("/devices/:id/layout", get(get_device_layout))
         .route("/devices/:id", patch(update_device_config))
@@ -32,7 +31,6 @@ struct DeviceResponse {
     path: String,
     serial: Option<String>,
     active: bool,
-    scope: Option<String>,
     layout: Option<String>,
 }
 
@@ -73,10 +71,6 @@ async fn list_devices() -> Result<Json<DevicesListResponse>, DaemonError> {
                 path: kb.path.display().to_string(),
                 serial: kb.serial,
                 active: true,
-                scope: registry_entry.map(|e| match e.scope {
-                    DeviceScope::Global => "global".to_string(),
-                    DeviceScope::DeviceSpecific => "device-specific".to_string(),
-                }),
                 layout: registry_entry.and_then(|e| e.layout.clone()),
             }
         })
@@ -117,50 +111,6 @@ async fn rename_device(
     let mut registry = DeviceRegistry::load(&registry_path)?;
 
     registry.rename(&id, &payload.name).map_err(|e| {
-        use crate::error::RegistryError;
-        RegistryError::CorruptedRegistry(e.to_string())
-    })?;
-
-    registry.save()?;
-
-    Ok(Json(json!({ "success": true })))
-}
-
-/// PUT /api/devices/:id/scope - Set device scope
-#[derive(Deserialize, Validate)]
-struct SetDeviceScopeRequest {
-    #[validate(length(min = 1, max = 50))]
-    scope: String, // "global" or "device-specific"
-}
-
-async fn set_device_scope(
-    Path(id): Path<String>,
-    Json(payload): Json<SetDeviceScopeRequest>,
-) -> Result<Json<Value>, DaemonError> {
-    use crate::error::WebError;
-
-    // Validate input parameters
-    payload.validate().map_err(|e| WebError::InvalidRequest {
-        reason: format!("Validation failed: {}", e),
-    })?;
-
-    let scope = match payload.scope.as_str() {
-        "global" => DeviceScope::Global,
-        "device-specific" => DeviceScope::DeviceSpecific,
-        _ => {
-            return Err(WebError::InvalidRequest {
-                reason: "Invalid scope value".to_string(),
-            }
-            .into())
-        }
-    };
-
-    let config_dir = get_config_dir()?;
-    let registry_path = config_dir.join("devices.json");
-
-    let mut registry = DeviceRegistry::load(&registry_path)?;
-
-    registry.set_scope(&id, scope).map_err(|e| {
         use crate::error::RegistryError;
         RegistryError::CorruptedRegistry(e.to_string())
     })?;
@@ -234,8 +184,6 @@ async fn get_device_layout(
 struct UpdateDeviceConfigRequest {
     #[validate(length(min = 1, max = 50))]
     layout: Option<String>,
-    #[validate(length(min = 1, max = 50))]
-    scope: Option<String>,
 }
 
 async fn update_device_config(
@@ -257,17 +205,16 @@ async fn update_device_config(
     // Auto-register device if it doesn't exist
     if registry.get(&id).is_none() {
         log::info!("Auto-registering device: {}", id);
-        let entry = DeviceEntry {
-            id: id.clone(),
-            name: id.clone(), // Use ID as default name
-            serial: None,
-            scope: DeviceScope::Global,
-            layout: None,
-            last_seen: std::time::SystemTime::now()
+        let entry = DeviceEntry::new(
+            id.clone(),
+            id.clone(), // Use ID as default name
+            None,
+            None,
+            std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-        };
+        );
         registry.register(entry).map_err(|e| {
             use crate::error::RegistryError;
             RegistryError::CorruptedRegistry(e.to_string())
@@ -277,25 +224,6 @@ async fn update_device_config(
     // Update layout if provided
     if let Some(layout) = &payload.layout {
         registry.set_layout(&id, layout).map_err(|e| {
-            use crate::error::RegistryError;
-            RegistryError::CorruptedRegistry(e.to_string())
-        })?;
-    }
-
-    // Update scope if provided
-    if let Some(scope_str) = &payload.scope {
-        let scope = match scope_str.as_str() {
-            "global" => DeviceScope::Global,
-            "device-specific" => DeviceScope::DeviceSpecific,
-            _ => {
-                return Err(WebError::InvalidRequest {
-                    reason: "Invalid scope value".to_string(),
-                }
-                .into())
-            }
-        };
-
-        registry.set_scope(&id, scope).map_err(|e| {
             use crate::error::RegistryError;
             RegistryError::CorruptedRegistry(e.to_string())
         })?;

@@ -1,13 +1,11 @@
 //! Device management CLI commands.
 //!
 //! This module implements the `keyrx devices` command and all its subcommands
-//! for managing device metadata, including renaming, scope settings, and layout assignment.
+//! for managing device metadata, including renaming and layout assignment.
 
 use crate::cli::common::output_error;
 use crate::cli::logging;
-use crate::config::device_registry::{
-    DeviceEntry, DeviceRegistry, DeviceScope, DeviceValidationError,
-};
+use crate::config::device_registry::{DeviceEntry, DeviceRegistry, DeviceValidationError};
 use crate::error::{CliError, DaemonResult};
 use clap::{Args, Subcommand};
 use serde::Serialize;
@@ -38,16 +36,6 @@ enum DevicesCommands {
         new_name: String,
     },
 
-    /// Set device scope (device-specific or global).
-    SetScope {
-        /// Device ID.
-        device_id: String,
-
-        /// Scope: "device" or "global".
-        #[arg(value_parser = parse_scope)]
-        scope: DeviceScope,
-    },
-
     /// Forget (remove) a device from the registry.
     Forget {
         /// Device ID to forget.
@@ -75,15 +63,6 @@ struct DeviceListOutput {
 struct SuccessOutput {
     success: bool,
     message: String,
-}
-
-/// Parse scope string to DeviceScope enum.
-fn parse_scope(s: &str) -> Result<DeviceScope, String> {
-    match s.to_lowercase().as_str() {
-        "device" | "device-specific" => Ok(DeviceScope::DeviceSpecific),
-        "global" => Ok(DeviceScope::Global),
-        _ => Err(format!("Invalid scope '{}'. Use 'device' or 'global'.", s)),
-    }
 }
 
 /// Execute the devices command.
@@ -141,9 +120,6 @@ fn execute_inner(args: DevicesArgs, registry_path: Option<PathBuf>) -> DaemonRes
             device_id,
             new_name,
         } => handle_rename(&mut registry, &device_id, &new_name, args.json),
-        DevicesCommands::SetScope { device_id, scope } => {
-            handle_set_scope(&mut registry, &device_id, scope, args.json)
-        }
         DevicesCommands::Forget { device_id } => {
             handle_forget(&mut registry, &device_id, args.json)
         }
@@ -176,21 +152,16 @@ fn handle_list(registry: &DeviceRegistry, json: bool) -> DaemonResult<()> {
 
         println!("Registered Devices:");
         println!();
-        println!("{:<40} {:<25} {:<15} LAYOUT", "ID", "NAME", "SCOPE");
-        println!("{}", "-".repeat(100));
+        println!("{:<40} {:<25} LAYOUT", "ID", "NAME");
+        println!("{}", "-".repeat(85));
 
         for device in &devices {
-            let scope_str = match device.scope {
-                DeviceScope::DeviceSpecific => "device-specific",
-                DeviceScope::Global => "global",
-            };
             let layout_str = device.layout.as_deref().unwrap_or("-");
 
             println!(
-                "{:<40} {:<25} {:<15} {}",
+                "{:<40} {:<25} {}",
                 truncate(&device.id, 40),
                 truncate(&device.name, 25),
-                scope_str,
                 layout_str
             );
         }
@@ -288,69 +259,6 @@ fn handle_rename(
 }
 
 /// Handle the `set-scope` subcommand.
-fn handle_set_scope(
-    registry: &mut DeviceRegistry,
-    device_id: &str,
-    scope: DeviceScope,
-    json: bool,
-) -> DaemonResult<()> {
-    match registry.set_scope(device_id, scope) {
-        Ok(()) => {
-            if let Err(e) = registry.save() {
-                output_error(
-                    &format!("Scope updated but failed to save: {}", e),
-                    3001,
-                    json,
-                );
-                return Err(CliError::CommandFailed {
-                    command: "devices".to_string(),
-                    reason: "Command failed".to_string(),
-                }
-                .into());
-            }
-
-            let scope_str = match scope {
-                DeviceScope::DeviceSpecific => "device-specific",
-                DeviceScope::Global => "global",
-            };
-
-            if json {
-                let output = SuccessOutput {
-                    success: true,
-                    message: format!("Device '{}' scope set to {}", device_id, scope_str),
-                };
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&output).map_err(CliError::from)?
-                );
-            } else {
-                println!("✓ Device '{}' scope set to {}", device_id, scope_str);
-            }
-            Ok(())
-        }
-        Err(DeviceValidationError::DeviceNotFound(id)) => {
-            output_error(
-                &format!("Device '{}' not found in registry", id),
-                1001,
-                json,
-            );
-            Err(CliError::CommandFailed {
-                command: "devices".to_string(),
-                reason: "Command failed".to_string(),
-            }
-            .into())
-        }
-        Err(e) => {
-            output_error(&format!("Failed to set scope: {}", e), 3001, json);
-            Err(CliError::CommandFailed {
-                command: "devices".to_string(),
-                reason: "Command failed".to_string(),
-            }
-            .into())
-        }
-    }
-}
-
 /// Handle the `forget` subcommand.
 fn handle_forget(registry: &mut DeviceRegistry, device_id: &str, json: bool) -> DaemonResult<()> {
     match registry.forget(device_id) {
@@ -478,23 +386,6 @@ fn truncate(s: &str, max_len: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_parse_scope() {
-        assert_eq!(
-            parse_scope("device").expect("device scope should parse"),
-            DeviceScope::DeviceSpecific
-        );
-        assert_eq!(
-            parse_scope("device-specific").expect("device-specific scope should parse"),
-            DeviceScope::DeviceSpecific
-        );
-        assert_eq!(
-            parse_scope("global").expect("global scope should parse"),
-            DeviceScope::Global
-        );
-        assert!(parse_scope("invalid").is_err());
-    }
 
     #[test]
     fn test_truncate() {

@@ -9,13 +9,12 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use typeshare::typeshare;
 
-/// Device scope determines whether configuration applies globally or per-device
-#[typeshare]
+/// Legacy device scope enum - kept for backward compatibility with old registry files
+/// This allows old registry files with the "scope" field to be loaded without errors
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DeviceScope {
-    /// Configuration applies only to this specific device
+#[allow(dead_code)]
+enum DeviceScopeLegacy {
     DeviceSpecific,
-    /// Configuration applies globally to all devices
     Global,
 }
 
@@ -29,13 +28,16 @@ pub struct DeviceEntry {
     pub name: String,
     /// Serial number if available
     pub serial: Option<String>,
-    /// Scope for configuration application
-    pub scope: DeviceScope,
     /// Associated layout name (max 32 chars)
     pub layout: Option<String>,
     /// Last seen timestamp (Unix seconds)
     #[typeshare(serialized_as = "number")]
     pub last_seen: u64,
+    /// Scope field for backward compatibility (ignored during serialization, accepted during deserialization)
+    #[serde(skip_serializing, default)]
+    #[typeshare(skip)]
+    #[allow(dead_code)]
+    scope: Option<DeviceScopeLegacy>,
 }
 
 /// Validation error types for device registry operations
@@ -60,6 +62,26 @@ impl std::fmt::Display for DeviceValidationError {
 }
 
 impl std::error::Error for DeviceValidationError {}
+
+impl DeviceEntry {
+    /// Create a new device entry
+    pub fn new(
+        id: String,
+        name: String,
+        serial: Option<String>,
+        layout: Option<String>,
+        last_seen: u64,
+    ) -> Self {
+        Self {
+            id,
+            name,
+            serial,
+            layout,
+            last_seen,
+            scope: None,
+        }
+    }
+}
 
 /// Device registry with persistent storage
 pub struct DeviceRegistry {
@@ -156,17 +178,6 @@ impl DeviceRegistry {
             .ok_or_else(|| DeviceValidationError::DeviceNotFound(id.to_string()))?;
 
         device.name = name.to_string();
-        Ok(())
-    }
-
-    /// Set device scope
-    pub fn set_scope(&mut self, id: &str, scope: DeviceScope) -> Result<(), DeviceValidationError> {
-        let device = self
-            .devices
-            .get_mut(id)
-            .ok_or_else(|| DeviceValidationError::DeviceNotFound(id.to_string()))?;
-
-        device.scope = scope;
         Ok(())
     }
 
@@ -303,14 +314,13 @@ mod tests {
     use tempfile::TempDir;
 
     fn create_test_device(id: &str, name: &str) -> DeviceEntry {
-        DeviceEntry {
-            id: id.to_string(),
-            name: name.to_string(),
-            serial: None,
-            scope: DeviceScope::Global,
-            layout: None,
-            last_seen: current_timestamp(),
-        }
+        DeviceEntry::new(
+            id.to_string(),
+            name.to_string(),
+            None,
+            None,
+            current_timestamp(),
+        )
     }
 
     #[test]
@@ -395,24 +405,6 @@ mod tests {
             result,
             Err(DeviceValidationError::DeviceNotFound(_))
         ));
-    }
-
-    #[test]
-    fn test_set_scope() {
-        let temp_dir = TempDir::new().unwrap();
-        let path = temp_dir.path().join("registry.json");
-        let mut registry = DeviceRegistry::new(path);
-
-        let device = create_test_device("dev1", "Device");
-        registry.register(device).unwrap();
-
-        registry
-            .set_scope("dev1", DeviceScope::DeviceSpecific)
-            .unwrap();
-        assert_eq!(
-            registry.get("dev1").unwrap().scope,
-            DeviceScope::DeviceSpecific
-        );
     }
 
     #[test]

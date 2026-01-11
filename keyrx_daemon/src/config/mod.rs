@@ -12,7 +12,7 @@ pub mod rhai_generator;
 pub mod simulation_engine;
 
 pub use device::{DeviceConfig, Scope};
-pub use device_registry::{DeviceEntry, DeviceRegistry, DeviceScope, DeviceValidationError};
+pub use device_registry::{DeviceEntry, DeviceRegistry, DeviceValidationError};
 pub use layout_manager::{KeyboardLayout, LayoutError, LayoutManager, LayoutSource};
 pub use profile_compiler::{CompilationError, CompilationResult, ProfileCompiler};
 pub use profile_manager::{

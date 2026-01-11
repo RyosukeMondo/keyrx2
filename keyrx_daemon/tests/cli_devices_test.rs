@@ -139,7 +139,6 @@ fn test_devices_help() {
         .stdout(predicate::str::contains("Device management"))
         .stdout(predicate::str::contains("list"))
         .stdout(predicate::str::contains("rename"))
-        .stdout(predicate::str::contains("set-scope"))
         .stdout(predicate::str::contains("forget"))
         .stdout(predicate::str::contains("set-layout"));
 }

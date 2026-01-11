@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 
-use crate::config::device_registry::{DeviceRegistry, DeviceScope};
+use crate::config::device_registry::DeviceRegistry;
 
 /// Device information returned by service methods
 #[derive(Debug, Clone)]
@@ -16,7 +16,6 @@ pub struct DeviceInfo {
     pub path: String,
     pub serial: Option<String>,
     pub active: bool,
-    pub scope: Option<DeviceScope>,
     pub layout: Option<String>,
 }
 
@@ -59,7 +58,6 @@ impl DeviceService {
                     path: kb.path.display().to_string(),
                     serial: kb.serial,
                     active: true,
-                    scope: registry_entry.map(|e| e.scope),
                     layout: registry_entry.and_then(|e| e.layout.clone()),
                 }
             })
@@ -82,22 +80,6 @@ impl DeviceService {
         registry
             .rename(id, name)
             .map_err(|e| format!("Failed to rename device: {}", e))?;
-
-        registry
-            .save()
-            .map_err(|e| format!("Failed to save device registry: {}", e))?;
-
-        Ok(())
-    }
-
-    /// Set device scope
-    pub async fn set_scope(&self, id: &str, scope: DeviceScope) -> Result<(), String> {
-        let mut registry = DeviceRegistry::load(&self.registry_path)
-            .map_err(|e| format!("Failed to load device registry: {}", e))?;
-
-        registry
-            .set_scope(id, scope)
-            .map_err(|e| format!("Failed to set device scope: {}", e))?;
 
         registry
             .save()

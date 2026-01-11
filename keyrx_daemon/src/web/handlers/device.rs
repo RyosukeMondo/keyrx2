@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use typeshare::typeshare;
 
-use crate::config::device_registry::DeviceScope;
 use crate::services::DeviceService;
 use crate::web::rpc_types::{RpcError, INTERNAL_ERROR};
 
@@ -23,13 +22,6 @@ struct GetDevicesParams {
 struct RenameDeviceParams {
     id: String,
     name: String,
-}
-
-/// Parameters for set_scope_device command
-#[derive(Debug, Deserialize)]
-struct SetScopeDeviceParams {
-    id: String,
-    scope: String, // "global" or "device-specific"
 }
 
 /// Parameters for forget_device command
@@ -47,7 +39,6 @@ pub struct DeviceRpcInfo {
     pub path: String,
     pub serial: Option<String>,
     pub active: bool,
-    pub scope: Option<String>,
     pub layout: Option<String>,
 }
 
@@ -114,10 +105,6 @@ pub async fn get_devices(device_service: &DeviceService, params: Value) -> Resul
             path: d.path.clone(),
             serial: d.serial.clone(),
             active: d.active,
-            scope: d.scope.map(|s| match s {
-                DeviceScope::Global => "global".to_string(),
-                DeviceScope::DeviceSpecific => "device-specific".to_string(),
-            }),
             layout: d.layout.clone(),
         })
         .collect();
@@ -152,49 +139,6 @@ pub async fn rename_device(
         "renamed": true,
         "id": params.id,
         "name": params.name
-    }))
-}
-
-/// Set device scope
-pub async fn set_scope_device(
-    device_service: &DeviceService,
-    params: Value,
-) -> Result<Value, RpcError> {
-    let params: SetScopeDeviceParams = serde_json::from_value(params)
-        .map_err(|e| RpcError::invalid_params(format!("Invalid parameters: {}", e)))?;
-
-    log::info!(
-        "RPC: set_scope_device id={} scope={}",
-        params.id,
-        params.scope
-    );
-
-    // Validate device ID
-    validate_device_id(&params.id)?;
-
-    // Parse scope
-    let scope = match params.scope.as_str() {
-        "global" => DeviceScope::Global,
-        "device-specific" => DeviceScope::DeviceSpecific,
-        _ => {
-            return Err(RpcError::invalid_params(format!(
-                "Invalid scope: {}. Must be 'global' or 'device-specific'",
-                params.scope
-            )))
-        }
-    };
-
-    // Call device service
-    device_service
-        .set_scope(&params.id, scope)
-        .await
-        .map_err(|e| RpcError::new(INTERNAL_ERROR, format!("Failed to set device scope: {}", e)))?;
-
-    // Return success
-    Ok(serde_json::json!({
-        "scope_set": true,
-        "id": params.id,
-        "scope": params.scope
     }))
 }
 

@@ -517,16 +517,6 @@ fn test_error_device_not_found() {
         .code(1)
         .stderr(predicate::str::contains("not found"));
 
-    // Set scope for nonexistent device
-    test_cmd(&temp_dir)
-        .arg("devices")
-        .arg("set-scope")
-        .arg("nonexistent-device-id")
-        .arg("global")
-        .assert()
-        .failure()
-        .code(1);
-
     // Forget nonexistent device
     test_cmd(&temp_dir)
         .arg("devices")

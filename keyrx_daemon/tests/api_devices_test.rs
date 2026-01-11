@@ -1,6 +1,6 @@
 //! Integration tests for device persistence API endpoints.
 //!
-//! Tests verify that device configuration (layout and scope) persists to filesystem
+//! Tests verify that device configuration (layout) persists to filesystem
 //! and loads correctly on daemon restart.
 //!
 //! # Note on Serial Execution
@@ -16,22 +16,21 @@ use serial_test::serial;
 
 /// Helper function to register a device in the registry
 async fn register_device(app: &TestApp, device_id: &str) {
-    use keyrx_daemon::config::device_registry::{DeviceEntry, DeviceRegistry, DeviceScope};
+    use keyrx_daemon::config::device_registry::{DeviceEntry, DeviceRegistry};
 
     let registry_path = app.config_path().join("devices.json");
     let mut registry = DeviceRegistry::load(&registry_path).expect("Failed to load registry");
 
-    let entry = DeviceEntry {
-        id: device_id.to_string(),
-        name: device_id.to_string(),
-        serial: Some(device_id.to_string()),
-        scope: DeviceScope::Global,
-        layout: None,
-        last_seen: std::time::SystemTime::now()
+    let entry = DeviceEntry::new(
+        device_id.to_string(),
+        device_id.to_string(),
+        Some(device_id.to_string()),
+        None,
+        std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs(),
-    };
+    );
 
     registry.register(entry).expect("Failed to register device");
     registry.save().expect("Failed to save registry");
@@ -83,49 +82,6 @@ async fn test_device_layout_save_persists_to_filesystem() {
     );
 }
 
-/// Test that device scope persists to filesystem
-#[tokio::test]
-#[serial]
-async fn test_device_scope_save_persists_to_filesystem() {
-    let app = TestApp::new().await;
-    let device_id = "test-keyboard-002";
-
-    // Register the device first
-    register_device(&app, device_id).await;
-
-    // Set device scope
-    let response = app
-        .put(
-            &format!("/api/devices/{}/scope", device_id),
-            &json!({ "scope": "device-specific" }),
-        )
-        .await;
-
-    assert_eq!(
-        response.status(),
-        200,
-        "Scope update should succeed: {}",
-        response.text().await.unwrap()
-    );
-
-    // Verify the file was created
-    let registry_path = app.config_path().join("devices.json");
-    assert!(registry_path.exists(), "devices.json should exist");
-
-    // Read and verify contents
-    let contents =
-        std::fs::read_to_string(&registry_path).expect("Should be able to read devices.json");
-
-    assert!(
-        contents.contains(device_id),
-        "Device ID should be in registry"
-    );
-    assert!(
-        contents.contains("DeviceSpecific"),
-        "Scope should be persisted as DeviceSpecific enum variant"
-    );
-}
-
 /// Test that device config persists correctly and can be read back
 #[tokio::test]
 #[serial]
@@ -141,15 +97,6 @@ async fn test_device_config_loads_correctly_on_restart() {
         .put(
             &format!("/api/devices/{}/layout", device_id),
             &json!({ "layout": "iso_105" }),
-        )
-        .await;
-    assert_eq!(response.status(), 200);
-
-    // Configure scope
-    let response = app
-        .put(
-            &format!("/api/devices/{}/scope", device_id),
-            &json!({ "scope": "global" }),
         )
         .await;
     assert_eq!(response.status(), 200);
@@ -179,12 +126,6 @@ async fn test_device_config_loads_correctly_on_restart() {
         Some("iso_105"),
         "Layout should be persisted correctly"
     );
-
-    assert_eq!(
-        device.get("scope").and_then(|v| v.as_str()),
-        Some("Global"),
-        "Scope should be persisted correctly"
-    );
 }
 
 /// Test that multiple device configurations persist independently
@@ -203,12 +144,6 @@ async fn test_multiple_devices_persist_independently() {
     )
     .await;
 
-    app.put(
-        &format!("/api/devices/{}/scope", device1_id),
-        &json!({ "scope": "global" }),
-    )
-    .await;
-
     // Configure device 2
     let device2_id = "keyboard-002";
     register_device(&app, device2_id).await;
@@ -216,12 +151,6 @@ async fn test_multiple_devices_persist_independently() {
     app.put(
         &format!("/api/devices/{}/layout", device2_id),
         &json!({ "layout": "iso_105" }),
-    )
-    .await;
-
-    app.put(
-        &format!("/api/devices/{}/scope", device2_id),
-        &json!({ "scope": "device-specific" }),
     )
     .await;
 
@@ -239,20 +168,12 @@ async fn test_multiple_devices_persist_independently() {
         device1.get("layout").and_then(|v| v.as_str()),
         Some("ansi_104")
     );
-    assert_eq!(
-        device1.get("scope").and_then(|v| v.as_str()),
-        Some("Global")
-    );
 
     // Verify device 2
     let device2 = registry.get(device2_id).expect("Device 2 should exist");
     assert_eq!(
         device2.get("layout").and_then(|v| v.as_str()),
         Some("iso_105")
-    );
-    assert_eq!(
-        device2.get("scope").and_then(|v| v.as_str()),
-        Some("DeviceSpecific")
     );
 }
 
@@ -323,27 +244,6 @@ async fn test_device_registry_atomic_writes() {
     assert!(
         !tmp_path.exists(),
         "Temp file should be removed after atomic write"
-    );
-}
-
-/// Test that invalid scope values are rejected
-#[tokio::test]
-#[serial]
-async fn test_invalid_scope_rejected() {
-    let app = TestApp::new().await;
-    let device_id = "test-keyboard-006";
-
-    let response = app
-        .put(
-            &format!("/api/devices/{}/scope", device_id),
-            &json!({ "scope": "invalid-scope-value" }),
-        )
-        .await;
-
-    assert_eq!(
-        response.status(),
-        400,
-        "Invalid scope should return 400 Bad Request"
     );
 }
 
