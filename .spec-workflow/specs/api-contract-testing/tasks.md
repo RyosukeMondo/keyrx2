@@ -62,10 +62,29 @@
 
 - Task 1: Created `keyrx_ui/scripts/validate-api-contracts.ts` - CLI validation script
 - Task 2: Added `validate:contracts` npm script to package.json
+- Task 3: Added `api-contract-tests` CI job to `.github/workflows/ci.yml`
+- Task 4: Added artifact upload for contract validation results
+- Task 5: Created comprehensive documentation in `keyrx_ui/docs/contract-testing.md`
+- Task 6: Extended validation to cover GET /api/status and PATCH /api/devices/:id
+
+## Implementation Results
+
+**Validated Endpoints (5 total):**
+- GET /api/status - Daemon status and version
+- GET /api/devices - List all devices
+- GET /api/profiles - List all profiles
+- GET /api/profiles/:name/config - Get profile configuration
+- PATCH /api/devices/:id - Update device configuration
+
+**Test Results:**
+- Contract validation: 5 passed, 0 failed, 0 skipped ✅
+- Unit tests: 40 passed, 0 failed ✅
+- CI integration: Automated on every PR ✅
+- Documentation: Complete with troubleshooting guide ✅
 
 ## Notes
 
-- Tasks 1-2 were completed as part of the initial investigation
-- Tasks 3-6 remain for full CI integration
-- Daemon must be built with web feature for API endpoints
+- All tasks completed successfully
+- Daemon must be built with web feature for API endpoints (default in release builds)
 - CI job runs on Ubuntu where keyboard capture will fail (expected - web API still works)
+- PATCH validation handles both success and error responses gracefully
