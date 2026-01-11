@@ -97,7 +97,7 @@
   - _Requirements: 1.5, 1.7, 1.8_
   - _Prompt: Implement the task for spec e2e-playwright-testing, first run spec-workflow-guide to get the workflow guide then implement the task: Role: E2E Test Developer | Task: Create Playwright tests for MetricsPage: test page loads without errors, test latency stats card renders (may show "no data" initially), test event log renders, test clear event log button. | Restrictions: Metrics may be empty if no events, handle empty state gracefully, verify structure not exact values | Success: MetricsPage displays correctly with or without data. After implementing, set this task to in-progress [-] in tasks.md, use log-implementation tool to record details, then mark as complete [x]_
 
-- [ ] 11. Create SimulatorPage E2E tests
+- [x] 11. Create SimulatorPage E2E tests
   - File: keyrx_ui/tests/e2e/pages/simulator.spec.ts
   - Test simulator interface loads
   - Test key simulation works
