@@ -12,7 +12,7 @@
   - _Requirements: 5.1, 5.4, 5.5_
   - _Prompt: Implement the task for spec e2e-playwright-testing, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Automation Engineer with Playwright expertise | Task: Create Playwright E2E configuration file with proper setup for testing against keyrx_daemon (port 9867), including screenshot/video capture on failure, HTML reporter, and sequential test execution. Reference existing playwright.config.ts for patterns. | Restrictions: Do not modify existing playwright.config.ts, use separate config for E2E, ensure tests run sequentially (workers: 1) due to shared daemon state | Success: Config file created, can be used with `npx playwright test --config=playwright.e2e.config.ts`. After implementing, set this task to in-progress [-] in tasks.md, use log-implementation tool to record details, then mark as complete [x]_
 
-- [ ] 2. Create daemon fixture for test lifecycle
+- [x] 2. Create daemon fixture for test lifecycle
   - File: keyrx_ui/tests/e2e/fixtures/daemon.ts
   - Implement daemon start/stop/wait helpers
   - Create test profile automatically
