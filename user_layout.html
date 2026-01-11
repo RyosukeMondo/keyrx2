@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeyRx Layout: user_layout.rhai</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Hiragino Sans', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #1a1a2e;
+    color: #eee;
+}
+h1 { color: #00d9ff; margin-bottom: 5px; }
+.source { color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.controls {
+    margin: 20px 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.controls button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    background: #0f3460;
+    color: #fff;
+    transition: background 0.2s;
+}
+.controls button:hover { background: #1f4068; }
+.controls button.active { background: #00d9ff; color: #000; }
+.layer-controls {
+    margin: 15px 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: rgba(255, 107, 107, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}
+.layer-controls .label {
+    color: #ff6b6b;
+    font-weight: bold;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+}
+.layer-btn {
+    background: #4a2020 !important;
+    border: 1px solid #ff6b6b !important;
+}
+.layer-btn:hover { background: #6a3030 !important; }
+.layer-btn.active { background: #ff6b6b !important; color: #000 !important; }
+.legend {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin: 15px 0;
+    font-size: 0.85em;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+}
+.keyboard {
+    display: inline-block;
+    background: #16213e;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.row {
+    display: flex;
+    margin-bottom: 4px;
+}
+.key {
+    height: 50px;
+    margin: 2px;
+    background: #2d3a5a;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: default;
+    transition: all 0.15s;
+    border: 1px solid #3d4a6a;
+    position: relative;
+}
+.key:hover {
+    background: #3d4a7a;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+.key .original {
+    color: #888;
+    font-size: 10px;
+}
+.key .remap {
+    color: #ffd93d;
+    font-weight: bold;
+    font-size: 12px;
+    min-height: 14px;
+}
+.key.remapped {
+    background: #1f4068;
+    border-color: #00d9ff;
+}
+.key.simple.remapped { border-color: #4ade80; }
+.key.modifier.remapped { border-color: #00d9ff; background: rgba(0, 217, 255, 0.15); }
+.key.lock.remapped { border-color: #a78bfa; background: rgba(167, 139, 250, 0.15); }
+.key.taphold.remapped { border-color: #ff6b6b; background: rgba(255, 107, 107, 0.15); }
+.key.modified.remapped { border-color: #4ade80; background: rgba(74, 222, 128, 0.15); }
+.key.layer-active { border-color: #fbbf24 !important; background: rgba(251, 191, 36, 0.2) !important; }
+.spacer { height: 50px; }
+
+/* View modes */
+body.show-original .key .remap { display: none; }
+body.show-original .key .original { font-size: 12px; color: #fff; }
+body.show-remap .key .original { display: none; }
+body.show-remap .key .remap { font-size: 12px; }
+body.show-remap .key:not(.remapped) .remap { color: #666; }
+body.show-remap .key:not(.remapped)::after { content: attr(data-original); color: #666; font-size: 12px; }
+body.show-code .key .original, body.show-code .key .remap { display: none; }
+body.show-code .key::after { content: attr(data-id); color: #888; font-size: 9px; }
+</style>
+</head>
+<body class="show-both">
+<h1>KeyRx Layout Viewer</h1>
+<p class="source">Source: <code>/home/rmondo/repos/keyrx2/examples/user_layout.rhai</code></p>
+<div class="controls">
+    <button onclick="setView('both')" class="active" id="btn-both">Original + Remap</button>
+    <button onclick="setView('original')" id="btn-original">Original Only</button>
+    <button onclick="setView('remap')" id="btn-remap">Remap Only</button>
+    <button onclick="setView('code')" id="btn-code">KeyCode</button>
+</div>
+<div class="layer-controls">
+    <span class="label">Layers:</span>
+    <button onclick="toggleLayer('base')" class="layer-btn active" id="btn-layer-base">Base Layer</button>
+    <button onclick="toggleLayer('md-00')" id="btn-layer-md-00" class="layer-btn">MD_00 Layer</button>
+    <button onclick="toggleLayer('md-05')" id="btn-layer-md-05" class="layer-btn">MD_05 Layer</button>
+    <button onclick="toggleLayer('md-03')" id="btn-layer-md-03" class="layer-btn">MD_03 Layer</button>
+    <button onclick="toggleLayer('md-01')" id="btn-layer-md-01" class="layer-btn">MD_01 Layer</button>
+    <button onclick="toggleLayer('md-08')" id="btn-layer-md-08" class="layer-btn">MD_08 Layer</button>
+    <button onclick="toggleLayer('md-06')" id="btn-layer-md-06" class="layer-btn">MD_06 Layer</button>
+    <button onclick="toggleLayer('md-02')" id="btn-layer-md-02" class="layer-btn">MD_02 Layer</button>
+    <button onclick="toggleLayer('md-04')" id="btn-layer-md-04" class="layer-btn">MD_04 Layer</button>
+</div>
+<div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background: #4ade80;"></div> Simple</div>
+    <div class="legend-item"><div class="legend-color" style="background: #00d9ff;"></div> Modifier</div>
+    <div class="legend-item"><div class="legend-color" style="background: #a78bfa;"></div> Lock</div>
+    <div class="legend-item"><div class="legend-color" style="background: #ff6b6b;"></div> TapHold</div>
+    <div class="legend-item"><div class="legend-color" style="background: #4ade80;"></div> Modified</div>
+    <div class="legend-item"><div class="legend-color" style="background: #fbbf24;"></div> Layer Active</div>
+    <span style="color: #666; margin-left: 20px;">Bordered = Remapped</span>
+</div>
+<div class="keyboard"><div class="row"><div class="key simple remapped" style="width: 50px;" data-id="Escape" data-original="Esc" data-base-remap="5">
+                        <span class="original">Esc</span>
+                        <span class="remap">5</span>
+                    </div><div class="spacer" style="width: 25px;"></div><div class="key simple remapped" style="width: 50px;" data-id="F1" data-original="F1" data-base-remap="Win">
+                        <span class="original">F1</span>
+                        <span class="remap">Win</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F2" data-original="F2" data-base-remap="Esc">
+                        <span class="original">F2</span>
+                        <span class="remap">Esc</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F3" data-original="F3" data-base-remap="LCtrl">
+                        <span class="original">F3</span>
+                        <span class="remap">LCtrl</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F4" data-original="F4" data-base-remap="LAlt">
+                        <span class="original">F4</span>
+                        <span class="remap">LAlt</span>
+                    </div><div class="spacer" style="width: 25px;"></div><div class="key simple remapped" style="width: 50px;" data-id="F5" data-original="F5" data-base-remap="BS">
+                        <span class="original">F5</span>
+                        <span class="remap">BS</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F6" data-original="F6" data-base-remap="Del">
+                        <span class="original">F6</span>
+                        <span class="remap">Del</span>
+                    </div><div class="key " style="width: 50px;" data-id="F7" data-original="F7" data-base-remap="">
+                        <span class="original">F7</span>
+                        <span class="remap"></span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F8" data-original="F8" data-base-remap="Tab">
+                        <span class="original">F8</span>
+                        <span class="remap">Tab</span>
+                    </div><div class="spacer" style="width: 25px;"></div><div class="key simple remapped" style="width: 50px;" data-id="F9" data-original="F9" data-base-remap="Tab">
+                        <span class="original">F9</span>
+                        <span class="remap">Tab</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F10" data-original="F10" data-base-remap="Tab">
+                        <span class="original">F10</span>
+                        <span class="remap">Tab</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F11" data-original="F11" data-base-remap="Tab">
+                        <span class="original">F11</span>
+                        <span class="remap">Tab</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F12" data-original="F12" data-base-remap="Tab">
+                        <span class="original">F12</span>
+                        <span class="remap">Tab</span>
+                    </div><div class="spacer" style="width: 12.5px;"></div><div class="key simple remapped" style="width: 50px;" data-id="PrintScreen" data-original="PrtSc" data-base-remap="半/全">
+                        <span class="original">PrtSc</span>
+                        <span class="remap">半/全</span>
+                    </div><div class="key " style="width: 50px;" data-id="ScrollLock" data-original="ScrLk" data-base-remap="">
+                        <span class="original">ScrLk</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Pause" data-original="Pause" data-base-remap="">
+                        <span class="original">Pause</span>
+                        <span class="remap"></span>
+                    </div></div>
+<div class="row"><div class="key simple remapped" style="width: 50px;" data-id="Zenkaku" data-original="半/全" data-base-remap="Esc" data-layer-md-00="Enter" data-layer-md-00-class="simple">
+                        <span class="original">半/全</span>
+                        <span class="remap">Esc</span>
+                    </div><div class="key taphold remapped" style="width: 50px;" data-id="Num1" data-original="1" data-base-remap="1/M4">
+                        <span class="original">1</span>
+                        <span class="remap">1/M4</span>
+                    </div><div class="key modified remapped" style="width: 50px;" data-id="Num2" data-original="2" data-base-remap="S+7" data-layer-md-00="←" data-layer-md-00-class="simple" data-layer-md-03="S+0" data-layer-md-03-class="modified" data-layer-md-01="L" data-layer-md-01-class="simple" data-layer-md-06="C+PgUp" data-layer-md-06-class="modified" data-layer-md-02="S+2" data-layer-md-02-class="modified" data-layer-md-04="C+Z" data-layer-md-04-class="modified">
+                        <span class="original">2</span>
+                        <span class="remap">S+7</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Num3" data-original="3" data-base-remap="," data-layer-md-00="→" data-layer-md-00-class="simple" data-layer-md-03="S+9" data-layer-md-03-class="modified" data-layer-md-01="R" data-layer-md-01-class="simple" data-layer-md-06="C+PgDn" data-layer-md-06-class="modified" data-layer-md-02="S+3" data-layer-md-02-class="modified" data-layer-md-04="C+X" data-layer-md-04-class="modified">
+                        <span class="original">3</span>
+                        <span class="remap">,</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Num4" data-original="4" data-base-remap="." data-layer-md-00="↓" data-layer-md-00-class="simple" data-layer-md-03="S+\" data-layer-md-03-class="modified" data-layer-md-01="C" data-layer-md-01-class="simple" data-layer-md-06="SC+Tab" data-layer-md-06-class="modified" data-layer-md-02="S+4" data-layer-md-02-class="modified" data-layer-md-04="C+C" data-layer-md-04-class="modified">
+                        <span class="original">4</span>
+                        <span class="remap">.</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Num5" data-original="5" data-base-remap="P" data-layer-md-00="↑" data-layer-md-00-class="simple" data-layer-md-03="S+8" data-layer-md-03-class="modified" data-layer-md-01="G" data-layer-md-01-class="simple" data-layer-md-06="C+Tab" data-layer-md-06-class="modified" data-layer-md-02="S+5" data-layer-md-02-class="modified" data-layer-md-04="C+V" data-layer-md-04-class="modified">
+                        <span class="original">5</span>
+                        <span class="remap">P</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Num6" data-original="6" data-base-remap="Y" data-layer-md-03="S+7" data-layer-md-03-class="modified" data-layer-md-01="F" data-layer-md-01-class="simple" data-layer-md-06="C+F4" data-layer-md-06-class="modified" data-layer-md-02="S+6" data-layer-md-02-class="modified" data-layer-md-04="C+Y" data-layer-md-04-class="modified">
+                        <span class="original">6</span>
+                        <span class="remap">Y</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Num7" data-original="7" data-base-remap="F" data-layer-md-03="S+6" data-layer-md-03-class="modified" data-layer-md-01="Y" data-layer-md-01-class="simple" data-layer-md-02="S+7" data-layer-md-02-class="modified">
+                        <span class="original">7</span>
+                        <span class="remap">F</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Num8" data-original="8" data-base-remap="G" data-layer-md-00="Home" data-layer-md-00-class="simple" data-layer-md-03="S+5" data-layer-md-03-class="modified" data-layer-md-01="P" data-layer-md-01-class="simple" data-layer-md-02="S+8" data-layer-md-02-class="modified">
+                        <span class="original">8</span>
+                        <span class="remap">G</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Num9" data-original="9" data-base-remap="C" data-layer-md-00="End" data-layer-md-00-class="simple" data-layer-md-03="S+4" data-layer-md-03-class="modified" data-layer-md-01="." data-layer-md-01-class="simple" data-layer-md-02="S+\" data-layer-md-02-class="modified">
+                        <span class="original">9</span>
+                        <span class="remap">C</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Num0" data-original="0" data-base-remap="R" data-layer-md-03="S+3" data-layer-md-03-class="modified" data-layer-md-01="," data-layer-md-01-class="simple" data-layer-md-02="S+9" data-layer-md-02-class="modified">
+                        <span class="original">0</span>
+                        <span class="remap">R</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Minus" data-original="-" data-base-remap="L" data-layer-md-00="F12" data-layer-md-00-class="simple" data-layer-md-03="S+2" data-layer-md-03-class="modified" data-layer-md-01="S+7" data-layer-md-01-class="modified" data-layer-md-02="S+0" data-layer-md-02-class="modified">
+                        <span class="original">-</span>
+                        <span class="remap">L</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Equal" data-original="=" data-base-remap="/">
+                        <span class="original">=</span>
+                        <span class="remap">/</span>
+                    </div><div class="key " style="width: 50px;" data-id="Yen" data-original="¥" data-base-remap="">
+                        <span class="original">¥</span>
+                        <span class="remap"></span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Backspace" data-original="BS" data-base-remap="Del">
+                        <span class="original">BS</span>
+                        <span class="remap">Del</span>
+                    </div><div class="spacer" style="width: 12.5px;"></div><div class="key " style="width: 50px;" data-id="Insert" data-original="Ins" data-base-remap="">
+                        <span class="original">Ins</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Home" data-original="Home" data-base-remap="">
+                        <span class="original">Home</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="PageUp" data-original="PgUp" data-base-remap="">
+                        <span class="original">PgUp</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 12.5px;"></div><div class="key " style="width: 50px;" data-id="NumLock" data-original="Num" data-base-remap="">
+                        <span class="original">Num</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="NumpadDivide" data-original="/" data-base-remap="">
+                        <span class="original">/</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="NumpadMultiply" data-original="*" data-base-remap="">
+                        <span class="original">*</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="NumpadSubtract" data-original="-" data-base-remap="">
+                        <span class="original">-</span>
+                        <span class="remap"></span>
+                    </div></div>
+<div class="row"><div class="key taphold remapped" style="width: 75px;" data-id="Tab" data-original="Tab" data-base-remap="Space/M7">
+                        <span class="original">Tab</span>
+                        <span class="remap">Space/M7</span>
+                    </div><div class="key taphold remapped" style="width: 50px;" data-id="Q" data-original="Q" data-base-remap="-/M8">
+                        <span class="original">Q</span>
+                        <span class="remap">-/M8</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="W" data-original="W" data-base-remap="A" data-layer-md-00="1" data-layer-md-00-class="simple" data-layer-md-05="0" data-layer-md-05-class="simple" data-layer-md-03="S+." data-layer-md-03-class="modified" data-layer-md-01="S" data-layer-md-01-class="simple" data-layer-md-08="Home" data-layer-md-08-class="simple" data-layer-md-06="C+←" data-layer-md-06-class="modified" data-layer-md-02="S+9" data-layer-md-02-class="modified" data-layer-md-04="C+G" data-layer-md-04-class="modified">
+                        <span class="original">W</span>
+                        <span class="remap">A</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="E" data-original="E" data-base-remap="O" data-layer-md-00="2" data-layer-md-00-class="simple" data-layer-md-05="9" data-layer-md-05-class="simple" data-layer-md-03="S+," data-layer-md-03-class="modified" data-layer-md-01="N" data-layer-md-01-class="simple" data-layer-md-08="End" data-layer-md-08-class="simple" data-layer-md-06="C+→" data-layer-md-06-class="modified" data-layer-md-02="S+0" data-layer-md-02-class="modified" data-layer-md-04="A+X" data-layer-md-04-class="modified">
+                        <span class="original">E</span>
+                        <span class="remap">O</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="R" data-original="R" data-base-remap="E" data-layer-md-00="3" data-layer-md-00-class="simple" data-layer-md-05="8" data-layer-md-05-class="simple" data-layer-md-03="]" data-layer-md-03-class="simple" data-layer-md-01="T" data-layer-md-01-class="simple" data-layer-md-08="S+Home" data-layer-md-08-class="modified" data-layer-md-06="C+↓" data-layer-md-06-class="modified" data-layer-md-02="S+[" data-layer-md-02-class="modified" data-layer-md-04="C+W" data-layer-md-04-class="modified">
+                        <span class="original">R</span>
+                        <span class="remap">E</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="T" data-original="T" data-base-remap="U" data-layer-md-00="4" data-layer-md-00-class="simple" data-layer-md-05="7" data-layer-md-05-class="simple" data-layer-md-03="[" data-layer-md-03-class="simple" data-layer-md-01="H" data-layer-md-01-class="simple" data-layer-md-08="S+End" data-layer-md-08-class="modified" data-layer-md-06="C+↑" data-layer-md-06-class="modified" data-layer-md-02="S+]" data-layer-md-02-class="modified" data-layer-md-04="半/全" data-layer-md-04-class="simple">
+                        <span class="original">T</span>
+                        <span class="remap">U</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Y" data-original="Y" data-base-remap="I" data-layer-md-00="5" data-layer-md-00-class="simple" data-layer-md-05="6" data-layer-md-05-class="simple" data-layer-md-03="S+0" data-layer-md-03-class="modified" data-layer-md-01="D" data-layer-md-01-class="simple" data-layer-md-06="C+W" data-layer-md-06-class="modified" data-layer-md-02="S+9" data-layer-md-02-class="modified" data-layer-md-04="S+?" data-layer-md-04-class="modified">
+                        <span class="original">Y</span>
+                        <span class="remap">I</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="U" data-original="U" data-base-remap="D" data-layer-md-00="6" data-layer-md-00-class="simple" data-layer-md-03="S+9" data-layer-md-03-class="modified" data-layer-md-01="I" data-layer-md-01-class="simple" data-layer-md-02="S+0" data-layer-md-02-class="modified">
+                        <span class="original">U</span>
+                        <span class="remap">D</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="I" data-original="I" data-base-remap="H" data-layer-md-00="7" data-layer-md-00-class="simple" data-layer-md-03="S+]" data-layer-md-03-class="modified" data-layer-md-01="U" data-layer-md-01-class="simple" data-layer-md-02="[" data-layer-md-02-class="simple">
+                        <span class="original">I</span>
+                        <span class="remap">H</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="O" data-original="O" data-base-remap="T" data-layer-md-00="8" data-layer-md-00-class="simple" data-layer-md-03="S+[" data-layer-md-03-class="modified" data-layer-md-01="E" data-layer-md-01-class="simple" data-layer-md-02="]" data-layer-md-02-class="simple">
+                        <span class="original">O</span>
+                        <span class="remap">T</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="P" data-original="P" data-base-remap="N" data-layer-md-00="9" data-layer-md-00-class="simple" data-layer-md-03="S+0" data-layer-md-03-class="modified" data-layer-md-01="O" data-layer-md-01-class="simple" data-layer-md-02="S+," data-layer-md-02-class="modified">
+                        <span class="original">P</span>
+                        <span class="remap">N</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="LeftBracket" data-original="[" data-base-remap="S" data-layer-md-00="0" data-layer-md-00-class="simple" data-layer-md-03="S+9" data-layer-md-03-class="modified" data-layer-md-01="A" data-layer-md-01-class="simple" data-layer-md-02="S+." data-layer-md-02-class="modified">
+                        <span class="original">[</span>
+                        <span class="remap">S</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="RightBracket" data-original="]" data-base-remap="-" data-layer-md-00="F12" data-layer-md-00-class="simple">
+                        <span class="original">]</span>
+                        <span class="remap">-</span>
+                    </div><div class="key simple remapped" style="width: 75px;" data-id="Enter" data-original="Enter" data-base-remap="¥">
+                        <span class="original">Enter</span>
+                        <span class="remap">¥</span>
+                    </div><div class="spacer" style="width: 12.5px;"></div><div class="key simple remapped" style="width: 50px;" data-id="Delete" data-original="Del" data-base-remap="4">
+                        <span class="original">Del</span>
+                        <span class="remap">4</span>
+                    </div><div class="key " style="width: 50px;" data-id="End" data-original="End" data-base-remap="">
+                        <span class="original">End</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="PageDown" data-original="PgDn" data-base-remap="">
+                        <span class="original">PgDn</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 12.5px;"></div><div class="key " style="width: 50px;" data-id="Numpad7" data-original="7" data-base-remap="">
+                        <span class="original">7</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Numpad8" data-original="8" data-base-remap="">
+                        <span class="original">8</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Numpad9" data-original="9" data-base-remap="">
+                        <span class="original">9</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="NumpadAdd" data-original="+" data-base-remap="">
+                        <span class="original">+</span>
+                        <span class="remap"></span>
+                    </div></div>
+<div class="row"><div class="key " style="width: 87.5px;" data-id="CapsLock" data-original="Caps" data-base-remap="">
+                        <span class="original">Caps</span>
+                        <span class="remap"></span>
+                    </div><div class="key taphold remapped" style="width: 50px;" data-id="A" data-original="A" data-base-remap="Tab/M9">
+                        <span class="original">A</span>
+                        <span class="remap">Tab/M9</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="S" data-original="S" data-base-remap=";" data-layer-md-00="F1" data-layer-md-00-class="simple" data-layer-md-05="F10" data-layer-md-05-class="simple" data-layer-md-03="\" data-layer-md-03-class="simple" data-layer-md-01="Z" data-layer-md-01-class="simple" data-layer-md-06="A+←" data-layer-md-06-class="modified" data-layer-md-02="S+/" data-layer-md-02-class="modified" data-layer-md-04="C+A" data-layer-md-04-class="modified">
+                        <span class="original">S</span>
+                        <span class="remap">;</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="D" data-original="D" data-base-remap="Q" data-layer-md-00="F2" data-layer-md-00-class="simple" data-layer-md-05="F9" data-layer-md-05-class="simple" data-layer-md-03="=" data-layer-md-03-class="simple" data-layer-md-01="V" data-layer-md-01-class="simple" data-layer-md-06="A+→" data-layer-md-06-class="modified" data-layer-md-02="/" data-layer-md-02-class="simple" data-layer-md-04="C+F" data-layer-md-04-class="modified">
+                        <span class="original">D</span>
+                        <span class="remap">Q</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="F" data-original="F" data-base-remap="J" data-layer-md-00="F3" data-layer-md-00-class="simple" data-layer-md-05="F8" data-layer-md-05-class="simple" data-layer-md-03="S+=" data-layer-md-03-class="modified" data-layer-md-01="W" data-layer-md-01-class="simple" data-layer-md-06="A+↓" data-layer-md-06-class="modified" data-layer-md-02="S+6" data-layer-md-02-class="modified" data-layer-md-04="C+J" data-layer-md-04-class="modified">
+                        <span class="original">F</span>
+                        <span class="remap">J</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="G" data-original="G" data-base-remap="K" data-layer-md-00="F4" data-layer-md-00-class="simple" data-layer-md-05="F7" data-layer-md-05-class="simple" data-layer-md-03="S+8" data-layer-md-03-class="modified" data-layer-md-01="M" data-layer-md-01-class="simple" data-layer-md-06="A+↑" data-layer-md-06-class="modified" data-layer-md-02="S+1" data-layer-md-02-class="modified" data-layer-md-04="A+Space" data-layer-md-04-class="modified">
+                        <span class="original">G</span>
+                        <span class="remap">K</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="H" data-original="H" data-base-remap="X" data-layer-md-00="F5" data-layer-md-00-class="simple" data-layer-md-05="F6" data-layer-md-05-class="simple" data-layer-md-03="S+`" data-layer-md-03-class="modified" data-layer-md-01="B" data-layer-md-01-class="simple" data-layer-md-06="A+F5" data-layer-md-06-class="modified" data-layer-md-02="`" data-layer-md-02-class="simple" data-layer-md-04="SC+B" data-layer-md-04-class="modified">
+                        <span class="original">H</span>
+                        <span class="remap">X</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="J" data-original="J" data-base-remap="B" data-layer-md-00="F6" data-layer-md-00-class="simple" data-layer-md-03="`" data-layer-md-03-class="simple" data-layer-md-01="X" data-layer-md-01-class="simple" data-layer-md-02="S+`" data-layer-md-02-class="modified">
+                        <span class="original">J</span>
+                        <span class="remap">B</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="K" data-original="K" data-base-remap="M" data-layer-md-00="F7" data-layer-md-00-class="simple" data-layer-md-03="S+1" data-layer-md-03-class="modified" data-layer-md-01="K" data-layer-md-01-class="simple" data-layer-md-02="S+8" data-layer-md-02-class="modified">
+                        <span class="original">K</span>
+                        <span class="remap">M</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="L" data-original="L" data-base-remap="W" data-layer-md-00="F8" data-layer-md-00-class="simple" data-layer-md-03="S+6" data-layer-md-03-class="modified" data-layer-md-01="J" data-layer-md-01-class="simple" data-layer-md-02="S+=" data-layer-md-02-class="modified">
+                        <span class="original">L</span>
+                        <span class="remap">W</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Semicolon" data-original=";" data-base-remap="V" data-layer-md-00="F9" data-layer-md-00-class="simple" data-layer-md-03="/" data-layer-md-03-class="simple" data-layer-md-01="Q" data-layer-md-01-class="simple" data-layer-md-02="=" data-layer-md-02-class="simple">
+                        <span class="original">;</span>
+                        <span class="remap">V</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Quote" data-original="'" data-base-remap="Z" data-layer-md-00="F10" data-layer-md-00-class="simple" data-layer-md-03="S+/" data-layer-md-03-class="modified" data-layer-md-01=";" data-layer-md-01-class="simple" data-layer-md-02="\" data-layer-md-02-class="simple">
+                        <span class="original">'</span>
+                        <span class="remap">Z</span>
+                    </div><div class="key " style="width: 50px;" data-id="Backslash" data-original="\" data-base-remap="" data-layer-md-00="F11" data-layer-md-00-class="simple">
+                        <span class="original">\</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 225px;"></div><div class="key " style="width: 50px;" data-id="Numpad4" data-original="4" data-base-remap="">
+                        <span class="original">4</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Numpad5" data-original="5" data-base-remap="">
+                        <span class="original">5</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Numpad6" data-original="6" data-base-remap="">
+                        <span class="original">6</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 50px;"></div></div>
+<div class="row"><div class="key " style="width: 112.5px;" data-id="LShift" data-original="LShift" data-base-remap="">
+                        <span class="original">LShift</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Z" data-original="Z" data-base-remap="">
+                        <span class="original">Z</span>
+                        <span class="remap"></span>
+                    </div><div class="key taphold remapped" style="width: 50px;" data-id="X" data-original="X" data-base-remap="Del/M3">
+                        <span class="original">X</span>
+                        <span class="remap">Del/M3</span>
+                    </div><div class="key taphold remapped" style="width: 50px;" data-id="C" data-original="C" data-base-remap="Del/M6">
+                        <span class="original">C</span>
+                        <span class="remap">Del/M6</span>
+                    </div><div class="key taphold remapped" style="width: 50px;" data-id="V" data-original="V" data-base-remap="Del/M1">
+                        <span class="original">V</span>
+                        <span class="remap">Del/M1</span>
+                    </div><div class="key taphold remapped" style="width: 50px;" data-id="B" data-original="B" data-base-remap="Enter/M0">
+                        <span class="original">B</span>
+                        <span class="remap">Enter/M0</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="N" data-original="N" data-base-remap="LShift">
+                        <span class="original">N</span>
+                        <span class="remap">LShift</span>
+                    </div><div class="key taphold remapped" style="width: 50px;" data-id="M" data-original="M" data-base-remap="BS/M2">
+                        <span class="original">M</span>
+                        <span class="remap">BS/M2</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Comma" data-original="," data-base-remap="F9">
+                        <span class="original">,</span>
+                        <span class="remap">F9</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Period" data-original="." data-base-remap="F10">
+                        <span class="original">.</span>
+                        <span class="remap">F10</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Slash" data-original="/" data-base-remap="F11" data-layer-md-00="S+2" data-layer-md-00-class="modified">
+                        <span class="original">/</span>
+                        <span class="remap">F11</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Ro" data-original="ろ" data-base-remap="F12">
+                        <span class="original">ろ</span>
+                        <span class="remap">F12</span>
+                    </div><div class="key " style="width: 87.5px;" data-id="RShift" data-original="RShift" data-base-remap="">
+                        <span class="original">RShift</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 12.5px;"></div><div class="key " style="width: 50px;" data-id="Up" data-original="↑" data-base-remap="">
+                        <span class="original">↑</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 62.5px;"></div><div class="key " style="width: 50px;" data-id="Numpad1" data-original="1" data-base-remap="">
+                        <span class="original">1</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Numpad2" data-original="2" data-base-remap="">
+                        <span class="original">2</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Numpad3" data-original="3" data-base-remap="">
+                        <span class="original">3</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="NumpadEnter" data-original="Ent" data-base-remap="">
+                        <span class="original">Ent</span>
+                        <span class="remap"></span>
+                    </div></div>
+<div class="row"><div class="key taphold remapped" style="width: 62.5px;" data-id="LCtrl" data-original="LCtrl" data-base-remap="Space/M5">
+                        <span class="original">LCtrl</span>
+                        <span class="remap">Space/M5</span>
+                    </div><div class="key " style="width: 62.5px;" data-id="LMeta" data-original="Win" data-base-remap="">
+                        <span class="original">Win</span>
+                        <span class="remap"></span>
+                    </div><div class="key simple remapped" style="width: 62.5px;" data-id="LAlt" data-original="LAlt" data-base-remap="LCtrl">
+                        <span class="original">LAlt</span>
+                        <span class="remap">LCtrl</span>
+                    </div><div class="key simple remapped" style="width: 62.5px;" data-id="Muhenkan" data-original="無変換" data-base-remap="Space">
+                        <span class="original">無変換</span>
+                        <span class="remap">Space</span>
+                    </div><div class="key " style="width: 250px;" data-id="Space" data-original="Space" data-base-remap="" data-layer-md-00="F12" data-layer-md-00-class="simple">
+                        <span class="original">Space</span>
+                        <span class="remap"></span>
+                    </div><div class="key simple remapped" style="width: 62.5px;" data-id="Henkan" data-original="変換" data-base-remap="RAlt">
+                        <span class="original">変換</span>
+                        <span class="remap">RAlt</span>
+                    </div><div class="key simple remapped" style="width: 50px;" data-id="Hiragana" data-original="ひら" data-base-remap="RCtrl">
+                        <span class="original">ひら</span>
+                        <span class="remap">RCtrl</span>
+                    </div><div class="key " style="width: 62.5px;" data-id="RAlt" data-original="RAlt" data-base-remap="">
+                        <span class="original">RAlt</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 62.5px;" data-id="RMeta" data-original="Win" data-base-remap="">
+                        <span class="original">Win</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 62.5px;" data-id="Menu" data-original="Menu" data-base-remap="">
+                        <span class="original">Menu</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 62.5px;" data-id="RCtrl" data-original="RCtrl" data-base-remap="">
+                        <span class="original">RCtrl</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 12.5px;"></div><div class="key " style="width: 50px;" data-id="Left" data-original="←" data-base-remap="">
+                        <span class="original">←</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Down" data-original="↓" data-base-remap="">
+                        <span class="original">↓</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="Right" data-original="→" data-base-remap="">
+                        <span class="original">→</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 12.5px;"></div><div class="key " style="width: 100px;" data-id="Numpad0" data-original="0" data-base-remap="">
+                        <span class="original">0</span>
+                        <span class="remap"></span>
+                    </div><div class="key " style="width: 50px;" data-id="NumpadDecimal" data-original="." data-base-remap="">
+                        <span class="original">.</span>
+                        <span class="remap"></span>
+                    </div><div class="spacer" style="width: 50px;"></div></div>
+</div>
+
+<script>
+let currentLayer = 'base';
+
+function setView(mode) {
+    const classList = document.body.className.split(' ').filter(c => c.startsWith('show-') === false);
+    classList.push('show-' + mode);
+    document.body.className = classList.join(' ');
+    document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-' + mode).classList.add('active');
+}
+
+function toggleLayer(layerId) {
+    currentLayer = layerId;
+    document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-layer-' + layerId).classList.add('active');
+
+    // Update all keys
+    document.querySelectorAll('.key').forEach(key => {
+        const baseRemap = key.getAttribute('data-base-remap') || '';
+        const remapSpan = key.querySelector('.remap');
+
+        // Reset layer-active class
+        key.classList.remove('layer-active');
+
+        if (layerId === 'base') {
+            // Show base layer mappings
+            if (remapSpan) remapSpan.textContent = baseRemap;
+            if (baseRemap) {
+                key.classList.add('remapped');
+            } else {
+                key.classList.remove('remapped');
+            }
+        } else {
+            // Show layer mappings
+            const layerRemap = key.getAttribute('data-layer-' + layerId);
+            if (layerRemap) {
+                if (remapSpan) remapSpan.textContent = layerRemap;
+                key.classList.add('remapped', 'layer-active');
+            } else if (baseRemap) {
+                // Fallback to base remap if no layer remap
+                if (remapSpan) remapSpan.textContent = baseRemap;
+                key.classList.add('remapped');
+                key.classList.remove('layer-active');
+            } else {
+                if (remapSpan) remapSpan.textContent = '';
+                key.classList.remove('remapped', 'layer-active');
+            }
+        }
+    });
+}
+</script>
+<footer style="margin-top: 30px; color: #555; font-size: 0.8em;">
+Generated by keyrx_compiler view - JIS 109 Layout
+</footer>
+</body>
+</html>

@@ -45,11 +45,11 @@ export function getWsUrl(): string {
   // In production, if no URL configured, use same origin with ws/wss protocol
   if (import.meta.env.PROD && !configuredUrl) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${window.location.host}/ws`;
+    return `${protocol}//${window.location.host}/ws-rpc`;
   }
 
   // In development or if explicitly configured, use the configured URL
-  return configuredUrl || 'ws://localhost:9867/ws';
+  return configuredUrl || 'ws://localhost:9867/ws-rpc';
 }
 
 /**

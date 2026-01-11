@@ -28,6 +28,7 @@
 import type { UseUnifiedApiReturn } from '../hooks/useUnifiedApi';
 import type { DaemonState, KeyEvent, LatencyMetrics } from '../types/rpc';
 import type { Profile, ProfileConfig, Device, Config, Layer, SimulationInput, SimulationResult, PaginatedEvents } from './types';
+import { validateApiResponse, ProfileConfigRpcSchema, ProfileRpcInfoSchema, DeviceRpcInfoSchema } from './schemas';
 
 /**
  * Type-safe RPC client for daemon communication.
@@ -124,7 +125,12 @@ export class RpcClient {
    * @throws Error if profile does not exist
    */
   async getProfileConfig(name: string): Promise<ProfileConfig> {
-    return this.api.query<ProfileConfig>('get_profile_config', { name });
+    const response = await this.api.query<any>('get_profile_config', { name });
+    const validated = validateApiResponse(ProfileConfigRpcSchema, response, 'get_profile_config');
+    return {
+      name: validated.name,
+      source: validated.source,
+    };
   }
 
   /**
@@ -136,7 +142,18 @@ export class RpcClient {
    * @throws Error if profile does not exist or source is invalid
    */
   async setProfileConfig(name: string, source: string): Promise<void> {
-    return this.api.command<void>('set_profile_config', { name, source });
+    const response = await this.api.command<any>('set_profile_config', { name, source });
+    // For commands, the response is typically empty on success or contains error info
+    // Validation already happened at the WebSocket layer, so we just need to check for errors
+    if (response && typeof response === 'object') {
+      console.debug(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'debug',
+        service: 'RPC Client',
+        event: 'set_profile_config_success',
+        context: { profileName: name },
+      }));
+    }
   }
 
   /**

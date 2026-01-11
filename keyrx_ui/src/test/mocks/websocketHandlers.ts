@@ -421,7 +421,7 @@ export function resetWebSocketState(): void {
  */
 export function createWebSocketHandlers() {
   return [
-    ws.link('ws://localhost:9867/ws').addEventListener('connection', ({ client }) => {
+    ws.link('ws://localhost:9867/ws-rpc').addEventListener('connection', ({ client }) => {
       const connectionId = generateConnectionId();
       console.debug(`[MSW WebSocket] Connection opened: ${connectionId}`);
 

@@ -145,9 +145,9 @@ export const KeyboardVisualizer: React.FC<KeyboardVisualizerProps> = ({
       aria-label={`${layout} keyboard layout${simulatorMode ? ' (simulator mode)' : ''}. Use arrow keys to navigate between keys, Enter to select.`}
       style={{
         display: 'grid',
-        gridTemplateRows: `repeat(${maxRow}, 48px)`,
-        gridTemplateColumns: `repeat(${maxCol}, 48px)`,
-        gap: '4px',
+        gridTemplateRows: `repeat(${maxRow}, 52px)`,
+        gridTemplateColumns: `repeat(${maxCol}, 52px)`,
+        gap: '2px',
         padding: '16px',
         backgroundColor: 'var(--color-bg-secondary)',
         borderRadius: '12px',

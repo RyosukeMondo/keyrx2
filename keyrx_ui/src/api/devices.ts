@@ -3,6 +3,7 @@
  */
 
 import { apiClient } from './client';
+import { validateApiResponse, DeviceListResponseSchema, DeviceEntrySchema } from './schemas';
 import type { DeviceEntry, DeviceScope } from '../types';
 
 interface RenameDeviceRequest {
@@ -26,7 +27,18 @@ interface DevicesListResponse {
  */
 export async function fetchDevices(): Promise<DeviceEntry[]> {
   const response = await apiClient.get<DevicesListResponse>('/api/devices');
-  return response.devices;
+  const validated = validateApiResponse(DeviceListResponseSchema, response, 'GET /api/devices');
+
+  // Map validated response to DeviceEntry format
+  return validated.devices.map((device) => ({
+    id: device.id,
+    name: device.name,
+    path: '', // REST API doesn't provide path, use empty string
+    serial: device.serial || null,
+    active: true, // Devices returned by REST API are assumed active
+    scope: device.scope === 'DeviceSpecific' ? 'device-specific' : 'global',
+    layout: device.layout || null,
+  }));
 }
 
 /**
@@ -37,7 +49,10 @@ export async function renameDevice(
   name: string
 ): Promise<DeviceResponse> {
   const request: RenameDeviceRequest = { name };
-  return apiClient.put<DeviceResponse>(`/api/devices/${id}/name`, request);
+  const response = await apiClient.put<DeviceEntry>(`/api/devices/${id}/name`, request);
+  // Validate the returned device entry
+  validateApiResponse(DeviceEntrySchema, response, `PUT /api/devices/${id}/name`);
+  return { success: true };
 }
 
 /**
@@ -48,12 +63,18 @@ export async function setDeviceScope(
   scope: DeviceScope
 ): Promise<DeviceResponse> {
   const request: SetScopeRequest = { scope };
-  return apiClient.put<DeviceResponse>(`/api/devices/${id}/scope`, request);
+  const response = await apiClient.put<DeviceEntry>(`/api/devices/${id}/scope`, request);
+  // Validate the returned device entry
+  validateApiResponse(DeviceEntrySchema, response, `PUT /api/devices/${id}/scope`);
+  return { success: true };
 }
 
 /**
  * Forget a device (remove from device list)
  */
 export async function forgetDevice(id: string): Promise<DeviceResponse> {
-  return apiClient.delete<DeviceResponse>(`/api/devices/${id}`);
+  const response = await apiClient.delete<DeviceEntry>(`/api/devices/${id}`);
+  // Validate the returned device entry
+  validateApiResponse(DeviceEntrySchema, response, `DELETE /api/devices/${id}`);
+  return { success: true };
 }

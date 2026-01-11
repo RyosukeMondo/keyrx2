@@ -30,6 +30,7 @@ tower-http = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+typeshare = "1.0"
 humantime = "2.3.0"
 # Embed static files in binary
 include_dir = "0.7"
@@ -94,3 +95,6 @@ harness = false
 
 [build-dependencies]
 chrono = "0.4"
+
+[package.metadata.typeshare]
+output_directory = "../keyrx_ui/src/types"

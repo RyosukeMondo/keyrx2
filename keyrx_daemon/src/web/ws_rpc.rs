@@ -188,6 +188,7 @@ async fn handle_query(
 
     let result = match method.as_str() {
         "get_profiles" => profile::get_profiles(&state.profile_service, params).await,
+        "get_profile_config" => profile::get_profile_config(&state.profile_service, params).await,
         "get_devices" => device::get_devices(&state.device_service, params).await,
         "get_config" => config::get_config(&state.config_service, params).await,
         "get_layers" => config::get_layers(&state.config_service, params).await,
@@ -227,6 +228,7 @@ async fn handle_command(
         "delete_profile" => profile::delete_profile(&state.profile_service, params).await,
         "duplicate_profile" => profile::duplicate_profile(&state.profile_service, params).await,
         "rename_profile" => profile::rename_profile(&state.profile_service, params).await,
+        "set_profile_config" => profile::set_profile_config(&state.profile_service, params).await,
         "rename_device" => device::rename_device(&state.device_service, params).await,
         "set_scope_device" => device::set_scope_device(&state.device_service, params).await,
         "forget_device" => device::forget_device(&state.device_service, params).await,

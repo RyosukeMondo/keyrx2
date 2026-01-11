@@ -6,6 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use typeshare::typeshare;
 
 use crate::config::device_registry::DeviceScope;
 use crate::services::DeviceService;
@@ -38,15 +39,16 @@ struct ForgetDeviceParams {
 }
 
 /// Device information returned by RPC methods
+#[typeshare]
 #[derive(Debug, Serialize)]
-struct DeviceRpcInfo {
-    id: String,
-    name: String,
-    path: String,
-    serial: Option<String>,
-    active: bool,
-    scope: Option<String>,
-    layout: Option<String>,
+pub struct DeviceRpcInfo {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub serial: Option<String>,
+    pub active: bool,
+    pub scope: Option<String>,
+    pub layout: Option<String>,
 }
 
 /// Validate device ID to prevent injection attacks

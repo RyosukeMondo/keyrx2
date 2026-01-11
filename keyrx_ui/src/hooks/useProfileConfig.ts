@@ -18,6 +18,10 @@ export function useGetProfileConfig(name: string) {
     queryKey: queryKeys.config(name),
     queryFn: () => client.getProfileConfig(name),
     enabled: !!name && api.isConnected, // Only fetch if name is provided and WebSocket connected
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    gcTime: 300000, // Keep in cache for 5 minutes
+    retry: 1, // Only retry once on failure
+    retryDelay: 1000, // Wait 1 second before retry
   });
 }
 

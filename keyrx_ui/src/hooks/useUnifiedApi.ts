@@ -37,6 +37,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from '../config/env';
+import { validateRpcMessage } from '../api/schemas';
 import type {
   ClientMessage,
   ServerMessage,
@@ -138,7 +139,17 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
     if (!lastMessage?.data) return;
 
     try {
-      const message: ServerMessage = JSON.parse(lastMessage.data);
+      const parsedData = JSON.parse(lastMessage.data);
+
+      // Validate incoming server message
+      let message: ServerMessage;
+      try {
+        message = validateRpcMessage(parsedData, 'server');
+      } catch (validationError) {
+        console.error('[useUnifiedApi] Message validation failed:', validationError);
+        setLastError(validationError instanceof Error ? validationError : new Error('Message validation failed'));
+        return;
+      }
 
       // Handle Connected handshake
       if (checkIsConnected(message)) {
@@ -245,6 +256,17 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
           reject,
           timeoutId,
         });
+
+        // Validate outgoing client message
+        try {
+          validateRpcMessage(message, 'client');
+        } catch (validationError) {
+          clearTimeout(timeoutId);
+          pendingRequests.current.delete(id);
+          console.error('[useUnifiedApi] Outgoing message validation failed:', validationError);
+          reject(validationError instanceof Error ? validationError : new Error('Message validation failed'));
+          return;
+        }
 
         // Send message
         try {

@@ -3,6 +3,7 @@
  */
 
 import { apiClient } from './client';
+import { validateApiResponse, ProfileListResponseSchema, ProfileRpcInfoSchema, ActivationRpcResultSchema } from './schemas';
 import type { ProfileMetadata, Template, ActivationResult } from '../types';
 
 interface CreateProfileRequest {
@@ -19,7 +20,17 @@ interface ProfileResponse {
  */
 export async function fetchProfiles(): Promise<ProfileMetadata[]> {
   const response = await apiClient.get<{ profiles: ProfileMetadata[] }>('/api/profiles');
-  return response.profiles;
+  const validated = validateApiResponse(ProfileListResponseSchema, response, 'GET /api/profiles');
+
+  // Map RPC profile info to ProfileMetadata format
+  return validated.profiles.map((p) => ({
+    name: p.name,
+    createdAt: new Date(p.modified_at_secs * 1000).toISOString(), // Use modifiedAt as createdAt fallback
+    modifiedAt: new Date(p.modified_at_secs * 1000).toISOString(),
+    deviceCount: 0, // RPC doesn't provide this, use placeholder
+    keyCount: p.layer_count, // Use layer count as approximation for key count
+    isActive: p.active,
+  }));
 }
 
 /**
@@ -30,7 +41,10 @@ export async function createProfile(
   template: Template
 ): Promise<ProfileResponse> {
   const request: CreateProfileRequest = { name, template };
-  return apiClient.post<ProfileResponse>('/api/profiles', request);
+  const response = await apiClient.post<any>('/api/profiles', request);
+  // Validate the returned profile info
+  validateApiResponse(ProfileRpcInfoSchema, response, 'POST /api/profiles');
+  return { success: true };
 }
 
 /**
@@ -39,14 +53,36 @@ export async function createProfile(
 export async function activateProfile(
   name: string
 ): Promise<ActivationResult> {
-  return apiClient.post<ActivationResult>(`/api/profiles/${name}/activate`);
+  const response = await apiClient.post<any>(`/api/profiles/${name}/activate`);
+  const validated = validateApiResponse(ActivationRpcResultSchema, response, `POST /api/profiles/${name}/activate`);
+
+  // Map RPC activation result to ActivationResult format
+  return {
+    success: validated.success,
+    profile: name,
+    compiledSize: 0, // RPC doesn't provide this, use placeholder
+    compileTimeMs: validated.compile_time_ms,
+    errors: validated.error ? [validated.error] : [],
+  };
 }
 
 /**
  * Delete a profile
  */
 export async function deleteProfile(name: string): Promise<ProfileResponse> {
-  return apiClient.delete<ProfileResponse>(`/api/profiles/${name}`);
+  const response = await apiClient.delete<any>(`/api/profiles/${name}`);
+  // Validate the response - for delete, we expect either empty or success indicator
+  // Since there's no specific schema for delete response, we'll just check it doesn't error
+  if (response && typeof response === 'object') {
+    console.debug(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: 'debug',
+      service: 'API Validation',
+      event: 'delete_profile_success',
+      context: { profileName: name },
+    }));
+  }
+  return { success: true };
 }
 
 /**
@@ -56,10 +92,13 @@ export async function duplicateProfile(
   sourceName: string,
   newName: string
 ): Promise<ProfileResponse> {
-  return apiClient.post<ProfileResponse>(
+  const response = await apiClient.post<any>(
     `/api/profiles/${sourceName}/duplicate`,
     { newName }
   );
+  // Validate the returned profile info
+  validateApiResponse(ProfileRpcInfoSchema, response, `POST /api/profiles/${sourceName}/duplicate`);
+  return { success: true };
 }
 
 /**

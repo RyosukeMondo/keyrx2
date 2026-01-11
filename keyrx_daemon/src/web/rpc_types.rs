@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use typeshare::typeshare;
 
 // JSON-RPC 2.0 standard error codes
 /// Parse error - Invalid JSON was received by the server
@@ -21,8 +22,9 @@ pub const INVALID_PARAMS: i32 = -32602;
 pub const INTERNAL_ERROR: i32 = -32603;
 
 /// Messages sent from client to server
+#[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum ClientMessage {
     /// Query request - read-only operation that returns data
     #[serde(rename = "query")]
@@ -65,8 +67,9 @@ pub enum ClientMessage {
 }
 
 /// Messages sent from server to client
+#[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum ServerMessage {
     /// Response to a query or command
     #[serde(rename = "response")]
@@ -94,11 +97,13 @@ pub enum ServerMessage {
         /// Protocol version
         version: String,
         /// Server timestamp in microseconds
+        #[typeshare(serialized_as = "number")]
         timestamp: u64,
     },
 }
 
 /// RPC error structure following JSON-RPC 2.0 conventions
+#[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RpcError {
     /// Numeric error code
