@@ -32,15 +32,16 @@ export const DeviceEntrySchema = z.object({
   last_seen: z.number(),
 }).passthrough(); // Allow unexpected fields (log warning in validator)
 
-// Device information from RPC
+// Device information from RPC and REST API
+// Matches Rust DeviceResponse struct in keyrx_daemon/src/web/api/devices.rs
 export const DeviceRpcInfoSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string(),
-  serial: z.string().optional(),
+  serial: z.string().nullable().optional(), // Backend returns null when not available
   active: z.boolean(),
-  scope: z.string().optional(),
-  layout: z.string().optional(),
+  scope: z.string().nullable().optional(),
+  layout: z.string().nullable().optional(), // Backend returns null when not set
 }).passthrough();
 
 // Event in event log
@@ -83,9 +84,10 @@ export const LatencyStatsSchema = z.object({
 }).passthrough();
 
 // Profile configuration from RPC
+// Matches Rust ProfileConfigResponse in keyrx_daemon/src/web/api/profiles.rs
 export const ProfileConfigRpcSchema = z.object({
   name: z.string(),
-  source: z.string(),
+  config: z.string(), // The Rhai source code
 }).passthrough();
 
 // Profile information from RPC (used in list responses)
@@ -201,8 +203,11 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
 ]);
 
 // API response collections
+// NOTE: DeviceListResponseSchema uses DeviceRpcInfoSchema (not DeviceEntrySchema)
+// because the REST API returns the same format as the RPC interface.
+// DeviceEntrySchema is for device metadata storage format, not API responses.
 export const DeviceListResponseSchema = z.object({
-  devices: z.array(DeviceEntrySchema),
+  devices: z.array(DeviceRpcInfoSchema),
 }).passthrough();
 
 export const ProfileListResponseSchema = z.object({
@@ -210,6 +215,23 @@ export const ProfileListResponseSchema = z.object({
 }).passthrough();
 
 export const ProfileConfigResponseSchema = ProfileConfigRpcSchema;
+
+// Status response from REST API
+// Matches Rust StatusResponse in keyrx_daemon/src/web/api/metrics.rs
+export const StatusResponseSchema = z.object({
+  status: z.string(),
+  version: z.string(),
+  daemon_running: z.boolean(),
+  uptime_secs: z.number().nullable().optional(),
+  active_profile: z.string().nullable().optional(),
+  device_count: z.number().nullable().optional(),
+}).passthrough();
+
+// Update device config response
+// Matches JSON response from PATCH /api/devices/:id
+export const UpdateDeviceConfigResponseSchema = z.object({
+  success: z.boolean(),
+}).passthrough();
 
 /**
  * Validates API response data against a Zod schema.
