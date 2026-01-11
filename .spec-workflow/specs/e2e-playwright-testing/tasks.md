@@ -57,7 +57,7 @@
   - _Requirements: 1.1, 1.7, 1.8_
   - _Prompt: Implement the task for spec e2e-playwright-testing, first run spec-workflow-guide to get the workflow guide then implement the task: Role: E2E Test Developer | Task: Create Playwright tests for HomePage: test page loads without console errors, test active profile card renders, test device list card renders, test quick stats renders. Use network monitor to verify no excessive requests. | Restrictions: Use data-testid attributes where available, wait for content to load before assertions, capture console errors | Success: Tests pass when HomePage works correctly, fail when issues exist. After implementing, set this task to in-progress [-] in tasks.md, use log-implementation tool to record details, then mark as complete [x]_
 
-- [ ] 7. Create DevicesPage E2E tests
+- [x] 7. Create DevicesPage E2E tests
   - File: keyrx_ui/tests/e2e/pages/devices.spec.ts
   - Test device list loads
   - Test layout selector works
