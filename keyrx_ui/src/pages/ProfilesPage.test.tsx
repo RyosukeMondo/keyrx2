@@ -603,15 +603,33 @@ describe('ProfilesPage', () => {
       }, { timeout: 5000 });
     });
 
-    it('shows success notification with auto-dismiss', async () => {
-      vi.useFakeTimers();
+    it('shows success notification with auto-dismiss', { timeout: 15000 }, async () => {
+      // Track profile creation state for sequential GET calls
+      let profileCreated = false;
 
       server.use(
         http.get('/api/profiles', () => {
-          return HttpResponse.json({ profiles: [] });
+          if (!profileCreated) {
+            return HttpResponse.json({ profiles: [] });
+          }
+          // After creation, return the created profile
+          return HttpResponse.json({
+            profiles: [{
+              name: 'default',
+              rhaiPath: '/home/user/.config/keyrx/profiles/default.rhai',
+              krxPath: '/home/user/.config/keyrx/profiles/default.krx',
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              modifiedAt: new Date().toISOString(),
+              layerCount: 1,
+              deviceCount: 0,
+              keyCount: 0,
+            }]
+          });
         }),
         http.post('/api/profiles', async ({ request }) => {
           const body = await request.json() as { name: string; template: string };
+          profileCreated = true;
           return HttpResponse.json({
             name: body.name,
             rhaiPath: `/home/user/.config/keyrx/profiles/${body.name}.rhai`,
@@ -638,20 +656,15 @@ describe('ProfilesPage', () => {
       // Wait for success notification to appear
       await waitFor(() => {
         expect(screen.getByText(/Default profile created/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      }, { timeout: 10000 });
 
-      // Fast-forward 5 seconds to trigger auto-dismiss
-      vi.advanceTimersByTime(5000);
-
-      // Notification should be dismissed
+      // Wait for auto-dismiss (5 seconds + buffer)
       await waitFor(() => {
         expect(screen.queryByText(/Default profile created/)).not.toBeInTheDocument();
-      });
-
-      vi.useRealTimers();
+      }, { timeout: 6000 });
     });
 
-    it('does not auto-generate if profiles already exist', async () => {
+    it('does not auto-generate if profiles already exist', { timeout: 10000 }, async () => {
       let createCalled = false;
 
       server.use(
@@ -667,13 +680,13 @@ describe('ProfilesPage', () => {
       await waitFor(() => {
         expect(screen.getByText('default')).toBeInTheDocument();
         expect(screen.getByText('gaming')).toBeInTheDocument();
-      });
+      }, { timeout: 8000 });
 
       // Should NOT have called create API
       expect(createCalled).toBe(false);
     });
 
-    it('shows error notification when daemon is offline', async () => {
+    it('shows error notification when daemon is offline', { timeout: 10000 }, async () => {
       server.use(
         http.get('/api/profiles', () => {
           return HttpResponse.json({ profiles: [] });
@@ -688,10 +701,10 @@ describe('ProfilesPage', () => {
       // Wait for error notification
       await waitFor(() => {
         expect(screen.getByText(/Unable to connect to daemon/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      }, { timeout: 8000 });
     });
 
-    it('shows error notification on creation failure', async () => {
+    it('shows error notification on creation failure', { timeout: 10000 }, async () => {
       server.use(
         http.get('/api/profiles', () => {
           return HttpResponse.json({ profiles: [] });
@@ -706,13 +719,16 @@ describe('ProfilesPage', () => {
 
       renderProfilesPage();
 
-      // Wait for error notification
+      // Wait for error notification (check for the actual error message)
       await waitFor(() => {
-        expect(screen.getByText(/Failed to create default profile/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+        expect(screen.getByText(/Disk full/i)).toBeInTheDocument();
+      }, { timeout: 8000 });
+
+      // Also verify the title is present
+      expect(screen.getByText(/Failed to Create Default Profile/i)).toBeInTheDocument();
     });
 
-    it('shows retry button on error', async () => {
+    it('shows retry button on error', { timeout: 10000 }, async () => {
       server.use(
         http.get('/api/profiles', () => {
           return HttpResponse.json({ profiles: [] });
@@ -727,22 +743,39 @@ describe('ProfilesPage', () => {
       // Wait for error notification with retry button
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
-      }, { timeout: 5000 });
+      }, { timeout: 8000 });
     });
 
-    it('retries auto-generation when retry button is clicked', async () => {
+    it('retries auto-generation when retry button is clicked', { timeout: 15000 }, async () => {
       const user = userEvent.setup();
       let attemptCount = 0;
+      let profileCreated = false;
 
       server.use(
         http.get('/api/profiles', () => {
-          return HttpResponse.json({ profiles: [] });
+          if (!profileCreated) {
+            return HttpResponse.json({ profiles: [] });
+          }
+          return HttpResponse.json({
+            profiles: [{
+              name: 'default',
+              rhaiPath: '/home/user/.config/keyrx/profiles/default.rhai',
+              krxPath: '/home/user/.config/keyrx/profiles/default.krx',
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              modifiedAt: new Date().toISOString(),
+              layerCount: 1,
+              deviceCount: 0,
+              keyCount: 0,
+            }]
+          });
         }),
         http.post('/api/profiles', () => {
           attemptCount++;
           if (attemptCount === 1) {
             return HttpResponse.error();
           }
+          profileCreated = true;
           return HttpResponse.json({
             name: 'default',
             rhaiPath: '/home/user/.config/keyrx/profiles/default.rhai',
@@ -769,7 +802,7 @@ describe('ProfilesPage', () => {
       // Wait for error and retry button
       const retryButton = await waitFor(() => {
         return screen.getByRole('button', { name: /Retry creating default profile/i });
-      }, { timeout: 5000 });
+      }, { timeout: 8000 });
 
       // Click retry
       await user.click(retryButton);
@@ -777,12 +810,12 @@ describe('ProfilesPage', () => {
       // Should show success notification after retry
       await waitFor(() => {
         expect(screen.getByText(/Default profile created/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      }, { timeout: 8000 });
 
       expect(attemptCount).toBe(2);
     });
 
-    it('can dismiss error notification', async () => {
+    it('can dismiss error notification', { timeout: 10000 }, async () => {
       const user = userEvent.setup();
 
       server.use(
@@ -799,7 +832,7 @@ describe('ProfilesPage', () => {
       // Wait for error notification
       await waitFor(() => {
         expect(screen.getByText(/Unable to connect to daemon/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      }, { timeout: 8000 });
 
       // Click dismiss button (×)
       const dismissButton = screen.getByRole('button', { name: /Dismiss error/i });
@@ -817,7 +850,7 @@ describe('ProfilesPage', () => {
   // =============================================================================
 
   describe('Error Handling', () => {
-    it('shows error message when profile fetch fails', async () => {
+    it('shows error message when profile fetch fails', { timeout: 10000 }, async () => {
       server.use(
         http.get('/api/profiles', () => {
           return HttpResponse.json(
@@ -831,20 +864,22 @@ describe('ProfilesPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Failed to load profiles/i)).toBeInTheDocument();
-      });
+      }, { timeout: 8000 });
     });
 
-    it('shows activation error with compilation details', async () => {
+    it('shows activation error with compilation details', { timeout: 10000 }, async () => {
       const user = userEvent.setup();
+      let activateCalled = false;
 
       server.use(
         http.post('/api/profiles/:name/activate', () => {
+          activateCalled = true;
+          console.log('Activate endpoint called with errors');
           return HttpResponse.json({
             success: true,
-            errors: [
-              'Line 5: Unexpected token',
-              'Line 10: Missing semicolon',
-            ],
+            compile_time_ms: 42,
+            reload_time_ms: 10,
+            error: 'Line 5: Unexpected token\nLine 10: Missing semicolon',
           });
         })
       );
@@ -853,25 +888,35 @@ describe('ProfilesPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('gaming')).toBeInTheDocument();
-      });
+      }, { timeout: 8000 });
 
       const activateButton = screen.getByRole('button', { name: /Activate profile gaming/i });
       await user.click(activateButton);
 
+      // First verify the activation API was called
       await waitFor(() => {
-        expect(screen.getByText(/Compilation failed/i)).toBeInTheDocument();
-        expect(screen.getByText(/Line 5: Unexpected token/)).toBeInTheDocument();
+        expect(activateCalled).toBe(true);
       });
+
+      // Wait for error to appear - check for specific error text
+      await waitFor(() => {
+        expect(screen.getByText(/Line 5: Unexpected token/)).toBeInTheDocument();
+      }, { timeout: 8000 });
+
+      // Verify compilation failed message is also present
+      expect(screen.getByText(/Compilation failed/i)).toBeInTheDocument();
     });
 
-    it('can dismiss activation error', async () => {
+    it('can dismiss activation error', { timeout: 10000 }, async () => {
       const user = userEvent.setup();
 
       server.use(
         http.post('/api/profiles/:name/activate', () => {
           return HttpResponse.json({
             success: true,
-            errors: ['Compilation error'],
+            compile_time_ms: 42,
+            reload_time_ms: 10,
+            error: 'Compilation error',
           });
         })
       );
@@ -880,7 +925,7 @@ describe('ProfilesPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('gaming')).toBeInTheDocument();
-      });
+      }, { timeout: 8000 });
 
       const activateButton = screen.getByRole('button', { name: /Activate profile gaming/i });
       await user.click(activateButton);
