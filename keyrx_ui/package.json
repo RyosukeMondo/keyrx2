@@ -36,6 +36,8 @@
     "test:e2e:ui": "playwright test e2e --ui",
     "test:e2e:headed": "playwright test e2e --headed",
     "test:e2e:debug": "playwright test e2e --debug",
+    "test:e2e:full": "playwright test --config=playwright.e2e.config.ts",
+    "test:e2e:ci": "playwright test --config=playwright.e2e.config.ts --reporter=html,json",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "validate:contracts": "npx tsx scripts/validate-api-contracts.ts",
     "storybook": "storybook dev -p 6006",

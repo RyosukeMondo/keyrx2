@@ -135,7 +135,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
   - _Prompt: Implement the task for spec e2e-playwright-testing, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Performance Test Engineer | Task: Create network efficiency tests: for each page, verify number of API requests on load is within expected range, verify no duplicate requests to same endpoint within 100ms, verify changing dropdown doesn't cause >2 requests. Use NetworkMonitor fixture. | Restrictions: Define expected request counts per page, allow some tolerance for race conditions, fail clearly on excessive requests | Success: Catches rapid PATCH bug pattern, provides clear failure messages on network issues. After implementing, set this task to in-progress [-] in tasks.md, use log-implementation tool to record details, then mark as complete [x]_
 
-- [ ] 15. Add npm script for E2E tests
+- [x] 15. Add npm script for E2E tests
   - File: keyrx_ui/package.json
   - Add test:e2e:full script for all E2E tests
   - Add test:e2e:ci script for CI environment
