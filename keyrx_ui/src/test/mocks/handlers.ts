@@ -14,6 +14,8 @@ const mockDevices: DeviceEntry[] = [
     path: '/dev/input/event0',
     vendorId: 0x1234,
     productId: 0x5678,
+    active: true,
+    layout: 'ANSI_104',
   },
   {
     id: 'device-2',
@@ -21,6 +23,8 @@ const mockDevices: DeviceEntry[] = [
     path: '/dev/input/event1',
     vendorId: 0x1234,
     productId: 0x5679,
+    active: true,
+    layout: 'ANSI_104',
   },
 ];
 
@@ -73,6 +77,28 @@ export const handlers = [
     }
 
     device.name = body.name;
+    return HttpResponse.json({ success: true });
+  }),
+
+  http.patch('/api/devices/:id', async ({ request, params }) => {
+    const { id } = params;
+    const body = (await request.json()) as { name?: string; layout?: string };
+
+    const device = mockDevices.find((d) => d.id === id);
+    if (!device) {
+      return HttpResponse.json(
+        { error: 'Device not found', errorCode: 'DEVICE_NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    if (body.name !== undefined) {
+      device.name = body.name;
+    }
+    if (body.layout !== undefined) {
+      device.layout = body.layout;
+    }
+
     return HttpResponse.json({ success: true });
   }),
 
