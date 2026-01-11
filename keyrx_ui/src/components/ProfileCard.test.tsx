@@ -8,6 +8,7 @@ describe('ProfileCard', () => {
   const mockOnActivate = vi.fn();
   const mockOnEdit = vi.fn();
   const mockOnDelete = vi.fn();
+  const mockOnPathClick = vi.fn();
 
   const defaultProps = {
     name: 'Test Profile',
@@ -168,12 +169,31 @@ describe('ProfileCard', () => {
 
       // Tooltip component should exist with the full path
       const pathButton = screen.getByRole('button', {
-        name: new RegExp(`Edit configuration file: ${fullPath}`),
+        name: new RegExp(`Open configuration file: ${fullPath}`),
       });
       expect(pathButton).toBeInTheDocument();
     });
 
-    it('calls onEdit when Rhai path is clicked', async () => {
+    it('calls onPathClick when Rhai path is clicked and onPathClick is provided', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <ProfileCard
+          {...defaultProps}
+          rhaiPath="/home/user/.config/keyrx/profiles/gaming.rhai"
+          onPathClick={mockOnPathClick}
+        />
+      );
+
+      const pathButton = screen.getByRole('button', {
+        name: /Open configuration file/,
+      });
+      await user.click(pathButton);
+
+      expect(mockOnPathClick).toHaveBeenCalledTimes(1);
+      expect(mockOnEdit).not.toHaveBeenCalled();
+    });
+
+    it('calls onEdit when Rhai path is clicked and onPathClick is not provided', async () => {
       const user = userEvent.setup();
       renderWithProviders(
         <ProfileCard
@@ -183,7 +203,7 @@ describe('ProfileCard', () => {
       );
 
       const pathButton = screen.getByRole('button', {
-        name: /Edit configuration file/,
+        name: /Open configuration file/,
       });
       await user.click(pathButton);
 

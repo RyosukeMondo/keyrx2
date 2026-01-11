@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ProfileCard } from '../components/ProfileCard';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
@@ -41,6 +42,8 @@ interface Profile {
  * Requirements: Req 6 (Profile Management User Flow)
  */
 export const ProfilesPage: React.FC = () => {
+  const navigate = useNavigate();
+
   // Fetch profiles from real API
   const { data: profilesData, isLoading, error } = useProfiles();
   const createProfileMutation = useCreateProfile();
@@ -135,6 +138,10 @@ export const ProfilesPage: React.FC = () => {
       setActivationError(`Failed to activate profile: ${errorMessage}`);
       console.error('Failed to activate profile:', err);
     }
+  };
+
+  const handleNavigateToConfig = (profileName: string) => {
+    navigate(`/profiles/${profileName}/config`);
   };
 
   const handleEditProfile = (profile: Profile) => {
@@ -274,6 +281,7 @@ export const ProfilesPage: React.FC = () => {
             onActivate={() => handleActivateProfile(profile.id)}
             onEdit={() => handleEditProfile(profile)}
             onDelete={() => handleDeleteProfile(profile)}
+            onPathClick={() => handleNavigateToConfig(profile.name)}
           />
         ))}
       </div>

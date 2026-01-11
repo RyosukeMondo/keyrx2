@@ -16,6 +16,7 @@ export interface ProfileCardProps {
   onActivate: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onPathClick?: () => void;
 }
 
 /**
@@ -40,6 +41,7 @@ export const ProfileCard = React.memo<ProfileCardProps>(
     onActivate,
     onEdit,
     onDelete,
+    onPathClick,
   }) => {
     // Fetch validation status for this profile
     const { data: validationResult, isLoading: isValidating } = useProfileValidation(name);
@@ -90,9 +92,9 @@ export const ProfileCard = React.memo<ProfileCardProps>(
           <div className="mb-3">
             <Tooltip content={rhaiPath} position="top">
               <button
-                onClick={onEdit}
+                onClick={onPathClick || onEdit}
                 className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-400 transition-colors group max-w-full"
-                aria-label={`Edit configuration file: ${rhaiPath}`}
+                aria-label={`Open configuration file: ${rhaiPath}`}
               >
                 <FileCode
                   size={14}

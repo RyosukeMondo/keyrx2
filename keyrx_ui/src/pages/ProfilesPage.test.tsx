@@ -4,9 +4,12 @@ import { renderWithProviders } from '../../tests/testUtils';
 import userEvent from '@testing-library/user-event';
 import { ProfilesPage } from './ProfilesPage';
 
+// Helper to render ProfilesPage with Router
+const renderProfilesPage = () => renderWithProviders(<ProfilesPage />, { wrapWithRouter: true });
+
 describe('ProfilesPage', () => {
   it('renders page title', async () => {
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for data to load
     await waitFor(() => {
@@ -17,7 +20,7 @@ describe('ProfilesPage', () => {
   });
 
   it('renders Create Profile button', async () => {
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for page to finish loading
     await waitFor(() => {
@@ -28,7 +31,7 @@ describe('ProfilesPage', () => {
   });
 
   it('renders initial profile cards', async () => {
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load
     await waitFor(() => {
@@ -39,7 +42,7 @@ describe('ProfilesPage', () => {
   });
 
   it('shows active indicator on Default profile', async () => {
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     await waitFor(() => {
       expect(screen.getByText('ACTIVE')).toBeInTheDocument();
@@ -48,7 +51,7 @@ describe('ProfilesPage', () => {
 
   it('opens create modal when Create Profile button is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for page to load
     const createButton = await screen.findByRole('button', {
@@ -63,7 +66,7 @@ describe('ProfilesPage', () => {
 
   it('creates a new profile when form is submitted', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for page to load and open create modal
     const createButton = await screen.findByRole('button', { name: /Create new profile/i });
@@ -85,7 +88,7 @@ describe('ProfilesPage', () => {
 
   it('shows validation error when profile name is empty', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for page to load and open create modal
     const createButton = await screen.findByRole('button', { name: /Create new profile/i });
@@ -100,7 +103,7 @@ describe('ProfilesPage', () => {
 
   it('shows validation error when profile name is too long', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for page to load and open create modal
     const createButton = await screen.findByRole('button', { name: /Create new profile/i });
@@ -117,7 +120,7 @@ describe('ProfilesPage', () => {
 
   it('shows validation error when profile name already exists', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for page to load and open create modal
     const createButton = await screen.findByRole('button', { name: /Create new profile/i });
@@ -135,7 +138,7 @@ describe('ProfilesPage', () => {
 
   it('closes create modal when Cancel is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for page to load and open create modal
     const createButton = await screen.findByRole('button', { name: /Create new profile/i });
@@ -160,7 +163,7 @@ describe('ProfilesPage', () => {
 
   it('activates a profile when Activate button is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load
     await waitFor(() => {
@@ -192,7 +195,7 @@ describe('ProfilesPage', () => {
 
   it('opens edit modal when Edit button is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load and click Edit on gaming profile
     const editButton = await screen.findByRole('button', {
@@ -211,7 +214,7 @@ describe('ProfilesPage', () => {
 
   it('updates profile when edit form is submitted', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load and click Edit on gaming profile
     const editButton = await screen.findByRole('button', { name: /Edit profile gaming/i });
@@ -240,7 +243,7 @@ describe('ProfilesPage', () => {
 
   it('closes edit modal when Cancel is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load and open edit modal
     const editButton = await screen.findByRole('button', { name: /Edit profile gaming/i });
@@ -265,7 +268,7 @@ describe('ProfilesPage', () => {
 
   it('opens delete confirmation modal when Delete button is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load and click Delete on gaming profile
     const deleteButton = await screen.findByRole('button', {
@@ -285,7 +288,7 @@ describe('ProfilesPage', () => {
 
   it('deletes profile when deletion is confirmed', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load and click Delete on gaming profile
     const deleteButton = await screen.findByRole('button', { name: /Delete profile gaming/i });
@@ -304,7 +307,7 @@ describe('ProfilesPage', () => {
 
   it('closes delete modal when Cancel is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load and open delete modal
     const deleteButton = await screen.findByRole('button', { name: /Delete profile gaming/i });
@@ -331,7 +334,7 @@ describe('ProfilesPage', () => {
   });
 
   it('renders profile grid with responsive classes', async () => {
-    const { container } = renderWithProviders(<ProfilesPage />);
+    const { container } = renderProfilesPage();
 
     // Wait for profiles to load
     await waitFor(() => {
@@ -345,7 +348,7 @@ describe('ProfilesPage', () => {
   });
 
   it('shows all action buttons with proper accessibility labels', async () => {
-    renderWithProviders(<ProfilesPage />);
+    renderProfilesPage();
 
     // Wait for profiles to load - use findBy for async wait
     await screen.findByText('gaming');
