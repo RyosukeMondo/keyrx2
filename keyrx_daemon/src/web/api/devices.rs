@@ -8,6 +8,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
+use validator::Validate;
 
 use crate::config::device_registry::{DeviceEntry, DeviceRegistry, DeviceScope};
 use crate::error::DaemonError;
@@ -92,8 +93,9 @@ async fn list_devices() -> Result<Json<DevicesListResponse>, DaemonError> {
 }
 
 /// PUT /api/devices/:id/name - Rename a device
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 struct RenameDeviceRequest {
+    #[validate(length(min = 1, max = 100))]
     name: String,
 }
 
@@ -101,6 +103,14 @@ async fn rename_device(
     Path(id): Path<String>,
     Json(payload): Json<RenameDeviceRequest>,
 ) -> Result<Json<Value>, DaemonError> {
+    // Validate input parameters
+    payload.validate().map_err(|e| {
+        use crate::error::WebError;
+        WebError::InvalidRequest {
+            reason: format!("Validation failed: {}", e),
+        }
+    })?;
+
     let config_dir = get_config_dir()?;
     let registry_path = config_dir.join("devices.json");
 
@@ -117,8 +127,9 @@ async fn rename_device(
 }
 
 /// PUT /api/devices/:id/scope - Set device scope
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 struct SetDeviceScopeRequest {
+    #[validate(length(min = 1, max = 50))]
     scope: String, // "global" or "device-specific"
 }
 
@@ -127,6 +138,11 @@ async fn set_device_scope(
     Json(payload): Json<SetDeviceScopeRequest>,
 ) -> Result<Json<Value>, DaemonError> {
     use crate::error::WebError;
+
+    // Validate input parameters
+    payload.validate().map_err(|e| WebError::InvalidRequest {
+        reason: format!("Validation failed: {}", e),
+    })?;
 
     let scope = match payload.scope.as_str() {
         "global" => DeviceScope::Global,
@@ -155,8 +171,9 @@ async fn set_device_scope(
 }
 
 /// PUT /api/devices/:id/layout - Set device layout
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 struct SetDeviceLayoutRequest {
+    #[validate(length(min = 1, max = 50))]
     layout: String,
 }
 
@@ -164,6 +181,14 @@ async fn set_device_layout(
     Path(id): Path<String>,
     Json(payload): Json<SetDeviceLayoutRequest>,
 ) -> Result<Json<Value>, DaemonError> {
+    // Validate input parameters
+    payload.validate().map_err(|e| {
+        use crate::error::WebError;
+        WebError::InvalidRequest {
+            reason: format!("Validation failed: {}", e),
+        }
+    })?;
+
     let config_dir = get_config_dir()?;
     let registry_path = config_dir.join("devices.json");
 
@@ -205,9 +230,11 @@ async fn get_device_layout(
 }
 
 /// PATCH /api/devices/:id - Update device configuration
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 struct UpdateDeviceConfigRequest {
+    #[validate(length(min = 1, max = 50))]
     layout: Option<String>,
+    #[validate(length(min = 1, max = 50))]
     scope: Option<String>,
 }
 
@@ -216,6 +243,11 @@ async fn update_device_config(
     Json(payload): Json<UpdateDeviceConfigRequest>,
 ) -> Result<Json<Value>, DaemonError> {
     use crate::error::WebError;
+
+    // Validate input parameters
+    payload.validate().map_err(|e| WebError::InvalidRequest {
+        reason: format!("Validation failed: {}", e),
+    })?;
 
     let config_dir = get_config_dir()?;
     let registry_path = config_dir.join("devices.json");

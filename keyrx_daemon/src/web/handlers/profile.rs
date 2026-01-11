@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use typeshare::typeshare;
+use validator::Validate;
 
 use crate::config::ProfileTemplate;
 use crate::services::ProfileService;
@@ -19,10 +20,12 @@ struct GetProfilesParams {
 }
 
 /// Parameters for create_profile command
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct CreateProfileParams {
+    #[validate(length(min = 1, max = 100))]
     name: String,
     #[serde(default = "default_template")]
+    #[validate(length(min = 1, max = 50))]
     template: String,
 }
 
@@ -31,41 +34,50 @@ fn default_template() -> String {
 }
 
 /// Parameters for activate_profile command
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct ActivateProfileParams {
+    #[validate(length(min = 1, max = 100))]
     name: String,
 }
 
 /// Parameters for delete_profile command
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct DeleteProfileParams {
+    #[validate(length(min = 1, max = 100))]
     name: String,
 }
 
 /// Parameters for duplicate_profile command
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct DuplicateProfileParams {
+    #[validate(length(min = 1, max = 100))]
     src_name: String,
+    #[validate(length(min = 1, max = 100))]
     dest_name: String,
 }
 
 /// Parameters for rename_profile command
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct RenameProfileParams {
+    #[validate(length(min = 1, max = 100))]
     old_name: String,
+    #[validate(length(min = 1, max = 100))]
     new_name: String,
 }
 
 /// Parameters for get_profile_config query
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct GetProfileConfigParams {
+    #[validate(length(min = 1, max = 100))]
     name: String,
 }
 
 /// Parameters for set_profile_config command
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct SetProfileConfigParams {
+    #[validate(length(min = 1, max = 100))]
     name: String,
+    #[validate(length(min = 1, max = 1048576))] // 1MB limit
     source: String,
 }
 
@@ -173,6 +185,11 @@ pub async fn create_profile(
     let params: CreateProfileParams = serde_json::from_value(params)
         .map_err(|e| RpcError::invalid_params(format!("Invalid parameters: {}", e)))?;
 
+    // Validate input parameters
+    params
+        .validate()
+        .map_err(|e| RpcError::invalid_params(format!("Validation failed: {}", e)))?;
+
     log::info!("RPC: create_profile name={}", params.name);
 
     // Validate profile name
@@ -223,6 +240,11 @@ pub async fn activate_profile(
     let params: ActivateProfileParams = serde_json::from_value(params)
         .map_err(|e| RpcError::invalid_params(format!("Invalid parameters: {}", e)))?;
 
+    // Validate input parameters
+    params
+        .validate()
+        .map_err(|e| RpcError::invalid_params(format!("Validation failed: {}", e)))?;
+
     log::info!("RPC: activate_profile name={}", params.name);
 
     // Validate profile name
@@ -254,6 +276,11 @@ pub async fn delete_profile(
     let params: DeleteProfileParams = serde_json::from_value(params)
         .map_err(|e| RpcError::invalid_params(format!("Invalid parameters: {}", e)))?;
 
+    // Validate input parameters
+    params
+        .validate()
+        .map_err(|e| RpcError::invalid_params(format!("Validation failed: {}", e)))?;
+
     log::info!("RPC: delete_profile name={}", params.name);
 
     // Validate profile name
@@ -279,6 +306,11 @@ pub async fn duplicate_profile(
 ) -> Result<Value, RpcError> {
     let params: DuplicateProfileParams = serde_json::from_value(params)
         .map_err(|e| RpcError::invalid_params(format!("Invalid parameters: {}", e)))?;
+
+    // Validate input parameters
+    params
+        .validate()
+        .map_err(|e| RpcError::invalid_params(format!("Validation failed: {}", e)))?;
 
     log::info!(
         "RPC: duplicate_profile src={} dest={}",
@@ -325,6 +357,11 @@ pub async fn rename_profile(
     let params: RenameProfileParams = serde_json::from_value(params)
         .map_err(|e| RpcError::invalid_params(format!("Invalid parameters: {}", e)))?;
 
+    // Validate input parameters
+    params
+        .validate()
+        .map_err(|e| RpcError::invalid_params(format!("Validation failed: {}", e)))?;
+
     log::info!(
         "RPC: rename_profile old={} new={}",
         params.old_name,
@@ -365,6 +402,11 @@ pub async fn get_profile_config(
     let params: GetProfileConfigParams = serde_json::from_value(params)
         .map_err(|e| RpcError::invalid_params(format!("Invalid parameters: {}", e)))?;
 
+    // Validate input parameters
+    params
+        .validate()
+        .map_err(|e| RpcError::invalid_params(format!("Validation failed: {}", e)))?;
+
     log::debug!("RPC: get_profile_config name={}", params.name);
 
     // Validate profile name
@@ -399,6 +441,11 @@ pub async fn set_profile_config(
     let params: SetProfileConfigParams = serde_json::from_value(params)
         .map_err(|e| RpcError::invalid_params(format!("Invalid parameters: {}", e)))?;
 
+    // Validate input parameters
+    params
+        .validate()
+        .map_err(|e| RpcError::invalid_params(format!("Validation failed: {}", e)))?;
+
     log::info!(
         "RPC: set_profile_config name={} source_length={}",
         params.name,
@@ -407,16 +454,6 @@ pub async fn set_profile_config(
 
     // Validate profile name
     validate_profile_name(&params.name)?;
-
-    // Enforce 1MB size limit
-    const MAX_CONFIG_SIZE: usize = 1024 * 1024; // 1MB
-    if params.source.len() > MAX_CONFIG_SIZE {
-        return Err(RpcError::invalid_params(format!(
-            "Configuration too large: {} bytes (max {} bytes)",
-            params.source.len(),
-            MAX_CONFIG_SIZE
-        )));
-    }
 
     // Call profile service
     profile_service
