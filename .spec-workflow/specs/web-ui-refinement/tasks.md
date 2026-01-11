@@ -169,7 +169,7 @@
   - _Completed: 2026-01-11_
   - _Artifacts: DeviceSelector.tsx (multi-device checkboxes, global option, connection status badges, WCAG 2.2 compliant, no scope toggle)_
 
-- [-] 16. Write unit tests for modified DeviceSelector
+- [x] 16. Write unit tests for modified DeviceSelector
   - File: keyrx_ui/src/components/DeviceSelector.test.tsx
   - Test multi-device selection
   - Test global checkbox
@@ -177,6 +177,8 @@
   - Purpose: Ensure component works correctly
   - _Leverage: keyrx_ui/tests/testUtils.tsx_
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+  - _Completed: 2026-01-11_
+  - _Artifacts: DeviceSelector.test.tsx (41 comprehensive tests, 100% code coverage), multi-device selection tests, global checkbox tests, connection status badge tests, accessibility tests (ARIA, keyboard navigation), no scope toggle verification, edge case tests_
   - _Prompt: Implement the task for spec web-ui-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in React component testing and accessibility | Task: Update DeviceSelector tests following requirements 5.1-5.5. Test multi-device selection (check multiple devices, verify onSelectionChange called with array). Test "Global" checkbox (check global, verify devices parameter). Test connection status badges (connected shows green, disconnected shows gray). Test device editing (name changes persist, layout changes persist). Test accessibility (keyboard navigation with Tab, ARIA labels present, screen reader announcements). Use renderWithProviders, mock useDevices hook | Restrictions: Must verify scope toggle completely removed, test edge cases (all disconnected, no selection warning), validate WCAG 2.2 compliance, achieve 80% coverage | Success: Multi-device selection tested thoroughly, global checkbox works independently, connection badges verified, device editing preserved, accessibility tests pass (keyboard nav, ARIA, contrast), no scope toggle remains, 80% code coverage achieved. After completing, set this task to in-progress [-] in tasks.md, then run mcp__spec-workflow__log-implementation tool to record artifacts (test file, accessibility tests, coverage), then mark task complete [x] in tasks.md_
 
 ## Phase 4: Devices Page Modifications
