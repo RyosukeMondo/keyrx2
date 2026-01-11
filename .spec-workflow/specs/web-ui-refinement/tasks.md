@@ -278,7 +278,7 @@
   - _Completed: 2026-01-11_
   - _Artifacts: Multiple KeyboardVisualizer components (global + device-specific), device-specific mapping filtering, device() block generation with pattern/mappings/layers structure, warning display for no selection, bidirectional sync with device awareness_
 
-- [ ] 25. Implement Rhai-driven device detection
+- [x] 25. Implement Rhai-driven device detection
   - File: keyrx_ui/src/pages/ConfigPage.tsx
   - Parse Rhai to detect device blocks
   - Auto-populate device selector
@@ -286,7 +286,8 @@
   - Purpose: Sync device selector with Rhai
   - _Leverage: keyrx_ui/src/utils/rhaiParser.ts, keyrx_ui/src/components/DeviceSelector.tsx_
   - _Requirements: 5.6, 7.4, 7.5_
-  - _Prompt: Implement the task for spec web-ui-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend React Developer specializing in data parsing | Task: Modify ConfigPage following requirements 5.6, 7.4-7.5. Implement Rhai-driven device detection: parse loaded Rhai script with RhaiParser to extract device() blocks, auto-populate device selector checkboxes based on devices found in script, mark devices as "connected" (currently attached) or "disconnected" (in script but not attached) with badges, display scope info derived from Rhai (global mappings vs device-specific mappings), allow editing disconnected devices (for portable configs). Leverage rhaiParser to extract DeviceBlock[], match against connected devices from API | Restrictions: Must handle devices in script that are not connected, must distinguish global vs device-specific scope from Rhai content (not UI setting), must update device selector when Rhai changes, must preserve disconnected device configs | Success: Device selector auto-populated from Rhai script on load, disconnected devices shown with badge, connected devices shown normally, scope info derived from Rhai (global vs device blocks), device selector updates when Rhai changes, disconnected device editing works, no manual scope selection UI. After completing, set this task to in-progress [-] in tasks.md, then run mcp__spec-workflow__log-implementation tool to record artifacts (Rhai parsing, device detection, scope derivation), then mark task complete [x] in tasks.md_
+  - _Completed: 2026-01-11_
+  - _Artifacts: Rhai-driven device detection in ConfigPage (extractDevicePatterns, hasGlobalMappings imports), mergedDevices state with connected + disconnected devices, auto-population of device selector based on Rhai AST, connection status badges (connected/disconnected), auto-selection of global and devices based on Rhai content, updates when sync state changes (parsing completes)_
 
 - [ ] 26. Write integration tests for ConfigPage
   - File: keyrx_ui/src/pages/ConfigPage.test.tsx
