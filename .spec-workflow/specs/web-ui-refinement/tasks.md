@@ -158,7 +158,7 @@
 
 ## Phase 3: Device Selector Modifications
 
-- [ ] 15. Modify DeviceSelector component
+- [x] 15. Modify DeviceSelector component
   - File: keyrx_ui/src/components/DeviceSelector.tsx
   - Remove scope toggle UI
   - Add multi-device checkboxes
@@ -166,7 +166,8 @@
   - Purpose: Enable device-aware configuration
   - _Leverage: keyrx_ui/src/hooks/useDevices.ts_
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 5.1, 5.2, 5.3, 5.4, 5.5_
-  - _Prompt: Implement the task for spec web-ui-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend React Developer specializing in UI components and accessibility | Task: Modify DeviceSelector component following requirements 1.1-1.4, 5.1-5.5. Remove scope selector toggle completely. Add multi-device selection with checkboxes (allow selecting multiple devices simultaneously). Add "Global" checkbox at top of device list. Display device connection status badges (connected: green, disconnected: gray). Allow selection of disconnected devices (for portable configs). Update props: multiSelect: boolean, showGlobalOption: boolean, selectedDevices: string[], globalSelected: boolean, onSelectionChange: (devices: string[], global: boolean) => void. Leverage useDevices hook | Restrictions: Must maintain WCAG 2.2 Level AA accessibility (ARIA labels, keyboard navigation), preserve existing device editing (name, layout), ensure responsive design (mobile and desktop), warn if no devices selected | Success: Scope toggle removed completely, multi-device checkboxes functional, "Global" option works correctly, connection status badges displayed, device editing preserved, accessibility compliant (keyboard nav, ARIA labels), responsive design maintained. After completing, set this task to in-progress [-] in tasks.md, then run mcp__spec-workflow__log-implementation tool to record artifacts (component changes, new props, UI modifications), then mark task complete [x] in tasks.md_
+  - _Completed: 2026-01-11_
+  - _Artifacts: DeviceSelector.tsx (multi-device checkboxes, global option, connection status badges, WCAG 2.2 compliant, no scope toggle)_
 
 - [ ] 16. Write unit tests for modified DeviceSelector
   - File: keyrx_ui/src/components/DeviceSelector.test.tsx
