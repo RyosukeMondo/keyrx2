@@ -88,7 +88,7 @@
   - _Completed: 2026-01-11_
   - _Artifacts: rhaiParser.ts (parsing functions, TypeScript interfaces), rhaiParser.test.ts (39 comprehensive tests), parseRhaiScript function, helper functions (extractDevicePatterns, hasGlobalMappings, getMappingsForDevice, validateAST)_
 
-- [ ] 9. Create RhaiCodeGenerator utility module
+- [x] 9. Create RhaiCodeGenerator utility module
   - File: keyrx_ui/src/utils/rhaiCodeGen.ts
   - Implement Rhai code generation functions
   - Generate clean, formatted code with proper indentation
@@ -96,7 +96,8 @@
   - Purpose: Generate Rhai code from visual editor state
   - _Leverage: None (new utility)_
   - _Requirements: 6.2, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
-  - _Prompt: Implement the task for spec web-ui-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend TypeScript Developer specializing in code generation | Task: Create Rhai code generator following requirements 6.2, 8.1-8.7. Implement functions: generateRhaiScript(mappings: KeyMapping[], devices: DeviceBlock[]): string, generateDeviceBlock(device: DeviceBlock): string, generateKeyMapping(mapping: KeyMapping): string, formatRhaiScript(script: string): string. Generate valid Rhai syntax for all mapping types: map(Key::A, Key::B) for simple, tap_hold(tap, hold, threshold) for tap-hold, macro sequences, layer switches. Group device-specific mappings in device() blocks by serial number. Preserve comments and formatting where possible. Follow formatting rules: 4-space indentation, 100 character max line length, 1 blank line between device blocks | Restrictions: Must preserve existing comments when regenerating, group multiple mappings for same device in single device() block, maintain consistent formatting, code generation must complete within 50ms for 1,000 mappings | Success: All generation functions implemented, generates valid Rhai syntax for all mapping types, groups device blocks correctly, preserves comments and formatting, passes unit tests for simple/tap_hold/macro/layer mappings, formatting matches project standards. After completing, set this task to in-progress [-] in tasks.md, then run mcp__spec-workflow__log-implementation tool to record artifacts (generator functions, code templates, formatting rules), then mark task complete [x] in tasks.md_
+  - _Completed: 2026-01-11_
+  - _Artifacts: rhaiCodeGen.ts (code generator with all mapping types), rhaiCodeGen.test.ts (35 tests, 97.6% line coverage, 92.3% function coverage), round-trip compatibility verified, performance validated (<50ms for 1,000 mappings)_
 
 - [ ] 10. Create RhaiFormatter utility module
   - File: keyrx_ui/src/utils/rhaiFormatter.ts
