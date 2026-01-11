@@ -663,13 +663,11 @@ describe('ProfilesPage', () => {
 
       renderProfilesPage();
 
-      // Wait for initial load
+      // Wait for initial load (default and gaming profiles from mock)
       await waitFor(() => {
         expect(screen.getByText('default')).toBeInTheDocument();
+        expect(screen.getByText('gaming')).toBeInTheDocument();
       });
-
-      // Wait to ensure auto-generate doesn't trigger
-      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Should NOT have called create API
       expect(createCalled).toBe(false);
