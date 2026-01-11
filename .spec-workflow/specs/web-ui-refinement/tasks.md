@@ -134,7 +134,7 @@
 
 ## Phase 2: Bidirectional Sync Engine
 
-- [ ] 13. Create RhaiSyncEngine component
+- [x] 13. Create RhaiSyncEngine component
   - File: keyrx_ui/src/components/RhaiSyncEngine.tsx
   - Implement bidirectional sync coordinator
   - Manage sync state machine
@@ -142,9 +142,10 @@
   - Purpose: Coordinate real-time sync between editors
   - _Leverage: keyrx_ui/src/utils/rhaiParser.ts, keyrx_ui/src/utils/rhaiCodeGen.ts, keyrx_ui/src/hooks/useAutoSave.ts_
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
-  - _Prompt: Implement the task for spec web-ui-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend React Developer specializing in state management and real-time sync | Task: Create RhaiSyncEngine component following requirements 6.1-6.7. Implement bidirectional sync: parse Rhai script on code editor changes and update visual editor within 500ms, generate Rhai code on visual editor changes immediately. Implement state machine: idle, parsing, generating, syncing, error. Debounce code editor changes (500ms) using useAutoSave hook. Preserve unsaved changes to localStorage. Handle parse errors gracefully: show last valid state in visual editor, display warning banner with error details. Leverage RhaiParser, RhaiCodeGen utilities | Restrictions: Must maintain sync state consistency, prevent infinite sync loops, handle parse errors without crashing, preserve user edits during sync, debounce must prevent excessive processing | Success: Bidirectional sync works correctly, visual editor updates reflect in code editor immediately, code editor changes update visual editor within 500ms, debouncing prevents excessive calls, parse errors display with last valid state preserved, unsaved changes persist to localStorage, state machine transitions correctly, no infinite sync loops. After completing, set this task to in-progress [-] in tasks.md, then run mcp__spec-workflow__log-implementation tool to record artifacts (sync component, state machine, debouncing logic), then mark task complete [x] in tasks.md_
+  - _Completed: 2026-01-11_
+  - _Artifacts: RhaiSyncEngine.tsx (useRhaiSyncEngine hook, state machine with 5 states, debounced parsing, localStorage persistence), RhaiSyncEngine.test.tsx (22 comprehensive tests, all state transitions verified, debouncing tested, error handling validated)_
 
-- [ ] 14. Write unit tests for RhaiSyncEngine
+- [x] 14. Write unit tests for RhaiSyncEngine
   - File: keyrx_ui/src/components/RhaiSyncEngine.test.tsx
   - Test sync from visual to code editor
   - Test sync from code to visual editor
@@ -152,7 +153,8 @@
   - Purpose: Ensure sync engine reliability
   - _Leverage: keyrx_ui/tests/testUtils.tsx_
   - _Requirements: 6.1, 6.2, 6.3, 6.6, 6.7_
-  - _Prompt: Implement the task for spec web-ui-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in React component testing | Task: Create comprehensive RhaiSyncEngine tests following requirements 6.1-6.3, 6.6-6.7. Test sync from visual to code (immediate update), sync from code to visual (500ms delay), debouncing behavior (multiple rapid changes result in single parse), parse error handling (show last valid state, display error), state machine transitions (idle→parsing→syncing→idle, error recovery), localStorage persistence (unsaved changes survive reload). Use renderWithProviders from testUtils. Mock RhaiParser and RhaiCodeGen | Restrictions: Must test both success and error paths, verify debouncing prevents excessive calls, test state machine exhaustively, mock localStorage correctly, achieve 85% coverage | Success: All sync scenarios tested (visual→code, code→visual), debouncing verified with timing tests, error handling tested (parse errors, localStorage failures), state machine transitions validated, localStorage persistence verified, 85% code coverage achieved. After completing, set this task to in-progress [-] in tasks.md, then run mcp__spec-workflow__log-implementation tool to record artifacts (test file, state machine tests, debounce tests), then mark task complete [x] in tasks.md_
+  - _Completed: 2026-01-11_
+  - _Artifacts: RhaiSyncEngine.test.tsx (22 tests: initialization, visual-to-code sync, code-to-visual sync, debouncing, state machine, sync lock, force sync, persistence, getters)_
 
 ## Phase 3: Device Selector Modifications
 
