@@ -192,44 +192,6 @@ describe('DevicesPage', () => {
     expect(screen.getByText(/\/ 64/)).toBeInTheDocument();
   });
 
-  it('toggles scope from global to device-specific', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<DevicesPage />);
-
-    // Wait for devices to load
-    await screen.findByText('Devices');
-
-    await waitFor(() => {
-      const deviceSpecificButton = screen.getAllByLabelText('Set scope to device-specific')[0];
-      expect(deviceSpecificButton).toBeInTheDocument();
-    });
-
-    const deviceSpecificButton = screen.getAllByLabelText('Set scope to device-specific')[0];
-    await user.click(deviceSpecificButton);
-
-    // Check that the button is now highlighted
-    expect(deviceSpecificButton).toHaveClass('border-primary-500');
-  });
-
-  it('toggles scope from device-specific to global', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<DevicesPage />);
-
-    // Wait for devices to load
-    await screen.findByText('Devices');
-
-    await waitFor(() => {
-      const globalButtons = screen.getAllByLabelText('Set scope to global');
-      expect(globalButtons.length).toBeGreaterThan(1);
-    });
-
-    // Find the second device (Test Keyboard 2) which has device-specific scope
-    const globalButtons = screen.getAllByLabelText('Set scope to global');
-    const globalButton = globalButtons[1]; // Second device
-    await user.click(globalButton);
-
-    expect(globalButton).toHaveClass('border-primary-500');
-  });
 
   it('changes layout via dropdown', async () => {
     const user = userEvent.setup();
@@ -358,10 +320,6 @@ describe('DevicesPage', () => {
       expect(screen.getByLabelText('Rename device Test Keyboard 1')).toBeInTheDocument();
       expect(screen.getByLabelText('Rename device Test Keyboard 2')).toBeInTheDocument();
     });
-
-    // Scope buttons
-    expect(screen.getAllByLabelText('Set scope to global').length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText('Set scope to device-specific').length).toBeGreaterThan(0);
 
     // Layout dropdowns
     expect(screen.getAllByLabelText('Select keyboard layout').length).toBeGreaterThan(0);

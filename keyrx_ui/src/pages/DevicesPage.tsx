@@ -13,7 +13,6 @@ interface Device {
   id: string;
   name: string;
   identifier: string;
-  scope: 'global' | 'device-specific';
   layout: string;
   active: boolean;
   vendorId?: string;
@@ -26,7 +25,6 @@ interface ApiDevice {
   id: string;
   name: string;
   path: string;
-  scope?: 'global' | 'device-specific';
   layout?: string;
   active: boolean;
   serial?: string;
@@ -74,7 +72,6 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
 }) => {
   // Local state for auto-save
   const [localLayout, setLocalLayout] = useState(device.layout);
-  const [localScope, setLocalScope] = useState(device.scope);
 
   // Device update mutation hook
   const { mutate: updateDevice, isPending: isUpdating, error: updateError } = useUpdateDevice();
@@ -105,48 +102,17 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
     }
   );
 
-  // Auto-save hook for scope changes
-  const { isSaving: isSavingScope, error: scopeSaveError } = useAutoSave(
-    localScope,
-    {
-      saveFn: async (scope: string) => {
-        await new Promise<void>((resolve, reject) => {
-          updateDevice(
-            { id: device.id, scope: scope as 'global' | 'device-specific' },
-            {
-              onSuccess: () => {
-                setLastSavedAt(new Date());
-                resolve();
-              },
-              onError: (error) => reject(error),
-            }
-          );
-        });
-      },
-      debounceMs: 500,
-      enabled: true,
-    }
-  );
-
   // Combine saving and error states
-  const isSaving = isSavingLayout || isSavingScope || isUpdating;
-  const saveError = layoutSaveError || scopeSaveError || updateError;
+  const isSaving = isSavingLayout || isUpdating;
+  const saveError = layoutSaveError || updateError;
 
   // Update local state when device changes externally
   React.useEffect(() => {
     setLocalLayout(device.layout);
   }, [device.layout]);
 
-  React.useEffect(() => {
-    setLocalScope(device.scope);
-  }, [device.scope]);
-
   const handleLayoutChange = (newLayout: string) => {
     setLocalLayout(newLayout);
-  };
-
-  const handleScopeChange = (newScope: 'global' | 'device-specific') => {
-    setLocalScope(newScope);
   };
 
   return (
@@ -245,10 +211,10 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
           </div>
         </div>
 
-        {/* Scope selector with save feedback */}
+        {/* Layout selector with save feedback */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-300">Scope</label>
+            <label className="text-sm font-medium text-slate-300">Layout</label>
             <div className="flex items-center gap-2">
               {isSaving && (
                 <span className="text-xs text-slate-400 flex items-center gap-1">
@@ -268,63 +234,6 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
               )}
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-            <button
-              onClick={() => handleScopeChange('global')}
-              className={`flex items-center gap-2 rounded-md border px-4 py-3 sm:py-2 text-sm transition-colors min-h-[44px] sm:min-h-0 focus:outline focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 ${
-                localScope === 'global'
-                  ? 'border-primary-500 bg-primary-500/10 text-primary-500'
-                  : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-slate-300'
-              }`}
-              aria-label="Set scope to global"
-              role="radio"
-              aria-checked={localScope === 'global'}
-            >
-              <span
-                className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
-                  localScope === 'global'
-                    ? 'border-primary-500 bg-primary-500'
-                    : 'border-slate-500'
-                }`}
-                aria-hidden="true"
-              >
-                {localScope === 'global' && (
-                  <span className="block h-full w-full rounded-full bg-white" />
-                )}
-              </span>
-              Global
-            </button>
-            <button
-              onClick={() => handleScopeChange('device-specific')}
-              className={`flex items-center gap-2 rounded-md border px-4 py-3 sm:py-2 text-sm transition-colors min-h-[44px] sm:min-h-0 focus:outline focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 ${
-                localScope === 'device-specific'
-                  ? 'border-primary-500 bg-primary-500/10 text-primary-500'
-                  : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-slate-300'
-              }`}
-              aria-label="Set scope to device-specific"
-              role="radio"
-              aria-checked={localScope === 'device-specific'}
-            >
-              <span
-                className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
-                  localScope === 'device-specific'
-                    ? 'border-primary-500 bg-primary-500'
-                    : 'border-slate-500'
-                }`}
-                aria-hidden="true"
-              >
-                {localScope === 'device-specific' && (
-                  <span className="block h-full w-full rounded-full bg-white" />
-                )}
-              </span>
-              Device-Specific
-            </button>
-          </div>
-        </div>
-
-        {/* Layout selector */}
-        <div className="flex flex-col gap-sm">
-          <label className="text-sm font-medium text-slate-300">Layout</label>
           <Dropdown
             options={LAYOUT_OPTIONS}
             value={localLayout}
@@ -364,12 +273,14 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
  * - Global settings card with default layout selector
  * - Device list showing all connected keyboards
  * - Inline rename functionality (click Rename → input → Enter saves)
- * - Scope toggle (Global / Device-Specific)
- * - Layout selector dropdown
+ * - Layout selector dropdown with auto-save
  * - Forget device with confirmation dialog
  *
  * Layout: From design.md Layout 2
  * Requirements: Req 5 (Device Management User Flows), Req 2 (Global Layout Selection)
+ *
+ * Note: Device scope (global vs device-specific) is now determined by the Rhai configuration,
+ * not by a UI setting. See ConfigPage for device-aware editing.
  */
 export const DevicesPage: React.FC<DevicesPageProps> = ({ className = '' }) => {
   const [loading, setLoading] = useState(true);
@@ -401,7 +312,6 @@ export const DevicesPage: React.FC<DevicesPageProps> = ({ className = '' }) => {
           id: device.id,
           name: device.name,
           identifier: device.path,
-          scope: device.scope || 'global',
           layout: device.layout || 'ANSI_104',
           active: device.active,
           vendorId: device.path.match(/VID_([0-9A-F]{4})/)?.[1],

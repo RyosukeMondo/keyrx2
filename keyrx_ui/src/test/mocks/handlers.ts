@@ -4,7 +4,7 @@
  */
 
 import { http, HttpResponse } from 'msw';
-import type { DeviceEntry, DeviceScope, ProfileEntry } from '../../types';
+import type { DeviceEntry, ProfileEntry } from '../../types';
 
 // Mock data
 const mockDevices: DeviceEntry[] = [
@@ -12,7 +12,6 @@ const mockDevices: DeviceEntry[] = [
     id: 'device-1',
     name: 'Test Keyboard 1',
     path: '/dev/input/event0',
-    scope: 'global' as DeviceScope,
     vendorId: 0x1234,
     productId: 0x5678,
   },
@@ -20,7 +19,6 @@ const mockDevices: DeviceEntry[] = [
     id: 'device-2',
     name: 'Test Keyboard 2',
     path: '/dev/input/event1',
-    scope: 'local' as DeviceScope,
     vendorId: 0x1234,
     productId: 0x5679,
   },
@@ -51,6 +49,17 @@ export const handlers = [
     return HttpResponse.json({ devices: mockDevices });
   }),
 
+  // Global settings endpoints
+  http.get('/api/settings/global-layout', () => {
+    return HttpResponse.json({ layout: 'ANSI_104' });
+  }),
+
+  http.put('/api/settings/global-layout', async ({ request }) => {
+    const body = (await request.json()) as { layout: string };
+    // In a real implementation, this would persist the layout
+    return HttpResponse.json({ success: true });
+  }),
+
   http.put('/api/devices/:id/name', async ({ request, params }) => {
     const { id } = params;
     const body = (await request.json()) as { name: string };
@@ -64,22 +73,6 @@ export const handlers = [
     }
 
     device.name = body.name;
-    return HttpResponse.json({ success: true });
-  }),
-
-  http.put('/api/devices/:id/scope', async ({ request, params }) => {
-    const { id } = params;
-    const body = (await request.json()) as { scope: DeviceScope };
-
-    const device = mockDevices.find((d) => d.id === id);
-    if (!device) {
-      return HttpResponse.json(
-        { error: 'Device not found', errorCode: 'DEVICE_NOT_FOUND' },
-        { status: 404 }
-      );
-    }
-
-    device.scope = body.scope;
     return HttpResponse.json({ success: true });
   }),
 
