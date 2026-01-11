@@ -22,14 +22,6 @@ export interface DaemonState {
 	active_profile?: string;
 }
 
-/** Device scope determines whether configuration applies globally or per-device */
-export enum DeviceScope {
-	/** Configuration applies only to this specific device */
-	DeviceSpecific = "DeviceSpecific",
-	/** Configuration applies globally to all devices */
-	Global = "Global",
-}
-
 /** Device metadata entry */
 export interface DeviceEntry {
 	/** Unique device identifier (max 256 chars) */
@@ -38,8 +30,6 @@ export interface DeviceEntry {
 	name: string;
 	/** Serial number if available */
 	serial?: string;
-	/** Scope for configuration application */
-	scope: DeviceScope;
 	/** Associated layout name (max 32 chars) */
 	layout?: string;
 	/** Last seen timestamp (Unix seconds) */
@@ -53,7 +43,6 @@ export interface DeviceRpcInfo {
 	path: string;
 	serial?: string;
 	active: boolean;
-	scope?: string;
 	layout?: string;
 }
 
