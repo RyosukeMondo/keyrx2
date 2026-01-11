@@ -67,7 +67,7 @@
   - _Requirements: 1.2, 1.7, 1.8, 4.1, 4.2_
   - _Prompt: Implement the task for spec e2e-playwright-testing, first run spec-workflow-guide to get the workflow guide then implement the task: Role: E2E Test Developer | Task: Create Playwright tests for DevicesPage: test page loads with device cards, test layout dropdown works, test changing layout only sends ONE PATCH request (critical - catches rapid request bug), test rename device flow. | Restrictions: Must verify no duplicate PATCH requests on page load, use network monitor fixture, wait for API responses | Success: Tests catch the rapid PATCH request bug pattern, verify normal operation works. After implementing, set this task to in-progress [-] in tasks.md, use log-implementation tool to record details, then mark as complete [x]_
 
-- [ ] 8. Create ProfilesPage E2E tests
+- [x] 8. Create ProfilesPage E2E tests
   - File: keyrx_ui/tests/e2e/pages/profiles.spec.ts
   - Test profile list loads
   - Test create profile flow
