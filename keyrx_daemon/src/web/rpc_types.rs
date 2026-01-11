@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use typeshare::typeshare;
 
+// Note: We don't export JsonValue to TypeScript - instead we use inline annotations
+// to map serde_json::Value to TypeScript's 'any' type
+
 // JSON-RPC 2.0 standard error codes
 /// Parse error - Invalid JSON was received by the server
 pub const PARSE_ERROR: i32 = -32700;
@@ -35,6 +38,7 @@ pub enum ClientMessage {
         method: String,
         /// Optional parameters for the method
         #[serde(default)]
+        #[typeshare(serialized_as = "any")]
         params: Value,
     },
     /// Command request - operation that modifies state
@@ -46,6 +50,7 @@ pub enum ClientMessage {
         method: String,
         /// Optional parameters for the method
         #[serde(default)]
+        #[typeshare(serialized_as = "any")]
         params: Value,
     },
     /// Subscribe to a channel for real-time updates
@@ -78,6 +83,7 @@ pub enum ServerMessage {
         id: String,
         /// Result data (success) or None if error
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[typeshare(serialized_as = "any")]
         result: Option<Value>,
         /// Error information (failure) or None if success
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -89,6 +95,7 @@ pub enum ServerMessage {
         /// Channel this event was published on
         channel: String,
         /// Event data
+        #[typeshare(serialized_as = "any")]
         data: Value,
     },
     /// Initial handshake message sent on connection
@@ -112,6 +119,7 @@ pub struct RpcError {
     pub message: String,
     /// Optional additional error data
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[typeshare(serialized_as = "any")]
     pub data: Option<Value>,
 }
 

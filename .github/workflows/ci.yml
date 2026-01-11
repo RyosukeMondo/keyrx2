@@ -7,10 +7,95 @@ on:
     branches: ['**']
 
 jobs:
+  type-check:
+    name: Type Consistency Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+
+      - name: Cache Cargo for typeshare
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-typeshare-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-typeshare-
+
+      - name: Install typeshare-cli
+        run: |
+          if ! command -v typeshare &> /dev/null; then
+            echo "Installing typeshare-cli..."
+            cargo install typeshare-cli
+          else
+            echo "typeshare-cli already installed (from cache)"
+            typeshare --version
+          fi
+
+      - name: Regenerate TypeScript types
+        run: |
+          echo "Regenerating TypeScript types from Rust..."
+          cd keyrx_daemon
+          typeshare --lang=typescript --output-file=../keyrx_ui/src/types/generated.ts src/
+          cd ..
+
+      - name: Check for type differences
+        run: |
+          echo "Checking if generated types differ from committed types..."
+          if git diff --exit-code keyrx_ui/src/types/generated.ts; then
+            echo "✅ Types are in sync"
+          else
+            echo "❌ Type mismatch detected!"
+            echo ""
+            echo "The generated TypeScript types differ from the committed types."
+            echo "This means Rust type definitions have changed without updating TypeScript types."
+            echo ""
+            echo "Differences:"
+            echo "=========================================="
+            git diff keyrx_ui/src/types/generated.ts
+            echo "=========================================="
+            echo ""
+            echo "To fix this issue:"
+            echo "  1. Run: scripts/check-types.sh --fix"
+            echo "  2. Review and commit the updated types"
+            echo ""
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: keyrx_ui/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd keyrx_ui
+          npm ci
+
+      - name: Run TypeScript type check
+        run: |
+          cd keyrx_ui
+          echo "Running TypeScript compilation check..."
+          npm run type-check
+          echo "✅ TypeScript compilation successful"
+
   build-and-verify:
     name: Build and Verify
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    needs: type-check
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -249,7 +334,7 @@ jobs:
     name: Test Documentation Accuracy
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build-and-verify
+    needs: [type-check, build-and-verify]
 
     steps:
       - uses: actions/checkout@v4
@@ -304,7 +389,7 @@ jobs:
     name: Virtual E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build-and-verify
+    needs: [type-check, build-and-verify]
 
     steps:
       - uses: actions/checkout@v4

@@ -129,7 +129,7 @@ export interface RpcError {
 	/** Human-readable error message */
 	message: string;
 	/** Optional additional error data */
-	data?: Value;
+	data: any;
 }
 
 /** Messages sent from client to server */
@@ -141,7 +141,7 @@ export type ClientMessage =
 	/** Method name to invoke */
 	method: string;
 	/** Optional parameters for the method */
-	params?: Value;
+	params?: any;
 }}
 	/** Command request - operation that modifies state */
 	| { type: "command", content: {
@@ -150,7 +150,7 @@ export type ClientMessage =
 	/** Method name to invoke */
 	method: string;
 	/** Optional parameters for the method */
-	params?: Value;
+	params?: any;
 }}
 	/** Subscribe to a channel for real-time updates */
 	| { type: "subscribe", content: {
@@ -183,7 +183,7 @@ export type ServerMessage =
 	/** Request ID this response corresponds to */
 	id: string;
 	/** Result data (success) or None if error */
-	result?: Value;
+	result: any;
 	/** Error information (failure) or None if success */
 	error?: RpcError;
 }}
@@ -192,7 +192,7 @@ export type ServerMessage =
 	/** Channel this event was published on */
 	channel: string;
 	/** Event data */
-	data: Value;
+	data: any;
 }}
 	/** Initial handshake message sent on connection */
 	| { type: "connected", content: {
