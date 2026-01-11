@@ -110,7 +110,7 @@
   - _Completed: 2026-01-11_
   - _Artifacts: rhaiFormatter.ts (formatRhaiScript, indentBlock, preserveComments, isLineTooLong, applyDefaultFormatOptions), rhaiFormatter.test.ts (43 tests, 100% statement coverage, 87.5% branch coverage), performance validated (<50ms for 1,000 lines), leverages rhaiParser and rhaiCodeGen for parse-format-generate cycle_
 
-- [ ] 11. Write unit tests for RhaiParser
+- [x] 11. Write unit tests for RhaiParser
   - File: keyrx_ui/src/utils/rhaiParser.test.ts
   - Test parsing all mapping types
   - Test device block extraction
@@ -118,9 +118,10 @@
   - Purpose: Ensure parser reliability
   - _Leverage: keyrx_ui/tests/testUtils.tsx_
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
-  - _Prompt: Implement the task for spec web-ui-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in TypeScript unit testing and Vitest | Task: Create comprehensive RhaiParser tests following requirements 7.1-7.6. Test all mapping types: simple (map(Key::A, Key::B)), tap_hold (tap_hold(Key::Escape, Key::LCtrl, 200)), macro, layer_switch. Test device block extraction with serial numbers. Test global vs device-specific scope identification. Test import statement parsing. Test comment preservation with line numbers. Test syntax error handling returning line numbers and suggestions. Test edge cases: empty scripts, comments-only scripts, scripts with 10,000+ lines. Use test utilities from keyrx_ui/tests/testUtils.tsx. Use descriptive test names | Restrictions: Must test both success and failure scenarios, maintain test isolation, use descriptive test names (test_[scenario]_[expected]), achieve 90% code coverage | Success: All parser functions tested comprehensively, edge cases covered (empty, large scripts, malformed syntax), error handling verified with line numbers, tests run independently, 90% code coverage achieved. After completing, set this task to in-progress [-] in tasks.md, then run mcp__spec-workflow__log-implementation tool to record artifacts (test file, test cases, coverage report), then mark task complete [x] in tasks.md_
+  - _Completed: 2026-01-11_
+  - _Artifacts: rhaiParser.test.ts (39 comprehensive tests covering all mapping types, device blocks, error handling, edge cases)_
 
-- [ ] 12. Write unit tests for RhaiCodeGenerator
+- [x] 12. Write unit tests for RhaiCodeGenerator
   - File: keyrx_ui/src/utils/rhaiCodeGen.test.ts
   - Test code generation for all mapping types
   - Test device block grouping
@@ -128,7 +129,8 @@
   - Purpose: Ensure code generation correctness
   - _Leverage: keyrx_ui/tests/testUtils.tsx, keyrx_ui/src/utils/rhaiParser.ts_
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
-  - _Prompt: Implement the task for spec web-ui-refinement, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in code generation validation | Task: Create comprehensive RhaiCodeGenerator tests following requirements 8.1-8.7. Test simple mapping generation (map(Key::A, Key::B)), tap-hold generation (tap_hold with threshold), macro sequences, layer switches. Test device block grouping (multiple mappings in single device() block). Test comment preservation. Test formatting (4-space indent, 100 char lines, 1 blank line between devices). Verify generated code is valid by parsing it with RhaiParser (round-trip test). Test edge cases: empty mappings, no devices, 1000+ mappings. Use test utilities | Restrictions: Must verify generated code parses correctly, test preservation of comments and formatting, test edge cases, achieve 90% coverage | Success: All generation functions tested, generated code is valid Rhai syntax, formatting rules verified, comment preservation tested, edge cases covered, round-trip tests pass (generate -> parse -> generate), 90% code coverage achieved. After completing, set this task to in-progress [-] in tasks.md, then run mcp__spec-workflow__log-implementation tool to record artifacts (test file, round-trip tests, coverage), then mark task complete [x] in tasks.md_
+  - _Completed: 2026-01-11_
+  - _Artifacts: rhaiCodeGen.test.ts (35 tests with 97.6% line coverage, 92.3% function coverage, round-trip tests verified)_
 
 ## Phase 2: Bidirectional Sync Engine
 
