@@ -9,7 +9,7 @@
   - _Requirements: 2.1_
   - _Prompt: Implement the task for spec keyboard-layouts, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer specializing in keyboard layout data structures | Task: Create ANSI_87.json containing 87 keys for tenkeyless layout, copying main section from ANSI_104.json but excluding numpad keys (KC_NLCK, KC_PSLS, KC_PAST, KC_PMNS, KC_P7-KC_P0, KC_PPLS, KC_PENT, KC_PDOT) | Restrictions: Do not modify ANSI_104.json, maintain exact coordinate system and key code conventions, ensure 87 keys total | Success: JSON file validates, contains exactly 87 keys, integrates with KeyboardVisualizer without errors. After implementation, mark task [ ] as [-] in tasks.md, then use log-implementation tool to record details, then mark [-] as [x]._
 
-- [ ] 2. Create ISO 105 layout JSON
+- [x] 2. Create ISO 105 layout JSON
   - File: keyrx_ui/src/data/layouts/ISO_105.json
   - Create full-size ISO layout with 105 keys including ISO-specific Enter shape and extra key
   - ISO Enter is L-shaped (spans rows 2.5-3.5), extra key between left Shift and Z
