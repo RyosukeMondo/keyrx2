@@ -36,7 +36,7 @@
   - _Requirements: 1.3_
   - _Prompt: Implement the task for spec keyboard-layouts, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer with knowledge of JIS keyboard standards | Task: Create JIS_109.json with Japanese-specific keys: KC_JYEN (Yen key), KC_RO (Ro key), KC_HENK (Henkan), KC_MHEN (Muhenkan), KC_KANA (Katakana/Hiragana), smaller spacebar with surrounding keys, JIS Enter shape | Restrictions: Use standard QMK JIS keycodes, maintain coordinate system compatibility, 109 keys total | Success: JSON validates, Japanese keys positioned correctly, 109 keys total. After implementation, mark task [ ] as [-] in tasks.md, then use log-implementation tool to record details, then mark [-] as [x]._
 
-- [ ] 5. Create 60% compact layout JSON
+- [x] 5. Create 60% compact layout JSON
   - File: keyrx_ui/src/data/layouts/COMPACT_60.json
   - Create standard 60% keyboard layout with ~61 keys
   - No F-row, no nav cluster, no arrows, no numpad
