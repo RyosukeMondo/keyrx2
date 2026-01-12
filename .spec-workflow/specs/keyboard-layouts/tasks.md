@@ -108,7 +108,7 @@
   - _Requirements: All_
   - _Prompt: Implement the task for spec keyboard-layouts, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer with TypeScript testing expertise | Task: Create Jest tests that import all layout JSON files, validate each has required name and keys fields, verify key counts match expectations (ANSI_104=104, ANSI_87=87, etc.), check each key has code, label, x, y fields | Restrictions: Use existing test utilities, do not modify layout files, test all 11 layouts | Success: All tests pass, each layout validated for structure and key count. After implementation, mark task [ ] as [-] in tasks.md, then use log-implementation tool to record details, then mark [-] as [x]._
 
-- [ ] 13. Add KeyboardVisualizer layout integration tests
+- [-] 13. Add KeyboardVisualizer layout integration tests
   - File: keyrx_ui/src/components/__tests__/KeyboardVisualizer.layout.test.tsx
   - Create tests verifying each layout renders correctly
   - Test layout switching and key count verification
