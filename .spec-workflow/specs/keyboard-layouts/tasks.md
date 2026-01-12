@@ -27,7 +27,7 @@
   - _Requirements: 2.2_
   - _Prompt: Implement the task for spec keyboard-layouts, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer with knowledge of keyboard layouts | Task: Create ISO_88.json by combining ISO_105 main section with TKL form factor (no numpad), maintaining ISO Enter and KC_NUBS key | Restrictions: Do not duplicate code from other layouts, ensure consistent coordinate system, 88 keys total | Success: JSON validates, renders ISO TKL layout correctly, 88 keys total. After implementation, mark task [ ] as [-] in tasks.md, then use log-implementation tool to record details, then mark [-] as [x]._
 
-- [ ] 4. Create JIS 109 layout JSON
+- [x] 4. Create JIS 109 layout JSON
   - File: keyrx_ui/src/data/layouts/JIS_109.json
   - Create Japanese Industrial Standard keyboard layout with 109 keys
   - Include Japanese-specific keys: Henkan, Muhenkan, Katakana/Hiragana, Yen, Ro
