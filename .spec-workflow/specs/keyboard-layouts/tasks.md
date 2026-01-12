@@ -18,7 +18,7 @@
   - _Requirements: 1.2_
   - _Prompt: Implement the task for spec keyboard-layouts, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Developer with knowledge of ISO keyboard standards | Task: Create ISO_105.json with ISO-specific modifications: L-shaped Enter key using multi-row positioning, KC_NUBS (non-US backslash) key between left Shift and Z, KC_NUHS (non-US hash) key replacing ANSI backslash position | Restrictions: Maintain compatibility with parseKLEJson, use standard QMK keycodes, ensure 105 keys total | Success: JSON validates, ISO Enter renders correctly, extra key visible, 105 keys total. After implementation, mark task [ ] as [-] in tasks.md, then use log-implementation tool to record details, then mark [-] as [x]._
 
-- [ ] 3. Create ISO 88 (TKL) layout JSON
+- [x] 3. Create ISO 88 (TKL) layout JSON
   - File: keyrx_ui/src/data/layouts/ISO_88.json
   - Create tenkeyless ISO layout with 88 keys
   - Combines ISO-specific keys with TKL form factor
