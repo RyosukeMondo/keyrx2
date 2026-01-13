@@ -441,7 +441,7 @@ jobs:
         continue-on-error: true
         id: coverage
         run: |
-          npm run test:coverage -- --run 2>&1 | tee coverage-output.log || true
+          npm run test:coverage -- --run --reporter=json --outputFile.json=/tmp/test-output.json 2>&1 | tee coverage-output.log || true
 
           # Quality gate: ≥80% coverage required for production
           if grep -q "ERROR: Coverage for" coverage-output.log; then
@@ -455,6 +455,24 @@ jobs:
           else
             echo "⚠️  Quality gate WARNING: Coverage analysis incomplete"
             exit 1
+          fi
+
+      - name: Collect test metrics
+        if: always()
+        run: |
+          chmod +x scripts/test-metrics.sh
+
+          # Collect metrics from test run
+          if [ -f /tmp/test-output.json ]; then
+            scripts/test-metrics.sh \
+              --test-output /tmp/test-output.json \
+              --output test-metrics.json \
+              --json > test-metrics-output.json || true
+
+            echo "Test metrics collected"
+            cat test-metrics.json | jq . || echo "Failed to parse metrics JSON"
+          else
+            echo "No test output found - skipping metrics collection"
           fi
 
       - name: Track coverage trend
@@ -483,6 +501,8 @@ jobs:
             keyrx_ui/coverage-output.log
             coverage-trend.json
             .coverage-baseline.json
+            test-metrics.json
+            test-metrics-output.json
           retention-days: 30
 
   frontend-quality-summary:

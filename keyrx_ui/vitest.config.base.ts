@@ -52,7 +52,8 @@ export const baseConfig: UserConfig = {
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
+      reporter: ['text', 'json', 'json-summary', 'html', 'lcov'],
+      reportsDirectory: './coverage',
       // Include all source files in coverage, even if not imported by tests
       all: true,
       exclude: [
