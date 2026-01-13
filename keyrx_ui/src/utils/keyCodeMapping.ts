@@ -63,6 +63,18 @@ const KEY_LABELS: Record<string, string> = {
   KEY_F10: "F10",
   KEY_F11: "F11",
   KEY_F12: "F12",
+  KEY_F13: "F13",
+  KEY_F14: "F14",
+  KEY_F15: "F15",
+  KEY_F16: "F16",
+  KEY_F17: "F17",
+  KEY_F18: "F18",
+  KEY_F19: "F19",
+  KEY_F20: "F20",
+  KEY_F21: "F21",
+  KEY_F22: "F22",
+  KEY_F23: "F23",
+  KEY_F24: "F24",
 
   // Special keys
   KEY_ENTER: "Enter",
@@ -106,6 +118,35 @@ const KEY_LABELS: Record<string, string> = {
   KEY_COMMA: ",",
   KEY_DOT: ".",
   KEY_SLASH: "/",
+
+  // Locks
+  KEY_CAPSLOCK: "CapsLock",
+  KEY_NUMLOCK: "NumLock",
+  KEY_SCROLLLOCK: "ScrollLock",
+
+  // System keys
+  KEY_SYSRQ: "PrintScreen",
+  KEY_PRINT: "PrintScreen",
+  KEY_PAUSE: "Pause",
+
+  // Numpad
+  KEY_KP0: "Num 0",
+  KEY_KP1: "Num 1",
+  KEY_KP2: "Num 2",
+  KEY_KP3: "Num 3",
+  KEY_KP4: "Num 4",
+  KEY_KP5: "Num 5",
+  KEY_KP6: "Num 6",
+  KEY_KP7: "Num 7",
+  KEY_KP8: "Num 8",
+  KEY_KP9: "Num 9",
+  KEY_KPASTERISK: "Num *",
+  KEY_KPMINUS: "Num -",
+  KEY_KPPLUS: "Num +",
+  KEY_KPDOT: "Num .",
+  KEY_KPSLASH: "Num /",
+  KEY_KPENTER: "Num Enter",
+  KEY_KPEQUAL: "Num =",
 };
 
 /**

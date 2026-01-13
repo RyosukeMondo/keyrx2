@@ -162,7 +162,7 @@ Fix UI issues identified during User Acceptance Testing for Dashboard, Devices, 
 
 ## Task 7: Config Page - Fix Key Dropdown Empty State
 
-- [ ] 7.1 Populate key dropdown with all available keys
+- [x] 7.1 Populate key dropdown with all available keys
   - File: `src/components/KeyAssignmentPanel.tsx` or related modal component
   - Currently dropdown shows no keys - investigate data source
   - Add all possible key codes from evdev/HID key list
