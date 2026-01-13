@@ -239,7 +239,7 @@ export function KeyConfigModal({
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">Select a key...</option>
-                {availableKeys.filter(k => k.category === 'modifier' || k.category === 'layer').map((key) => (
+                {availableKeys.filter(k => k.category === 'modifiers' || k.category === 'layers').map((key) => (
                   <option key={key.id} value={key.id}>
                     {key.label} ({key.id})
                   </option>
