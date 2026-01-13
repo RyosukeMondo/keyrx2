@@ -299,3 +299,138 @@ export function simulateError(error?: Error): void {
   const server = getMockWebSocket();
   server.error(error);
 }
+
+// ========================================
+// RPC Helper Functions
+// ========================================
+
+/**
+ * RPC error structure following JSON-RPC 2.0
+ */
+export interface RpcError {
+  code: number;
+  message: string;
+  data?: unknown;
+}
+
+/**
+ * Send an RPC response (successful result)
+ *
+ * @param id - Request ID to respond to
+ * @param result - Result data
+ *
+ * @example
+ * ```typescript
+ * sendRpcResponse('req-123', { profiles: [...] });
+ * ```
+ */
+export function sendRpcResponse(id: string, result: unknown): void {
+  sendServerMessage({
+    type: 'response',
+    content: {
+      id,
+      result,
+    },
+  });
+}
+
+/**
+ * Send an RPC error response
+ *
+ * @param id - Request ID to respond to
+ * @param code - Error code
+ * @param message - Error message
+ * @param data - Optional error data
+ *
+ * @example
+ * ```typescript
+ * sendRpcError('req-123', -32601, 'Method not found');
+ * ```
+ */
+export function sendRpcError(
+  id: string,
+  code: number,
+  message: string,
+  data?: unknown
+): void {
+  const error: RpcError = { code, message };
+  if (data !== undefined) {
+    error.data = data;
+  }
+
+  sendServerMessage({
+    type: 'response',
+    content: {
+      id,
+      error,
+    },
+  });
+}
+
+/**
+ * Wait for the server to receive an RPC request and return the request details
+ *
+ * @param method - Optional method name to filter for
+ * @returns Promise resolving to the received request
+ *
+ * @example
+ * ```typescript
+ * const request = await waitForRpcRequest('get_profiles');
+ * sendRpcResponse(request.id, { profiles: [...] });
+ * ```
+ */
+export async function waitForRpcRequest(
+  method?: string
+): Promise<{ id: string; method: string; params?: unknown }> {
+  const server = getMockWebSocket();
+
+  // Wait for any message
+  const message = await server.nextMessage;
+
+  // Parse the message
+  const parsed = typeof message === 'string' ? JSON.parse(message) : message;
+
+  // Validate it's a query or command
+  if (parsed.type !== 'query' && parsed.type !== 'command') {
+    throw new Error(`Expected query or command, got: ${parsed.type}`);
+  }
+
+  // Check method if specified
+  if (method && parsed.content.method !== method) {
+    throw new Error(
+      `Expected method ${method}, got: ${parsed.content.method}`
+    );
+  }
+
+  return {
+    id: parsed.content.id,
+    method: parsed.content.method,
+    params: parsed.content.params,
+  };
+}
+
+/**
+ * Setup a mock WebSocket with automatic cleanup
+ * Returns server instance and cleanup function
+ *
+ * @param url - WebSocket URL (default: WS_URL)
+ * @returns Object with server and cleanup function
+ *
+ * @example
+ * ```typescript
+ * const { server, cleanup } = await setupMockWebSocketWithCleanup();
+ * // Use server in tests
+ * // cleanup() called automatically in afterEach
+ * ```
+ */
+export async function setupMockWebSocketWithCleanup(
+  url: string = WS_URL
+): Promise<{ server: WS; cleanup: () => void }> {
+  const server = await setupMockWebSocket(url);
+
+  const cleanup = () => {
+    cleanupMockWebSocket();
+  };
+
+  return { server, cleanup };
+}

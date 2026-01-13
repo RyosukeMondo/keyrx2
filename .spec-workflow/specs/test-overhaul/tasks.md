@@ -31,7 +31,7 @@ Comprehensive overhaul of test infrastructure: fix failing tests, improve test p
   - _Requirements: WebSocket tests pass without JSON errors_
   - _Prompt: Implement the task for spec test-overhaul, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Test Infrastructure Engineer | Task: Fix WebSocket mock deserialization. Debug jest-websocket-mock usage in websocketHandlers.ts. Ensure all messages sent via mock.send() are JSON.stringify'd. Add validation layer to catch non-JSON messages. | Restrictions: Don't replace mock library yet, fix usage first | Success: All WebSocket-related tests pass, no JSON parse errors | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
 
-- [ ] 1.2 Create standardized WebSocket test utilities
+- [x] 1.2 Create standardized WebSocket test utilities
   - File: `keyrx_ui/tests/helpers/websocket.ts` (enhance)
   - Create `setupMockWebSocket()` with auto-cleanup
   - Create `sendRpcResponse(id, result)` helper
