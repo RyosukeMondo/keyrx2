@@ -210,12 +210,16 @@ export function renderWithProviders(
  *
  * Available WebSocket Helpers:
  * - `setupMockWebSocket()` - Create WebSocket mock server (call in beforeEach)
+ * - `setupMockWebSocketWithCleanup()` - Setup with auto-cleanup function
  * - `cleanupMockWebSocket()` - Clean up mock server (call in afterEach)
  * - `simulateConnected(sessionId?)` - Simulate connection handshake
  * - `sendDaemonStateUpdate(state)` - Simulate daemon state changes
  * - `sendLatencyUpdate(stats)` - Simulate latency metric broadcasts
  * - `sendKeyEvent(event)` - Simulate key press/release events
  * - `sendServerMessage(message)` - Low-level: send custom messages
+ * - `sendRpcResponse(id, result)` - Send RPC success response
+ * - `sendRpcError(id, code, message, data?)` - Send RPC error response
+ * - `waitForRpcRequest(method?)` - Wait for and capture RPC requests
  * - `simulateDisconnect()` - Simulate WebSocket disconnect
  * - `simulateError(error?)` - Simulate connection error
  * - `waitForMessage(expectedMessage)` - Wait for client to send message
@@ -225,6 +229,7 @@ export function renderWithProviders(
  */
 export {
   setupMockWebSocket,
+  setupMockWebSocketWithCleanup,
   getMockWebSocket,
   cleanupMockWebSocket,
   sendServerMessage,
@@ -236,6 +241,9 @@ export {
   simulateError,
   waitForMessage,
   assertReceivedMessages,
+  sendRpcResponse,
+  sendRpcError,
+  waitForRpcRequest,
   WS_URL,
 } from './helpers/websocket';
 
