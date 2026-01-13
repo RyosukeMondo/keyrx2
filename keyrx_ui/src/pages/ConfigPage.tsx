@@ -523,71 +523,81 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             }}
           />
 
-          {/* KEYBOARD DISPLAY - Shows Global and/or Device-Specific Keyboards */}
-          {globalSelected && (
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900">
-              <h3 className="text-xl font-bold text-primary-400 mb-4">
-                Global Keyboard (All Devices)
-              </h3>
-              <div className="flex justify-center p-4">
-                <KeyboardVisualizer
-                  layout="ANSI_104"
-                  keyMappings={keyMappings}
-                  onKeyClick={handlePhysicalKeyClick}
-                  simulatorMode={false}
+          {/* Dual-Pane Layout: Global Keys (left) and Device-Specific Keys (right) */}
+          <div className="flex gap-4">
+            {/* Left Pane: Global Keyboard with Layer Switcher */}
+            {globalSelected && (
+              <div className="flex gap-2 flex-1">
+                <LayerSwitcher
+                  activeLayer={activeLayer}
+                  availableLayers={availableLayers}
+                  onLayerChange={setActiveLayer}
                 />
+                <Card className="bg-gradient-to-br from-slate-800 to-slate-900 flex-1">
+                  <h3 className="text-xl font-bold text-primary-400 mb-4">
+                    Global Keyboard (All Devices)
+                  </h3>
+                  <div className="flex justify-center p-4">
+                    <KeyboardVisualizer
+                      layout="ANSI_104"
+                      keyMappings={keyMappings}
+                      onKeyClick={handlePhysicalKeyClick}
+                      simulatorMode={false}
+                    />
+                  </div>
+                  <p className="text-center text-sm text-slate-400 mt-4">
+                    Click any key to configure global mappings
+                  </p>
+                </Card>
               </div>
-              <p className="text-center text-sm text-slate-400 mt-4">
-                Click any key to configure global mappings
-              </p>
-            </Card>
-          )}
+            )}
 
-          {/* Device-Specific Keyboards */}
-          {selectedDevices.length > 0 && devices
-            .filter((d) => selectedDevices.includes(d.id))
-            .map((device) => (
-              <Card key={device.id} className="bg-gradient-to-br from-slate-800 to-slate-900">
-                <h3 className="text-xl font-bold text-primary-400 mb-4">
-                  {device.name}
-                  {device.serial && (
-                    <span className="ml-2 text-sm text-slate-400 font-normal">
-                      ({device.serial})
-                    </span>
-                  )}
-                </h3>
-                <div className="flex justify-center p-4">
-                  <KeyboardVisualizer
-                    layout="ANSI_104"
-                    keyMappings={keyMappings}
-                    onKeyClick={handlePhysicalKeyClick}
-                    simulatorMode={false}
+            {/* Right Pane: Device-Specific Keyboard with Layer Switcher */}
+            {selectedDevices.length > 0 && devices
+              .filter((d) => selectedDevices.includes(d.id))
+              .map((device) => (
+                <div key={device.id} className="flex gap-2 flex-1">
+                  <LayerSwitcher
+                    activeLayer={activeLayer}
+                    availableLayers={availableLayers}
+                    onLayerChange={setActiveLayer}
                   />
+                  <Card className="bg-gradient-to-br from-slate-800 to-slate-900 flex-1">
+                    <h3 className="text-xl font-bold text-primary-400 mb-4">
+                      {device.name}
+                      {device.serial && (
+                        <span className="ml-2 text-sm text-slate-400 font-normal">
+                          ({device.serial})
+                        </span>
+                      )}
+                    </h3>
+                    <div className="flex justify-center p-4">
+                      <KeyboardVisualizer
+                        layout="ANSI_104"
+                        keyMappings={keyMappings}
+                        onKeyClick={handlePhysicalKeyClick}
+                        simulatorMode={false}
+                      />
+                    </div>
+                    <p className="text-center text-sm text-slate-400 mt-4">
+                      Click any key to configure device-specific mappings for {device.name}
+                    </p>
+                  </Card>
                 </div>
-                <p className="text-center text-sm text-slate-400 mt-4">
-                  Click any key to configure device-specific mappings for {device.name}
-                </p>
+              ))}
+
+            {/* Warning if no selection */}
+            {!globalSelected && selectedDevices.length === 0 && (
+              <Card className="bg-yellow-900/20 border border-yellow-700/50 flex-1">
+                <div className="text-center py-8">
+                  <p className="text-yellow-200 text-lg mb-2">⚠️ No devices selected</p>
+                  <p className="text-yellow-300 text-sm">
+                    Select at least one device or "Global" to configure key mappings
+                  </p>
+                </div>
               </Card>
-            ))}
-
-          {/* Warning if no selection */}
-          {!globalSelected && selectedDevices.length === 0 && (
-            <Card className="bg-yellow-900/20 border border-yellow-700/50">
-              <div className="text-center py-8">
-                <p className="text-yellow-200 text-lg mb-2">⚠️ No devices selected</p>
-                <p className="text-yellow-300 text-sm">
-                  Select at least one device or "Global" to configure key mappings
-                </p>
-              </div>
-            </Card>
-          )}
-
-          {/* Layer Switcher */}
-          <LayerSwitcher
-            activeLayer={activeLayer}
-            availableLayers={availableLayers}
-            onLayerChange={setActiveLayer}
-          />
+            )}
+          </div>
 
           {/* Legend - Color coding */}
           <div className="flex gap-4 flex-wrap text-xs text-slate-400 px-2">

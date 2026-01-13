@@ -22,7 +22,7 @@ General UI/UX improvements for the KeyRX Web UI excluding key palette (separate 
 
 ## Task 2: Layer-Dedicated Keyboard Layout Side-by-Side
 
-- [ ] 2.1 Create dual-pane layout for Global and Device-Specific keys
+- [-] 2.1 Create dual-pane layout for Global and Device-Specific keys
   - File: `keyrx_ui/src/pages/ConfigPage.tsx`
   - Layout: `LAYERS(narrow) | Global Keyboard | Device-Specific Keyboard`
   - Each keyboard view has its own dedicated layer switcher
