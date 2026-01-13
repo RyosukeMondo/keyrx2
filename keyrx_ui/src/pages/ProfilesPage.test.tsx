@@ -212,76 +212,70 @@ describe('ProfilesPage', () => {
     });
   });
 
-  it('opens edit modal when Edit button is clicked', async () => {
+  it('enables inline editing when profile name is clicked', async () => {
     const user = userEvent.setup();
     renderProfilesPage();
 
-    // Wait for profiles to load and click Edit on gaming profile
-    const editButton = await screen.findByRole('button', {
-      name: /Edit profile gaming/i,
+    // Wait for profiles to load and click on the inline edit button for gaming profile name
+    const editNameButton = await screen.findByRole('button', {
+      name: /Edit profile name: gaming/i,
     });
-    await user.click(editButton);
+    await user.click(editNameButton);
 
-    expect(
-      screen.getByRole('heading', { name: 'Edit Profile' })
-    ).toBeInTheDocument();
-
-    // Verify form is pre-filled (profile name from MSW mock is "Gaming" with capital G)
-    const nameInput = screen.getByPlaceholderText('Profile name') as HTMLInputElement;
+    // Input field should appear with the current value
+    const nameInput = await screen.findByLabelText(/Edit profile name: gaming/i) as HTMLInputElement;
+    expect(nameInput).toBeInTheDocument();
     expect(nameInput.value).toBe('gaming');
   });
 
-  it('updates profile when edit form is submitted', async () => {
+  it('updates profile name with inline editing', async () => {
     const user = userEvent.setup();
     renderProfilesPage();
 
-    // Wait for profiles to load and click Edit on gaming profile
-    const editButton = await screen.findByRole('button', { name: /Edit profile gaming/i });
-    await user.click(editButton);
+    // Wait for profiles to load and click on inline edit for gaming profile name
+    const editNameButton = await screen.findByRole('button', {
+      name: /Edit profile name: gaming/i,
+    });
+    await user.click(editNameButton);
 
     // Update name
-    const nameInput = screen.getByPlaceholderText('Profile name');
+    const nameInput = await screen.findByLabelText(/Edit profile name: gaming/i) as HTMLInputElement;
     await user.clear(nameInput);
     await user.type(nameInput, 'Updated Gaming');
 
-    // Save (note: edit API not implemented yet, so modal just closes)
-    await user.click(
-      screen.getByRole('button', { name: /Save profile changes/i })
+    // Blur to trigger save (inline edit saves on blur with 500ms debounce)
+    nameInput.blur();
+
+    // Wait for save to complete (debounced)
+    await waitFor(
+      () => {
+        expect(screen.getByText('Updated Gaming')).toBeInTheDocument();
+      },
+      { timeout: 1000 }
     );
-
-    // Modal should close (edit doesn't actually update the profile yet)
-    await waitFor(() => {
-      expect(
-        screen.queryByRole('heading', { name: 'Edit Profile' })
-      ).not.toBeInTheDocument();
-    });
-
-    // Original profile name still exists (edit not implemented)
-    expect(screen.getByText('gaming')).toBeInTheDocument();
   });
 
-  it('closes edit modal when Cancel is clicked', async () => {
+  it('reverts changes when Escape is pressed during inline editing', async () => {
     const user = userEvent.setup();
     renderProfilesPage();
 
-    // Wait for profiles to load and open edit modal
-    const editButton = await screen.findByRole('button', { name: /Edit profile gaming/i });
-    await user.click(editButton);
+    // Wait for profiles to load and click on inline edit for gaming profile name
+    const editNameButton = await screen.findByRole('button', {
+      name: /Edit profile name: gaming/i,
+    });
+    await user.click(editNameButton);
 
-    expect(
-      screen.getByRole('heading', { name: 'Edit Profile' })
-    ).toBeInTheDocument();
+    // Update name
+    const nameInput = await screen.findByLabelText(/Edit profile name: gaming/i) as HTMLInputElement;
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Changed Name');
 
-    // Click Cancel
-    await user.click(
-      screen.getByRole('button', { name: /Cancel editing profile/i })
-    );
+    // Press Escape to cancel
+    await user.keyboard('{Escape}');
 
-    // Wait for modal to close (animation takes time)
+    // Original name should still be displayed
     await waitFor(() => {
-      expect(
-        screen.queryByRole('heading', { name: 'Edit Profile' })
-      ).not.toBeInTheDocument();
+      expect(screen.getByText('gaming')).toBeInTheDocument();
     });
   });
 
@@ -380,10 +374,15 @@ describe('ProfilesPage', () => {
     });
 
     expect(
-      screen.getByRole('button', { name: /Edit profile gaming/i })
+      screen.getByRole('button', { name: /Delete profile gaming/i })
+    ).toBeInTheDocument();
+
+    // Profile name and description are inline-editable
+    expect(
+      screen.getByRole('button', { name: /Edit profile name: gaming/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /Delete profile gaming/i })
+      screen.getByRole('button', { name: /Edit profile description: gaming/i })
     ).toBeInTheDocument();
   });
 

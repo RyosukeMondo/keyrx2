@@ -58,12 +58,12 @@ Comprehensive overhaul of test infrastructure: fix failing tests, improve test p
 
 ## Task 2: Fix Async/Timing Test Issues
 
-- [ ] 2.1 Fix ProfilesPage Edit button rendering issue
+- [x] 2.1 Fix ProfilesPage Edit button rendering issue
   - File: `keyrx_ui/src/pages/ProfilesPage.test.tsx`
-  - Issue: Edit button not found at line 383
-  - Root cause: Async state update timing
-  - Solution: Use findByRole with waitFor, not getByRole
-  - Add data-testid for reliable selection
+  - Issue: Tests looking for non-existent "Edit profile" button
+  - Root cause: UI changed from Edit modal to InlineEdit component, tests not updated
+  - Solution: Updated tests to use InlineEdit component's aria-labels instead of modal button
+  - Rewrote 3 tests: inline editing activation, profile name update, Escape key revert
   - Purpose: Fix component rendering race condition
   - _Leverage: keyrx_ui/src/pages/ProfilesPage.test.tsx, @testing-library/react_
   - _Requirements: Edit button test passes reliably_
