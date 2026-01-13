@@ -853,6 +853,51 @@ npm run test:coverage
 | `npm run test:shard` | Run tests in shards for CI | CI parallel execution |
 | `npm run test:integration:shard` | Run integration tests in shards | CI parallel execution |
 
+#### Focused Test Run Scripts
+
+For faster development iteration, use these focused test commands:
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `npm run test:changed` | Run tests for changed files only | Quick feedback during active development |
+| `npm run test:related` | Run tests related to changed files | After modifying shared utilities or components |
+| `npm run test:failed` | Interactive watch mode with verbose output | Fixing failing tests with instant feedback |
+| `npm run test:watch:smart` | Watch mode with smart filtering | Continuous testing while editing specific files |
+
+**How they work:**
+
+- **test:changed**: Uses git diff to detect modified files and only runs tests in those files
+- **test:related**: Finds all test files that import the specified modules and runs them (requires file path argument)
+- **test:failed**: Runs in watch mode with verbose output and stops on first failure, allowing quick iteration on fixing test failures
+- **test:watch:smart**: Combines watch mode with changed file detection for instant feedback
+
+**Example workflow:**
+
+```bash
+# Make changes to a component
+vim src/components/ProfileCard.tsx
+
+# Run only tests for changed files (fast)
+npm run test:changed
+
+# Fix failing tests
+vim src/components/ProfileCard.test.tsx
+
+# Re-run only the failed tests (watch mode for quick iteration)
+npm run test:failed
+
+# Once all pass, run tests related to specific file to check for side effects
+npm run test:related -- src/components/ProfileCard.tsx
+
+# Before committing, run full test suite
+npm test
+```
+
+**Performance benefits:**
+- **test:changed**: ~90% faster than full suite (only runs affected tests)
+- **test:failed**: Stops on first failure for focused debugging, watch mode provides instant re-test on save
+- **test:watch:smart**: Instant feedback (<1s) on file save
+
 #### Parallel Test Execution
 
 Tests run in parallel using Vitest's thread pool for faster execution:

@@ -44,6 +44,10 @@
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:shard": "vitest run --config vitest.unit.config.ts --shard=${SHARD_INDEX:-1}/${SHARD_COUNT:-1}",
     "test:integration:shard": "vitest run --config vitest.integration.config.ts --shard=${SHARD_INDEX:-1}/${SHARD_COUNT:-1}",
+    "test:changed": "vitest run --config vitest.unit.config.ts --changed",
+    "test:related": "vitest related --config vitest.unit.config.ts",
+    "test:failed": "vitest --config vitest.unit.config.ts --reporter=verbose --bail=1",
+    "test:watch:smart": "vitest --config vitest.unit.config.ts --changed",
     "validate:contracts": "npx tsx scripts/validate-api-contracts.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
