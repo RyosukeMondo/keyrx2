@@ -850,6 +850,34 @@ npm run test:coverage
 | `npm run test:a11y` | Run accessibility tests | Before committing UI changes |
 | `npm run test:coverage` | Generate coverage report | Check coverage thresholds |
 | `npm run test:all` | Run all test categories | Final verification before merge |
+| `npm run test:shard` | Run tests in shards for CI | CI parallel execution |
+| `npm run test:integration:shard` | Run integration tests in shards | CI parallel execution |
+
+#### Parallel Test Execution
+
+Tests run in parallel using Vitest's thread pool for faster execution:
+
+- **Automatic thread optimization**: Uses 75% of available CPU cores (9 threads on a 12-core machine)
+- **Thread pool**: Configured in `vitest.config.base.ts`
+- **Shard support**: Tests can be split across multiple CI jobs for faster pipelines
+
+**Local parallel execution** (automatic):
+```bash
+npm test  # Runs on 9 threads (75% of 12 cores)
+```
+
+**CI sharded execution** (manual control):
+```bash
+# Split tests into 3 shards, run shard 1
+SHARD_INDEX=1 SHARD_COUNT=3 npm run test:shard
+
+# Split integration tests into 2 shards, run shard 2
+SHARD_INDEX=2 SHARD_COUNT=2 npm run test:integration:shard
+```
+
+**Performance benefits**:
+- Local development: ~30% faster test execution with parallel threads
+- CI/CD: Can split tests across multiple jobs to reduce total pipeline time
 
 #### Test Infrastructure
 

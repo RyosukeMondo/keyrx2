@@ -42,6 +42,8 @@
     "test:e2e:full": "playwright test --config=playwright.e2e.config.ts",
     "test:e2e:ci": "playwright test --config=playwright.e2e.config.ts --reporter=html,json",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
+    "test:shard": "vitest run --config vitest.unit.config.ts --shard=${SHARD_INDEX:-1}/${SHARD_COUNT:-1}",
+    "test:integration:shard": "vitest run --config vitest.integration.config.ts --shard=${SHARD_INDEX:-1}/${SHARD_COUNT:-1}",
     "validate:contracts": "npx tsx scripts/validate-api-contracts.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

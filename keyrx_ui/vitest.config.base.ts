@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import path from 'path';
+import os from 'os';
 
 /**
  * Base Vitest configuration for shared test settings.
@@ -34,6 +35,16 @@ export const baseConfig: UserConfig = {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
+    // Parallel execution configuration
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        // Optimize thread count based on CPU cores
+        // Use 75% of available cores to leave headroom for system
+        maxThreads: Math.max(1, Math.floor((os.cpus().length || 4) * 0.75)),
+        minThreads: 1,
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
