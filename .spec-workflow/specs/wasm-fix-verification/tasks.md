@@ -165,7 +165,7 @@ Fix WASM build issues, enhance build scripts for verification, and ensure WASM m
   - _Requirements: Automated WASM integration tests_
   - _Prompt: Implement the task for spec wasm-fix-verification, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Test Engineer | Task: Create wasm.integration.test.ts: 1) Test useWasm hook returns ready state, 2) Test validateConfig returns errors for invalid input, 3) Test runSimulation returns results, 4) Add mock WASM module for unit tests. | Restrictions: Tests must pass without real WASM (use mocks) | Success: CI runs WASM tests, catches loading failures | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
 
-- [ ] 8.2 Add build script tests
+- [x] 8.2 Add build script tests
   - File: `scripts/tests/wasm-build.test.sh` (create)
   - Test build-wasm.sh produces output
   - Test verify-wasm.sh detects missing files
