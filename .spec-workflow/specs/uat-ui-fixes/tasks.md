@@ -172,7 +172,7 @@ Fix UI issues identified during User Acceptance Testing for Dashboard, Devices, 
   - _Requirements: All possible keys available in dropdown_
   - _Prompt: Implement the task for spec uat-ui-fixes: Role: Frontend Developer | Task: Fix empty key dropdown in config modal. Ensure keyCodeMapping.ts exports complete key list. Categories: Letters, Numbers, Function, Modifiers (Shift/Ctrl/Alt/Meta), Navigation (Arrows/Home/End/PgUp/PgDn), Numpad, Special (Tab/Enter/Backspace/Escape/Space/Caps). Verify dropdown component receives and renders all options. | Restrictions: Use existing key code constants, ensure codes match daemon expectations | Success: Dropdown shows all possible keys organized by category | After completion: Use log-implementation tool, mark [x] complete_
 
-- [ ] 7.2 Add tests for key dropdown population
+- [x] 7.2 Add tests for key dropdown population
   - File: `src/__tests__/KeyAssignmentPanel.test.tsx` (create or extend)
   - Test that dropdown contains expected key categories
   - Test that selecting a key updates state correctly
