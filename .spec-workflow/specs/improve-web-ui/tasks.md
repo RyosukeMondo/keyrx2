@@ -7,7 +7,7 @@ General UI/UX improvements for the KeyRX Web UI excluding key palette (separate 
 
 ## Task 1: Narrow Layer Switcher Width
 
-- [-] 1.1 Refactor LayerSwitcher to fixed narrow width
+- [x] 1.1 Refactor LayerSwitcher to fixed narrow width
   - File: `keyrx_ui/src/components/LayerSwitcher.tsx`
   - Change from full-width to fixed narrow width (~80px / 7 chars)
   - Layers are predictable: "Base", "MD_00", "MD_FF" (max 7 chars)
