@@ -85,7 +85,7 @@ Fix UI issues identified during User Acceptance Testing for Dashboard, Devices, 
   - _Requirements: Inline edit for name/description, remove Edit button_
   - _Prompt: Implement the task for spec uat-ui-fixes: Role: React UI Developer | Task: In ProfileCard, make name and description inline-editable. Click shows input field, blur saves with 500ms debounce. Remove Edit button. Show pencil icon on hover to indicate editability. Add API call for profile rename if not exists. | Restrictions: Handle empty values gracefully, prevent XSS with proper escaping | Success: Name/description editable inline, saves automatically, Edit button removed | After completion: Use log-implementation tool, mark [x] complete_
 
-- [ ] 3.2 Add clear active profile indicator
+- [-] 3.2 Add clear active profile indicator
   - File: `src/components/ProfileCard.tsx`, `src/pages/ProfilesPage.tsx`
   - Active profile has prominent visual distinction (thick colored border, background tint)
   - Show "ACTIVE" badge prominently at top

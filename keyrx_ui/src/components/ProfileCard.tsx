@@ -61,13 +61,17 @@ export const ProfileCard = React.memo<ProfileCardProps>(
       <Card
         variant="default"
         padding="md"
-        className={`relative ${isActive ? 'border-green-500 border-2' : ''}`}
+        className={`relative ${
+          isActive
+            ? 'border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-500/10 to-transparent'
+            : ''
+        }`}
         data-profile={name}
       >
         {/* Active Badge */}
         {isActive && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
-            <Check size={14} aria-hidden="true" />
+          <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-lg">
+            <Check size={16} aria-hidden="true" />
             <span>ACTIVE</span>
           </div>
         )}
@@ -77,7 +81,7 @@ export const ProfileCard = React.memo<ProfileCardProps>(
           {isActive && (
             <Check
               size={20}
-              className="text-green-500 flex-shrink-0 mt-1"
+              className="text-blue-500 flex-shrink-0 mt-1"
               aria-label="Active profile indicator"
             />
           )}
