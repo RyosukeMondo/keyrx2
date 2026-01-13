@@ -48,7 +48,7 @@ General UI/UX improvements for the KeyRX Web UI excluding key palette (separate 
 
 ## Task 3: Responsive Layout for Smaller Screens
 
-- [ ] 3.1 Add responsive breakpoints for dual-pane layout
+- [x] 3.1 Add responsive breakpoints for dual-pane layout
   - File: `keyrx_ui/src/pages/ConfigPage.tsx`
   - Desktop (lg+): Side-by-side dual pane
   - Tablet (md): Stacked vertical with tabs

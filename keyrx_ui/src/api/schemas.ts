@@ -84,10 +84,10 @@ export const LatencyStatsSchema = z.object({
 }).passthrough();
 
 // Profile configuration from RPC
-// Matches Rust ProfileConfigResponse in keyrx_daemon/src/web/api/profiles.rs
+// Matches Rust ProfileConfigRpc in keyrx_daemon/src/web/handlers/profile.rs
 export const ProfileConfigRpcSchema = z.object({
   name: z.string(),
-  config: z.string(), // The Rhai source code
+  source: z.string(), // The Rhai source code
 }).passthrough();
 
 // Profile information from RPC (used in list responses)

@@ -129,7 +129,7 @@ export class RpcClient {
     const validated = validateApiResponse(ProfileConfigRpcSchema, response, 'get_profile_config');
     return {
       name: validated.name,
-      source: validated.config, // Backend returns 'config' field
+      source: validated.source, // Backend returns 'source' field
     };
   }
 

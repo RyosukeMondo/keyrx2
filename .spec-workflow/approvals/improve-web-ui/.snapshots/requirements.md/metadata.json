@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/improve-web-ui/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-13T16:08:31.962Z",
+      "trigger": "initial",
+      "approvalId": "approval_1768320511942_9amqz4zml",
+      "approvalTitle": "Requirements Document for Web UI/UX Improvements"
+    }
+  ]
+}

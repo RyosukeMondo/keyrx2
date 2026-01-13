@@ -62,6 +62,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
   // Available layers
   const availableLayers = ['base', 'md-00', 'md-01', 'md-02', 'md-03', 'md-04', 'md-05'];
 
+  // Responsive layout state: 'global' or 'device' for mobile/tablet views
+  const [activePane, setActivePane] = useState<'global' | 'device'>('global');
+
   // Query for profile config - doesn't block rendering
   const { data: profileConfig, isLoading, error } = useGetProfileConfig(selectedProfileName);
   const { mutateAsync: setProfileConfig } = useSetProfileConfig();
@@ -570,11 +573,45 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             </div>
           </Card>
 
+          {/* Mobile/Tablet Pane Switcher - Hidden on desktop (lg+) and when only one pane is shown */}
+          {globalSelected && selectedDevices.length > 0 && (
+            <div className="flex gap-2 lg:hidden border-b border-slate-700" data-testid="pane-switcher">
+              <button
+                onClick={() => setActivePane('global')}
+                data-testid="pane-global"
+                className={`flex-1 px-4 py-2 font-medium transition-colors ${
+                  activePane === 'global'
+                    ? 'text-primary-400 border-b-2 border-primary-400'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                Global Keys
+              </button>
+              <button
+                onClick={() => setActivePane('device')}
+                data-testid="pane-device"
+                className={`flex-1 px-4 py-2 font-medium transition-colors ${
+                  activePane === 'device'
+                    ? 'text-primary-400 border-b-2 border-primary-400'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                Device Keys
+              </button>
+            </div>
+          )}
+
           {/* Dual-Pane Layout: Global Keys (left) and Device-Specific Keys (right) */}
-          <div className="flex gap-4">
+          {/* Desktop: side-by-side (flex-row), Tablet/Mobile: stacked with conditional visibility */}
+          <div className="flex flex-col lg:flex-row gap-4">
             {/* Left Pane: Global Keyboard with Header and Layer Switcher */}
             {globalSelected && (
-              <div className="flex flex-col gap-3 flex-1">
+              <div className={`flex flex-col gap-3 flex-1 ${
+                // Always show on desktop (lg), on mobile/tablet show based on activePane
+                selectedDevices.length > 0
+                  ? (activePane === 'global' ? 'flex' : 'hidden lg:flex')
+                  : 'flex'
+              }`}>
                 {/* Global Pane Header */}
                 <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-md">
                   <h2 className="text-lg font-semibold text-slate-200">Global Keys</h2>
@@ -623,7 +660,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             {selectedDevices.length > 0 && devices
               .filter((d) => selectedDevices.includes(d.id))
               .map((device) => (
-                <div key={device.id} className="flex flex-col gap-3 flex-1">
+                <div key={device.id} className={`flex flex-col gap-3 flex-1 ${
+                  // Always show on desktop (lg), on mobile/tablet show based on activePane
+                  globalSelected
+                    ? (activePane === 'device' ? 'flex' : 'hidden lg:flex')
+                    : 'flex'
+                }`}>
                   {/* Device Pane Header */}
                   <div className="flex items-center justify-between px-4 py-2 bg-zinc-800/50 border border-zinc-700 rounded-md">
                     <div className="flex items-center gap-2">
@@ -694,7 +736,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
             {/* Warning if no selection */}
             {!globalSelected && selectedDevices.length === 0 && (
-              <Card className="bg-yellow-900/20 border border-yellow-700/50 flex-1">
+              <Card className="bg-yellow-900/20 border border-yellow-700/50 flex-1 block">
                 <div className="text-center py-8">
                   <p className="text-yellow-200 text-lg mb-2">⚠️ No devices selected</p>
                   <p className="text-yellow-300 text-sm">
