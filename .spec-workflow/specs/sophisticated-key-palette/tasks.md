@@ -78,7 +78,7 @@ Sources:
 
 ## Task 3: Implement "Any Key" Custom Input
 
-- [ ] 3.1 Add custom keycode input field
+- [x] 3.1 Add custom keycode input field
   - File: `keyrx_ui/src/components/KeyPalette.tsx`
   - "Any" category with text input for custom keycodes
   - Support QMK syntax: KC_A, LCTL(KC_C), MO(1), LT(2,KC_SPC)

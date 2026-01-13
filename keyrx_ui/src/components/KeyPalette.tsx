@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X, Star, Clock } from 'lucide-react';
+import { Search, X, Star, Clock, Check, AlertCircle, HelpCircle } from 'lucide-react';
 import { Card } from './Card';
 import { KEY_DEFINITIONS, KeyDefinition } from '../data/keyDefinitions';
 
@@ -383,6 +383,136 @@ function findKeyById(keyId: string): PaletteKey | null {
   return allKeys.find(k => k.id === keyId) || null;
 }
 
+/**
+ * Validation result for custom keycodes
+ */
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  normalizedId?: string;
+  label?: string;
+}
+
+/**
+ * Validate QMK-style keycode syntax
+ * Supports:
+ * - Simple keys: A, KC_A, VK_A
+ * - Modifiers: LCTL(KC_C), LSFT(A)
+ * - Layer functions: MO(1), TO(2), TG(3), OSL(4)
+ * - Layer-tap: LT(2,KC_SPC), LT(1,A)
+ */
+function validateCustomKeycode(input: string): ValidationResult {
+  const trimmed = input.trim();
+
+  if (!trimmed) {
+    return { valid: false, error: 'Please enter a keycode' };
+  }
+
+  // Check if it's a simple key ID (matches existing key)
+  const keyDef = KEY_DEFINITIONS.find(k =>
+    k.id === trimmed || k.aliases.includes(trimmed)
+  );
+
+  if (keyDef) {
+    return {
+      valid: true,
+      normalizedId: keyDef.id,
+      label: keyDef.label,
+    };
+  }
+
+  // Check for modifier combinations: LCTL(KC_C), LSFT(A), etc.
+  const modifierPattern = /^(LCTL|RCTL|LSFT|RSFT|LALT|RALT|LMETA|RMETA)\(([A-Za-z0-9_]+)\)$/;
+  const modMatch = trimmed.match(modifierPattern);
+  if (modMatch) {
+    const [, modifier, keyPart] = modMatch;
+    // Validate inner key exists
+    const innerKey = KEY_DEFINITIONS.find(k =>
+      k.id === keyPart || k.aliases.includes(keyPart)
+    );
+
+    if (!innerKey) {
+      return {
+        valid: false,
+        error: `Unknown key: ${keyPart}. Try KC_A, KC_ENTER, etc.`
+      };
+    }
+
+    return {
+      valid: true,
+      normalizedId: trimmed,
+      label: `${modifier}+${innerKey.label}`,
+    };
+  }
+
+  // Check for layer functions: MO(n), TO(n), TG(n), OSL(n)
+  const layerPattern = /^(MO|TO|TG|OSL)\((\d+)\)$/;
+  const layerMatch = trimmed.match(layerPattern);
+  if (layerMatch) {
+    const [, func, layer] = layerMatch;
+    const layerNum = parseInt(layer, 10);
+
+    if (layerNum < 0 || layerNum > 15) {
+      return {
+        valid: false,
+        error: 'Layer number must be between 0-15'
+      };
+    }
+
+    const funcLabels: Record<string, string> = {
+      MO: 'Hold Layer',
+      TO: 'To Layer',
+      TG: 'Toggle Layer',
+      OSL: 'OneShot Layer',
+    };
+
+    return {
+      valid: true,
+      normalizedId: trimmed,
+      label: `${funcLabels[func]} ${layer}`,
+    };
+  }
+
+  // Check for layer-tap: LT(layer, key)
+  const layerTapPattern = /^LT\((\d+),\s*([A-Za-z0-9_]+)\)$/;
+  const ltMatch = trimmed.match(layerTapPattern);
+  if (ltMatch) {
+    const [, layer, keyPart] = ltMatch;
+    const layerNum = parseInt(layer, 10);
+
+    if (layerNum < 0 || layerNum > 15) {
+      return {
+        valid: false,
+        error: 'Layer number must be between 0-15'
+      };
+    }
+
+    // Validate inner key exists
+    const innerKey = KEY_DEFINITIONS.find(k =>
+      k.id === keyPart || k.aliases.includes(keyPart)
+    );
+
+    if (!innerKey) {
+      return {
+        valid: false,
+        error: `Unknown key: ${keyPart}. Try KC_A, KC_ENTER, etc.`
+      };
+    }
+
+    return {
+      valid: true,
+      normalizedId: trimmed,
+      label: `LT${layer}/${innerKey.label}`,
+    };
+  }
+
+  // Unknown pattern
+  return {
+    valid: false,
+    error: 'Invalid syntax. Examples: KC_A, LCTL(KC_C), MO(1), LT(2,KC_SPC)',
+  };
+}
+
 export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
   const [activeCategory, setActiveCategory] = React.useState<PaletteKey['category']>('basic');
   const [activeSubcategory, setActiveSubcategory] = React.useState<string | null>(null);
@@ -393,6 +523,10 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
   // Recent and Favorite keys state
   const [recentKeyIds, setRecentKeyIds] = React.useState<string[]>(() => loadFromStorage(STORAGE_KEY_RECENT));
   const [favoriteKeyIds, setFavoriteKeyIds] = React.useState<string[]>(() => loadFromStorage(STORAGE_KEY_FAVORITES));
+
+  // Custom keycode input state (for "Any" category)
+  const [customKeycode, setCustomKeycode] = React.useState('');
+  const [customValidation, setCustomValidation] = React.useState<ValidationResult>({ valid: false });
 
   // Add key to recent list (max 10, most recent first)
   const addToRecent = React.useCallback((keyId: string) => {
@@ -426,6 +560,28 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
     addToRecent(key.id);
     onKeySelect(key);
   }, [addToRecent, onKeySelect]);
+
+  // Handle custom keycode input change
+  const handleCustomKeycodeChange = React.useCallback((value: string) => {
+    setCustomKeycode(value);
+    const validation = validateCustomKeycode(value);
+    setCustomValidation(validation);
+  }, []);
+
+  // Apply custom keycode
+  const handleApplyCustomKeycode = React.useCallback(() => {
+    if (customValidation.valid && customValidation.normalizedId && customValidation.label) {
+      const customKey: PaletteKey = {
+        id: customValidation.normalizedId,
+        label: customValidation.label,
+        category: 'any',
+        description: `Custom keycode: ${customValidation.normalizedId}`,
+      };
+      handleKeySelect(customKey);
+      setCustomKeycode('');
+      setCustomValidation({ valid: false });
+    }
+  }, [customValidation, handleKeySelect]);
 
   // Get recent and favorite key objects
   const recentKeys = React.useMemo(() => {
@@ -776,9 +932,131 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
             </div>
           )
         ) : activeCategory === 'any' ? (
-          <div className="p-4 text-center text-slate-400">
-            <p className="mb-2">Custom keycode input coming soon...</p>
-            <p className="text-xs text-slate-500">Task 3.1: Add custom keycode input field</p>
+          // Custom keycode input (Any category)
+          <div className="p-6 space-y-6">
+            <div>
+              <h4 className="text-lg font-semibold text-slate-200 mb-2">Custom Keycode</h4>
+              <p className="text-sm text-slate-400 mb-4">
+                Enter any valid QMK-style keycode for advanced customization.
+              </p>
+            </div>
+
+            {/* Input field with validation */}
+            <div className="space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={customKeycode}
+                  onChange={(e) => handleCustomKeycodeChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && customValidation.valid) {
+                      handleApplyCustomKeycode();
+                    }
+                  }}
+                  placeholder="e.g., KC_A, LCTL(KC_C), MO(1), LT(2,KC_SPC)"
+                  className={`
+                    w-full px-4 py-3 pr-10
+                    bg-slate-800 border-2 rounded-lg
+                    text-slate-100 font-mono text-base
+                    placeholder-slate-500
+                    focus:outline-none focus:ring-2
+                    transition-colors
+                    ${customValidation.valid
+                      ? 'border-green-500 focus:border-green-400 focus:ring-green-500/50'
+                      : customKeycode && !customValidation.valid
+                      ? 'border-red-500 focus:border-red-400 focus:ring-red-500/50'
+                      : 'border-slate-700 focus:border-primary-500 focus:ring-primary-500/50'
+                    }
+                  `}
+                />
+                {/* Validation icon */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {customValidation.valid ? (
+                    <Check className="w-5 h-5 text-green-400" />
+                  ) : customKeycode && !customValidation.valid ? (
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Validation message */}
+              {customKeycode && (
+                <div className={`text-sm ${customValidation.valid ? 'text-green-400' : 'text-red-400'}`}>
+                  {customValidation.valid ? (
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Valid keycode</p>
+                        <p className="text-slate-400 text-xs mt-0.5">
+                          Will be mapped as: <span className="font-mono">{customValidation.label}</span>
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <p>{customValidation.error}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Apply button */}
+              <button
+                onClick={handleApplyCustomKeycode}
+                disabled={!customValidation.valid}
+                className={`
+                  w-full px-4 py-3 rounded-lg font-medium
+                  transition-all
+                  ${customValidation.valid
+                    ? 'bg-primary-500 hover:bg-primary-600 text-white shadow-lg hover:shadow-xl'
+                    : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                {customValidation.valid ? 'Apply Keycode' : 'Enter a valid keycode'}
+              </button>
+            </div>
+
+            {/* Help section */}
+            <div className="pt-6 border-t border-slate-700">
+              <div className="flex items-start gap-2 mb-3">
+                <HelpCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                <h5 className="text-sm font-semibold text-slate-300">Supported Syntax</h5>
+              </div>
+              <div className="space-y-3 text-sm text-slate-400">
+                <div>
+                  <p className="font-mono text-xs text-primary-400 mb-1">Simple Keys</p>
+                  <p className="text-xs">
+                    <span className="font-mono text-slate-300">A</span>,{' '}
+                    <span className="font-mono text-slate-300">KC_A</span>,{' '}
+                    <span className="font-mono text-slate-300">KC_ENTER</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="font-mono text-xs text-primary-400 mb-1">Modifier Combinations</p>
+                  <p className="text-xs">
+                    <span className="font-mono text-slate-300">LCTL(KC_C)</span>,{' '}
+                    <span className="font-mono text-slate-300">LSFT(A)</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="font-mono text-xs text-primary-400 mb-1">Layer Functions</p>
+                  <p className="text-xs">
+                    <span className="font-mono text-slate-300">MO(1)</span> = Hold layer,{' '}
+                    <span className="font-mono text-slate-300">TO(2)</span> = Switch to layer<br />
+                    <span className="font-mono text-slate-300">TG(3)</span> = Toggle layer,{' '}
+                    <span className="font-mono text-slate-300">OSL(4)</span> = One-shot layer
+                  </p>
+                </div>
+                <div>
+                  <p className="font-mono text-xs text-primary-400 mb-1">Layer-Tap</p>
+                  <p className="text-xs">
+                    <span className="font-mono text-slate-300">LT(2,KC_SPC)</span> = Hold for layer 2, tap for Space
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : activeKeys.length === 0 ? (
           <div className="p-4 text-center text-slate-400">
