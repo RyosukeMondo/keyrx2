@@ -77,7 +77,7 @@ General UI/UX improvements for the KeyRX Web UI excluding key palette (separate 
 
 ## Task 5: Add Code Editor as Collapsible Panel
 
-- [-] 5.1 Convert code editor to collapsible bottom panel
+- [x] 5.1 Convert code editor to collapsible bottom panel
   - File: `keyrx_ui/src/pages/ConfigPage.tsx`
   - Remove tab-based switching between visual/code editor
   - Add collapsible panel at bottom for code view
