@@ -1,9 +1,10 @@
-import { expect, afterEach, beforeAll, afterAll } from 'vitest';
+import { expect, afterEach, beforeAll, beforeEach, afterAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import * as axeMatchers from 'vitest-axe/matchers';
 import { server } from './mocks/server';
 import { resetMockData } from './mocks/handlers';
+import { setupMockWebSocket, cleanupMockWebSocket } from '../../tests/helpers/websocket';
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
@@ -49,8 +50,8 @@ global.ResizeObserver = class ResizeObserver {
  * - MSW: Proven excellent for HTTP mocking
  * - jest-websocket-mock: Better react-use-websocket compatibility
  *
- * WebSocket setup is handled per-test via setupMockWebSocket() from
- * tests/helpers/websocket.ts - not automatic like HTTP mocking.
+ * WebSocket setup is now automatic for all tests (as of task 1.1).
+ * Tests can still call setupMockWebSocket() manually if needed for custom configuration.
  */
 beforeAll(() =>
   server.listen({
@@ -69,6 +70,19 @@ beforeAll(() =>
     },
   })
 );
+
+/**
+ * Setup WebSocket mock before each test
+ *
+ * This ensures all tests have a properly configured WebSocket mock,
+ * preventing "assertIsWebSocket" errors from react-use-websocket.
+ *
+ * Tests can still override this by calling setupMockWebSocket() again
+ * with custom configuration if needed.
+ */
+beforeEach(async () => {
+  await setupMockWebSocket();
+});
 
 /**
  * Reset handlers between tests to prevent test pollution
@@ -90,12 +104,12 @@ afterAll(() => {
  * This ensures test isolation by:
  * 1. Cleaning up React components
  * 2. Resetting HTTP mock data
- *
- * Note: WebSocket cleanup is handled by cleanupMockWebSocket() in individual
- * tests that use WebSocket mocking (see tests/helpers/websocket.ts).
+ * 3. Cleaning up WebSocket mock (automatic as of task 1.1)
  */
 afterEach(() => {
   cleanup();
   // Reset HTTP mock data to prevent test pollution
   resetMockData();
+  // Clean up WebSocket mock
+  cleanupMockWebSocket();
 });

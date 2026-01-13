@@ -20,7 +20,7 @@ Comprehensive overhaul of test infrastructure: fix failing tests, improve test p
 
 ## Task 1: Fix WebSocket Mock Infrastructure (CRITICAL)
 
-- [ ] 1.1 Diagnose and fix jest-websocket-mock deserialization
+- [-] 1.1 Diagnose and fix jest-websocket-mock deserialization
   - File: `keyrx_ui/src/test/mocks/websocketHandlers.ts`, `tests/helpers/websocket.ts`
   - Error: `SyntaxError: Unexpected token 'e', "test message" is not valid JSON`
   - Fix JSON message serialization in mock handlers

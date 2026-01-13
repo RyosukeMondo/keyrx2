@@ -72,8 +72,31 @@ export async function setupMockWebSocket(
     });
   }
 
-  // Create new server with JSON protocol enabled by default
-  mockServer = new WS(url, { jsonProtocol: true, ...options });
+  // Create new server with graceful JSON parsing that handles both JSON and non-JSON messages
+  // This prevents "Unexpected token" errors when non-JSON strings are sent
+  const safeDeserializer = (message: string | Buffer): any => {
+    const messageStr = message.toString();
+    try {
+      return JSON.parse(messageStr);
+    } catch {
+      // If parsing fails, return the raw string
+      // This allows tests to send both JSON and plain text
+      return messageStr;
+    }
+  };
+
+  const safeSerializer = (message: any): string => {
+    if (typeof message === 'string') {
+      return message;
+    }
+    return JSON.stringify(message);
+  };
+
+  mockServer = new WS(url, {
+    deserializer: safeDeserializer, // Safe deserializer for incoming messages
+    serializer: safeSerializer, // Safe serializer for outgoing messages
+    ...options,
+  });
 
   return mockServer;
 }
@@ -128,6 +151,7 @@ export function cleanupMockWebSocket(): void {
  */
 export function sendServerMessage(message: any): void {
   const server = getMockWebSocket();
+  // jsonProtocol: true handles JSON serialization automatically
   server.send(message);
 }
 
