@@ -123,7 +123,7 @@ Fix WASM build issues, enhance build scripts for verification, and ensure WASM m
 
 ## Task 6: Add WASM Health Check CLI
 
-- [ ] 6.1 Create CLI tool for WASM diagnostics
+- [x] 6.1 Create CLI tool for WASM diagnostics
   - File: `scripts/wasm-health.sh` (create)
   - Check wasm-pack installation and version
   - Check Rust WASM target installed (wasm32-unknown-unknown)
