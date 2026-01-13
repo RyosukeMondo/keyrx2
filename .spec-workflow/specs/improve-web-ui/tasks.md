@@ -33,7 +33,7 @@ General UI/UX improvements for the KeyRX Web UI excluding key palette (separate 
   - _Requirements: Side-by-side layout with dedicated layer switchers_
   - _Prompt: Implement the task for spec improve-web-ui, first run spec-workflow-guide to get the workflow guide then implement the task: Role: React Layout Architect | Task: Redesign ConfigPage to show dual-pane layout: narrow LayerSwitcher + Global Keyboard on left, narrow LayerSwitcher + Device Keyboard on right. Use flex layout with gap. Each pane independently scrollable. | Restrictions: Keep existing KeyboardVisualizer component, maintain layer state per pane | Success: Two keyboard layouts visible side-by-side with dedicated layer switchers | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
 
-- [-] 2.2 Add pane header labels and device selector
+- [x] 2.2 Add pane header labels and device selector
   - File: `keyrx_ui/src/pages/ConfigPage.tsx`
   - Add "Global Keys" header above left pane
   - Add "Device: [dropdown]" header above right pane
