@@ -257,9 +257,9 @@ describe('ConfigPage - Integration Tests', () => {
       // Clear previous calls
       vi.mocked(rhaiParserModule.parseRhaiScript).mockClear();
 
-      // Switch to code editor tab
-      const codeTab = screen.getByRole('button', { name: /Code Editor/i });
-      await user.click(codeTab);
+      // Open code panel
+      const showCodeButton = screen.getByRole('button', { name: /Show Code/i });
+      await user.click(showCodeButton);
 
       const textarea = screen.getByTestId('code-editor-textarea');
 
@@ -300,9 +300,9 @@ describe('ConfigPage - Integration Tests', () => {
         expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
       });
 
-      // Switch to code editor
-      const codeTab = screen.getByRole('button', { name: /Code Editor/i });
-      await user.click(codeTab);
+      // Open code panel
+      const showCodeButton = screen.getByRole('button', { name: /Show Code/i });
+      await user.click(showCodeButton);
 
       const textarea = screen.getByTestId('code-editor-textarea');
       await user.clear(textarea);
@@ -325,9 +325,9 @@ describe('ConfigPage - Integration Tests', () => {
         expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
       });
 
-      // Switch to code editor
-      const codeTab = screen.getByRole('button', { name: /Code Editor/i });
-      await user.click(codeTab);
+      // Open code panel
+      const showCodeButton = screen.getByRole('button', { name: /Show Code/i });
+      await user.click(showCodeButton);
 
       // Simulate parse error
       vi.mocked(rhaiParserModule.parseRhaiScript).mockImplementation(() => {
@@ -374,9 +374,9 @@ describe('ConfigPage - Integration Tests', () => {
         expect(screen.getByTestId('keyboard-visualizer')).toBeInTheDocument();
       });
 
-      // Switch to code editor
-      const codeTab = screen.getByRole('button', { name: /Code Editor/i });
-      await user.click(codeTab);
+      // Open code panel
+      const showCodeButton = screen.getByRole('button', { name: /Show Code/i });
+      await user.click(showCodeButton);
 
       // Break the code
       vi.mocked(rhaiParserModule.parseRhaiScript).mockImplementation(() => {
@@ -404,9 +404,9 @@ describe('ConfigPage - Integration Tests', () => {
         expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
       });
 
-      // Switch to code editor
-      const codeTab = screen.getByRole('button', { name: /Code Editor/i });
-      await user.click(codeTab);
+      // Open code panel
+      const showCodeButton = screen.getByRole('button', { name: /Show Code/i });
+      await user.click(showCodeButton);
 
       // Create parse error
       vi.mocked(rhaiParserModule.parseRhaiScript).mockImplementation(() => {
@@ -697,7 +697,7 @@ device("SN-001") {
       await user.type(textarea, newCode);
 
       // Click save button
-      const saveButton = screen.getByRole('button', { name: /Save Configuration/i });
+      const saveButton = screen.getByRole('button', { name: /^Save$/i });
       await user.click(saveButton);
 
       // Should call setProfileConfig with the code
@@ -725,7 +725,7 @@ device("SN-001") {
       });
 
       // Click save button
-      const saveButton = screen.getByRole('button', { name: /Save Configuration/i });
+      const saveButton = screen.getByRole('button', { name: /^Save$/i });
       await user.click(saveButton);
 
       // Should handle error
@@ -757,7 +757,7 @@ device("SN-001") {
       await user.type(textarea, 'map("Tab", "Escape");');
 
       // Save
-      const saveButton = screen.getByRole('button', { name: /Save Configuration/i });
+      const saveButton = screen.getByRole('button', { name: /^Save$/i });
       await user.click(saveButton);
 
       // Should persist to daemon
@@ -767,8 +767,8 @@ device("SN-001") {
     });
   });
 
-  describe('Tab Switching and State Preservation (Req 6.6)', () => {
-    it('should preserve sync state when switching tabs', async () => {
+  describe('Code Panel Toggle and State Preservation (Req 6.6)', () => {
+    it('should preserve code state when toggling panel', async () => {
       const user = userEvent.setup();
 
       renderWithProviders(<ConfigPage />, { wrapWithRouter: true });
@@ -777,25 +777,27 @@ device("SN-001") {
         expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
       });
 
-      // Start on visual tab
+      // Visual editor should always be visible
       expect(screen.getByTestId('keyboard-visualizer')).toBeInTheDocument();
 
-      // Switch to code tab
-      const codeTab = screen.getByRole('button', { name: /Code Editor/i });
-      await user.click(codeTab);
+      // Open code panel
+      const showCodeButton = screen.getByRole('button', { name: /Show Code/i });
+      await user.click(showCodeButton);
 
       // Modify code
       const textarea = screen.getByTestId('code-editor-textarea');
-      const originalValue = textarea.getAttribute('value') || '';
       await user.clear(textarea);
       await user.type(textarea, 'map("X", "Y");');
 
-      // Switch back to visual tab
-      const visualTab = screen.getByRole('button', { name: /Visual Editor/i });
-      await user.click(visualTab);
+      // Close code panel
+      const hideCodeButton = screen.getByRole('button', { name: /Hide Code/i });
+      await user.click(hideCodeButton);
 
-      // Switch back to code tab
-      await user.click(codeTab);
+      // Visual editor should still be visible
+      expect(screen.getByTestId('keyboard-visualizer')).toBeInTheDocument();
+
+      // Reopen code panel
+      await user.click(screen.getByRole('button', { name: /Show Code/i }));
 
       // Code should still be there
       expect(textarea).toHaveValue('map("X", "Y");');
@@ -815,7 +817,7 @@ device("SN-001") {
       expect(rhaiParserModule.parseRhaiScript).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle rapid tab switching without sync loops', async () => {
+    it('should handle rapid panel toggling without sync loops', async () => {
       const user = userEvent.setup();
 
       renderWithProviders(<ConfigPage />, { wrapWithRouter: true });
@@ -824,15 +826,16 @@ device("SN-001") {
         expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
       });
 
-      const codeTab = screen.getByRole('button', { name: /Code Editor/i });
-      const visualTab = screen.getByRole('button', { name: /Visual Editor/i });
+      // Rapid toggling
+      const showButton = screen.getByRole('button', { name: /Show Code/i });
+      await user.click(showButton);
 
-      // Rapid switching
-      await user.click(codeTab);
-      await user.click(visualTab);
-      await user.click(codeTab);
-      await user.click(visualTab);
-      await user.click(codeTab);
+      const hideButton = screen.getByRole('button', { name: /Hide Code/i });
+      await user.click(hideButton);
+
+      await user.click(screen.getByRole('button', { name: /Show Code/i }));
+      await user.click(screen.getByRole('button', { name: /Hide Code/i }));
+      await user.click(screen.getByRole('button', { name: /Show Code/i }));
 
       // Should not cause infinite loops or crashes
       expect(screen.getByTestId('code-editor-textarea')).toBeInTheDocument();
@@ -879,7 +882,7 @@ device("SN-001") {
 
       // Should show create configuration button
       expect(
-        screen.getByRole('button', { name: /Create Configuration/i })
+        screen.getByRole('button', { name: /^Create$/i })
       ).toBeInTheDocument();
     });
 
@@ -892,7 +895,10 @@ device("SN-001") {
 
       renderWithProviders(<ConfigPage />, { wrapWithRouter: true });
 
-      expect(screen.getByText(/Loading configuration/i)).toBeInTheDocument();
+      // During loading, no error messages should be shown
+      expect(screen.queryByText(/Failed to load/i)).not.toBeInTheDocument();
+      // Component should render without crashing
+      expect(screen.getByRole('button', { name: /Show Code/i })).toBeInTheDocument();
     });
 
     it('should handle error state', async () => {
@@ -922,7 +928,7 @@ device("SN-001") {
         expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
       });
 
-      const saveButton = screen.getByRole('button', { name: /Save Configuration/i });
+      const saveButton = screen.getByRole('button', { name: /^Save$/i });
       expect(saveButton).toBeDisabled();
     });
   });
@@ -960,7 +966,7 @@ device("SN-001") {
       await user.type(textarea, 'map("Enter", "Tab");');
 
       // Step 6: Save
-      const saveButton = screen.getByRole('button', { name: /Save Configuration/i });
+      const saveButton = screen.getByRole('button', { name: /^Save$/i });
       await user.click(saveButton);
 
       // Step 7: Verify save was called

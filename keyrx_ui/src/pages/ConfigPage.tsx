@@ -32,7 +32,10 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
   const [selectedProfileName, setSelectedProfileName] = useState<string>(defaultProfileName);
 
   const api = useUnifiedApi();
-  const [activeTab, setActiveTab] = useState<'visual' | 'code'>('visual');
+
+  // Code panel state
+  const [isCodePanelOpen, setIsCodePanelOpen] = useState(false);
+  const [codePanelHeight, setCodePanelHeight] = useState(300);
 
   // Initialize RhaiSyncEngine for bidirectional sync
   const syncEngine = useRhaiSyncEngine({
@@ -235,10 +238,10 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     }
   }, [syncEngine.state, devicesData]); // Re-run when sync state changes (parsing complete) or devices change
 
-  // Sync visual editor state from parsed AST when transitioning to visual tab or when code changes
+  // Sync visual editor state from parsed AST when code changes
   useEffect(() => {
-    // Only sync when on visual tab and state is idle (parsing complete)
-    if (activeTab !== 'visual' || syncEngine.state !== 'idle') return;
+    // Only sync when state is idle (parsing complete)
+    if (syncEngine.state !== 'idle') return;
 
     const ast = syncEngine.getAST();
     if (!ast) return;
@@ -300,7 +303,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     }
 
     setKeyMappings(newMappings);
-  }, [activeTab, syncEngine.state, globalSelected, selectedDevices, devicesData]);
+  }, [syncEngine.state, globalSelected, selectedDevices, devicesData]);
 
   // Handle profile selection change
   const handleProfileChange = (newProfileName: string) => {
@@ -488,7 +491,15 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             )}
           </div>
 
-          {/* Save Button */}
+          {/* Code Panel Toggle and Save Button */}
+          <button
+            onClick={() => setIsCodePanelOpen(!isCodePanelOpen)}
+            className="px-4 py-2 bg-slate-700 text-slate-200 text-sm font-medium rounded-md hover:bg-slate-600 transition-colors whitespace-nowrap border border-slate-600"
+            title={isCodePanelOpen ? 'Hide Code' : 'Show Code'}
+          >
+            {isCodePanelOpen ? '▼ Hide Code' : '▲ Show Code'}
+          </button>
+
           <button
             onClick={handleSaveConfig}
             disabled={!api.isConnected || !profileExists || syncStatus === 'saving'}
@@ -530,38 +541,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-700" data-testid="editor-tabs">
-        <button
-          onClick={() => setActiveTab('visual')}
-          data-testid="tab-visual"
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'visual'
-              ? 'text-primary-400 border-b-2 border-primary-400'
-              : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          Visual Editor
-        </button>
-        <button
-          onClick={() => setActiveTab('code')}
-          data-testid="tab-code"
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'code'
-              ? 'text-primary-400 border-b-2 border-primary-400'
-              : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          Code Editor
-        </button>
-      </div>
-
-      {/* Content */}
-      {activeTab === 'visual' ? (
-        <>
+      {/* Visual Editor Content (Always visible) */}
+      <div className="flex flex-col gap-4">
           {/* Device Selection Panel (compact at top) */}
           <Card>
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap" data-testid="device-selector">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -569,6 +553,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                   onChange={(e) => setGlobalSelected(e.target.checked)}
                   className="w-4 h-4 text-primary-600 bg-slate-700 border-slate-600 rounded focus:ring-primary-500 focus:ring-2"
                   aria-label="Enable global configuration"
+                  data-testid="global-checkbox"
                 />
                 <span className="text-sm font-medium text-slate-200">
                   Global (All Devices)
@@ -584,6 +569,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                     <label
                       key={device.id}
                       className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-md hover:bg-slate-700 cursor-pointer transition-colors"
+                      data-testid={device.connected === false ? `disconnected-${device.id}` : undefined}
                     >
                       <input
                         type="checkbox"
@@ -834,70 +820,100 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
               availableKeys={getAllAvailableKeys()}
             />
           )}
-        </>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {/* Sync status indicator */}
-          {syncEngine.state !== 'idle' && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-slate-700 border border-slate-600 rounded-md">
-              {syncEngine.state === 'parsing' && (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
-                  <span className="text-sm text-slate-300">Parsing Rhai script...</span>
-                </>
-              )}
-              {syncEngine.state === 'generating' && (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
-                  <span className="text-sm text-slate-300">Generating code...</span>
-                </>
-              )}
-              {syncEngine.state === 'syncing' && (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
-                  <span className="text-sm text-slate-300">Syncing...</span>
-                </>
-              )}
-            </div>
-          )}
+      </div>
 
-          {/* Parse error display */}
-          {syncEngine.error && (
-            <div className="p-4 bg-red-900/20 border border-red-500 rounded-md">
-              <div className="flex items-start gap-3">
-                <span className="text-red-400 text-xl">⚠️</span>
-                <div className="flex-1">
-                  <h4 className="text-red-400 font-semibold mb-1">Parse Error</h4>
-                  <p className="text-sm text-red-300 mb-2">
-                    Line {syncEngine.error.line}, Column {syncEngine.error.column}: {syncEngine.error.message}
-                  </p>
-                  {syncEngine.error.suggestion && (
-                    <p className="text-sm text-slate-300 italic">
-                      💡 {syncEngine.error.suggestion}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => syncEngine.clearError()}
-                  className="text-slate-400 hover:text-slate-300 transition-colors"
-                  aria-label="Clear error"
-                >
-                  ✕
-                </button>
+      {/* Collapsible Code Panel */}
+      {isCodePanelOpen && (
+        <div
+          className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-600 shadow-2xl z-50 transition-all duration-300 ease-in-out"
+          style={{ height: `${codePanelHeight}px` }}
+        >
+          {/* Resize Handle */}
+          <div
+            className="h-1 bg-slate-600 hover:bg-primary-500 cursor-ns-resize transition-colors"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const startY = e.clientY;
+              const startHeight = codePanelHeight;
+
+              const handleMouseMove = (moveEvent: MouseEvent) => {
+                const deltaY = startY - moveEvent.clientY;
+                const newHeight = Math.max(200, Math.min(600, startHeight + deltaY));
+                setCodePanelHeight(newHeight);
+              };
+
+              const handleMouseUp = () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+              };
+
+              document.addEventListener('mousemove', handleMouseMove);
+              document.addEventListener('mouseup', handleMouseUp);
+            }}
+          />
+
+          {/* Code Panel Content */}
+          <div className="h-full flex flex-col p-4 overflow-hidden">
+            {/* Sync status and error indicators */}
+            {syncEngine.state !== 'idle' && (
+              <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-slate-700 border border-slate-600 rounded-md">
+                {syncEngine.state === 'parsing' && (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
+                    <span className="text-sm text-slate-300">Parsing Rhai script...</span>
+                  </>
+                )}
+                {syncEngine.state === 'generating' && (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
+                    <span className="text-sm text-slate-300">Generating code...</span>
+                  </>
+                )}
+                {syncEngine.state === 'syncing' && (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
+                    <span className="text-sm text-slate-300">Syncing...</span>
+                  </>
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          <Card variant="default" padding="lg" data-testid="code-editor-card">
-            <div data-testid="code-editor">
+            {syncEngine.error && (
+              <div className="p-3 mb-2 bg-red-900/20 border border-red-500 rounded-md">
+                <div className="flex items-start gap-3">
+                  <span className="text-red-400 text-lg">⚠️</span>
+                  <div className="flex-1">
+                    <h4 className="text-red-400 font-semibold text-sm mb-1">Parse Error</h4>
+                    <p className="text-xs text-red-300 mb-1">
+                      Line {syncEngine.error.line}, Column {syncEngine.error.column}: {syncEngine.error.message}
+                    </p>
+                    {syncEngine.error.suggestion && (
+                      <p className="text-xs text-slate-300 italic">
+                        💡 {syncEngine.error.suggestion}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => syncEngine.clearError()}
+                    className="text-slate-400 hover:text-slate-300 transition-colors"
+                    aria-label="Clear error"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Code Editor */}
+            <div className="flex-1 overflow-hidden" data-testid="code-editor">
               <SimpleCodeEditor
                 value={syncEngine.getCode()}
                 onChange={(value) => syncEngine.onCodeChange(value)}
-                height="600px"
+                height={`${codePanelHeight - (syncEngine.state !== 'idle' ? 120 : syncEngine.error ? 140 : 60)}px`}
                 language="javascript"
               />
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>
