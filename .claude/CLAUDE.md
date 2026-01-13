@@ -1143,6 +1143,204 @@ cat scripts/logs/build_*.log | tail -50
 - `vagrant/windows/README.md`
 - `docs/development/windows-vm-setup.md`
 
+### WASM Troubleshooting
+
+**Quick Health Check:**
+```bash
+# Run comprehensive WASM diagnostics
+./scripts/wasm-health.sh
+
+# JSON output for automation
+./scripts/wasm-health.sh --json
+```
+
+#### Common WASM Errors and Fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| "WASM not available (run build:wasm)" | WASM module not built or missing | `cd keyrx_ui && npm run build:wasm` |
+| "Using mock simulation (WASM not ready)" | WASM failed to load in UI | Check browser console, rebuild WASM |
+| "wasm-pack: command not found" | wasm-pack not installed | `cargo install wasm-pack` |
+| "wasm32-unknown-unknown not installed" | WASM target missing from Rust toolchain | `rustup target add wasm32-unknown-unknown` |
+| "Hash mismatch" in verify-wasm | WASM file modified after build | `cd keyrx_ui && npm run rebuild:wasm` |
+| "Version mismatch" in verify-wasm | keyrx_core version doesn't match WASM | Rebuild WASM after updating Cargo.toml |
+| "cdylib crate-type not found" | keyrx_core not configured for WASM | Add `crate-type = ["cdylib", "rlib"]` to `[lib]` in `keyrx_core/Cargo.toml` |
+| WASM file size < 100KB | Build incomplete or failed | Check build logs, run `npm run rebuild:wasm` |
+
+#### WASM Build Commands
+
+**Build WASM module:**
+```bash
+# From project root
+cd keyrx_ui
+npm run build:wasm
+
+# Or use the script directly
+../scripts/lib/build-wasm.sh
+```
+
+**Rebuild WASM (clean + build):**
+```bash
+cd keyrx_ui
+npm run rebuild:wasm
+```
+
+**Verify WASM build integrity:**
+```bash
+# From project root
+./scripts/verify-wasm.sh
+
+# With JSON output
+./scripts/verify-wasm.sh --json
+```
+
+**Clean WASM artifacts:**
+```bash
+cd keyrx_ui
+npm run clean:wasm
+```
+
+#### WASM Verification Steps
+
+**1. Check WASM environment health:**
+```bash
+./scripts/wasm-health.sh
+```
+
+Expected output for healthy environment:
+- ✓ wasm-pack installed
+- ✓ wasm32-unknown-unknown target installed
+- ✓ keyrx_core configured with cdylib
+- ✓ wasm-bindgen dependency present
+- ✓ WASM file exists (>100KB)
+- ✓ Manifest valid
+
+**2. Build WASM module:**
+```bash
+cd keyrx_ui
+npm run build:wasm
+```
+
+Expected output:
+```
+[INFO] Building WASM module...
+[INFO] Running wasm-pack build...
+[SUCCESS] WASM build completed
+[INFO] WASM file size: 1882KB
+[SUCCESS] Verification passed
+```
+
+**3. Verify build integrity:**
+```bash
+./scripts/verify-wasm.sh
+```
+
+Expected checks:
+- Manifest exists and is valid JSON
+- WASM file hash matches manifest
+- Version consistency (Cargo.toml, manifest, package.json)
+- wasm-bindgen version compatibility
+
+**4. Test in UI:**
+```bash
+cd keyrx_ui
+npm run dev
+```
+
+Open browser and check:
+- No "WASM not available" error
+- No "Using mock simulation" warning
+- WASM status indicator shows green "WASM Ready"
+
+#### WASM Health Check Details
+
+The `wasm-health.sh` script performs 8 comprehensive checks:
+
+1. **wasm-pack installation** - Required for building WASM
+2. **Rust WASM target** - wasm32-unknown-unknown must be installed
+3. **keyrx_core configuration** - Must have `crate-type = ["cdylib", "rlib"]`
+4. **wasm-bindgen dependency** - Required for JS bindings
+5. **wasm-bindgen CLI** - Optional but recommended for version matching
+6. **WASM build artifacts** - Checks file exists and size > 100KB
+7. **WASM manifest** - Validates manifest exists and is valid JSON
+8. **Version compatibility** - Ensures CLI and dependency versions match
+
+**Exit codes:**
+- 0 - All checks passed (healthy)
+- 1 - One or more checks failed
+- 2 - Critical tool missing
+
+**Example output:**
+```bash
+$ ./scripts/wasm-health.sh
+
+WASM Health Check
+========================================
+
+✓ wasm-pack: Installed (version 0.13.1)
+✓ wasm32-target: wasm32-unknown-unknown installed
+✓ keyrx_core-config: cdylib crate-type configured
+✓ wasm-bindgen-dep: Configured (version 0.2.95)
+⚠ wasm-bindgen-cli: Not installed (optional but recommended)
+✓ wasm-artifacts: WASM file exists (1882KB)
+⚠ wasm-manifest: Manifest not found
+
+Health Check Summary:
+  Total checks: 7
+  Passed: 5
+  Failed: 0
+  Warnings: 2
+
+WASM Health: OK (with warnings)
+```
+
+#### Debugging WASM Loading in UI
+
+**Check browser console:**
+1. Open DevTools (F12)
+2. Look for errors related to WASM loading
+3. Common errors:
+   - "Failed to fetch" - WASM file not found
+   - "WebAssembly instantiation failed" - WASM file corrupted
+   - "Import not found" - Version mismatch between WASM and JS glue code
+
+**Check WASM status in UI:**
+- Look for WASM status badge in UI header
+- Green = Ready, Yellow = Loading, Red = Error
+- Error message should indicate the problem
+
+**Force WASM rebuild:**
+```bash
+cd keyrx_ui
+rm -rf src/wasm/pkg
+npm run build:wasm
+npm run dev
+```
+
+**Verify WASM loads in test environment:**
+```bash
+cd keyrx_ui
+npm test -- useWasm.test.ts
+```
+
+#### Integration with UAT
+
+WASM verification is integrated into the UAT script:
+
+```bash
+# Run full UAT including WASM checks
+./scripts/uat.sh
+
+# Skip WASM checks for quick testing
+./scripts/uat.sh --skip-wasm
+```
+
+UAT performs:
+1. Build WASM module
+2. Verify WASM integrity (hash, version)
+3. Check UI loads WASM successfully
+4. Abort UAT if WASM verification fails
+
 ## Advanced Usage
 
 ### Continuous Development Mode
