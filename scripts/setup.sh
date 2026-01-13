@@ -149,6 +149,14 @@ check_dev_tools_status() {
         fi
     done
 
+    # WASM target
+    if rustup target list --installed | grep -q "wasm32-unknown-unknown"; then
+        log_info "  wasm32-unknown-unknown: installed"
+    else
+        log_warn "  wasm32-unknown-unknown: NOT INSTALLED"
+        all_ok=false
+    fi
+
     # Node.js
     if command_exists node; then
         log_info "  Node.js: $(node --version)"
@@ -326,6 +334,14 @@ install_dev_tools() {
             log_info "$tool already installed"
         fi
     done
+
+    # Install wasm32 target for WASM compilation
+    if ! rustup target list --installed | grep -q "wasm32-unknown-unknown"; then
+        log_info "Installing wasm32-unknown-unknown target..."
+        rustup target add wasm32-unknown-unknown || log_warn "Failed to install wasm32 target"
+    else
+        log_info "wasm32-unknown-unknown target already installed"
+    fi
 
     # Check Node.js and npm
     if ! command_exists node; then

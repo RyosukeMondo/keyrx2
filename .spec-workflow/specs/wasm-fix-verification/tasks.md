@@ -24,7 +24,7 @@ Fix WASM build issues, enhance build scripts for verification, and ensure WASM m
   - _Requirements: Diagnose root cause of WASM failure_
   - _Prompt: Implement the task for spec wasm-fix-verification, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Build Engineer | Task: Investigate WASM build: 1) Check if keyrx_ui/src/wasm/pkg/ exists with .wasm file, 2) Run scripts/lib/build-wasm.sh and capture errors, 3) Check wasm-pack version, 4) Document findings in investigation report. | Restrictions: Don't modify code yet, diagnose only | Success: Root cause identified and documented | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
 
-- [ ] 1.2 Fix WASM build configuration
+- [x] 1.2 Fix WASM build configuration
   - Files: `keyrx_core/Cargo.toml`, `scripts/lib/build-wasm.sh`
   - Ensure crate-type includes "cdylib" for WASM
   - Fix any wasm-bindgen version mismatches
