@@ -134,7 +134,7 @@ Sources:
 
 ## Task 6: Add Physical Key Capture
 
-- [ ] 6.1 Implement "Press physical key" input mode
+- [x] 6.1 Implement "Press physical key" input mode
   - File: `keyrx_ui/src/components/KeyPalette.tsx`
   - Button: "Capture Key" enters listening mode
   - Listen for keydown event, map to key ID

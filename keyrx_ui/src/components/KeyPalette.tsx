@@ -1,6 +1,6 @@
 import React from 'react';
 import { DndContext, DragOverlay, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
-import { Search, X, Star, Clock, Check, AlertCircle, HelpCircle, Grid3x3, List } from 'lucide-react';
+import { Search, X, Star, Clock, Check, AlertCircle, HelpCircle, Grid3x3, List, Keyboard } from 'lucide-react';
 import { Card } from './Card';
 import { KEY_DEFINITIONS, KeyDefinition } from '../data/keyDefinitions';
 import { KeyPaletteItem } from './KeyPaletteItem';
@@ -425,6 +425,61 @@ interface ValidationResult {
 }
 
 /**
+ * Map DOM KeyboardEvent.code to our key ID
+ * Uses KEY_DEFINITIONS aliases to find matching key
+ */
+function mapDomCodeToKeyId(domCode: string): PaletteKey | null {
+  // Normalize the DOM code - it might be like "KeyA", "Digit1", etc.
+  // We need to map these to our KEY_ format
+
+  // First try direct match with aliases
+  const keyDef = KEY_DEFINITIONS.find(k => k.aliases.includes(domCode));
+  if (keyDef) {
+    return {
+      id: keyDef.id,
+      label: keyDef.label,
+      category: keyDef.category,
+      subcategory: keyDef.subcategory,
+      description: keyDef.description,
+    };
+  }
+
+  // Try normalizing common DOM codes to KEY_ format
+  let normalizedCode = domCode;
+
+  // Handle KeyA -> KEY_A
+  if (domCode.startsWith('Key')) {
+    normalizedCode = `KEY_${domCode.slice(3)}`;
+  }
+  // Handle Digit0 -> KEY_0
+  else if (domCode.startsWith('Digit')) {
+    normalizedCode = `KEY_${domCode.slice(5)}`;
+  }
+  // Handle ArrowUp -> KEY_UP
+  else if (domCode.startsWith('Arrow')) {
+    normalizedCode = `KEY_${domCode.slice(5).toUpperCase()}`;
+  }
+  // Handle others directly
+  else {
+    normalizedCode = `KEY_${domCode.toUpperCase()}`;
+  }
+
+  // Try again with normalized code
+  const normalizedKeyDef = KEY_DEFINITIONS.find(k => k.aliases.includes(normalizedCode));
+  if (normalizedKeyDef) {
+    return {
+      id: normalizedKeyDef.id,
+      label: normalizedKeyDef.label,
+      category: normalizedKeyDef.category,
+      subcategory: normalizedKeyDef.subcategory,
+      description: normalizedKeyDef.description,
+    };
+  }
+
+  return null;
+}
+
+/**
  * Validate QMK-style keycode syntax
  * Supports:
  * - Simple keys: A, KC_A, VK_A
@@ -565,6 +620,10 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
   const [customKeycode, setCustomKeycode] = React.useState('');
   const [customValidation, setCustomValidation] = React.useState<ValidationResult>({ valid: false });
 
+  // Physical key capture state
+  const [isCapturingKey, setIsCapturingKey] = React.useState(false);
+  const [capturedKey, setCapturedKey] = React.useState<PaletteKey | null>(null);
+
   // Add key to recent list (max 10, most recent first)
   const addToRecent = React.useCallback((keyId: string) => {
     setRecentKeyIds(prev => {
@@ -628,6 +687,59 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
       setCustomValidation({ valid: false });
     }
   }, [customValidation, handleKeySelect]);
+
+  // Start physical key capture mode
+  const startKeyCapture = React.useCallback(() => {
+    setIsCapturingKey(true);
+    setCapturedKey(null);
+  }, []);
+
+  // Cancel key capture mode
+  const cancelKeyCapture = React.useCallback(() => {
+    setIsCapturingKey(false);
+    setCapturedKey(null);
+  }, []);
+
+  // Confirm captured key
+  const confirmCapturedKey = React.useCallback(() => {
+    if (capturedKey) {
+      handleKeySelect(capturedKey);
+      setIsCapturingKey(false);
+      setCapturedKey(null);
+    }
+  }, [capturedKey, handleKeySelect]);
+
+  // Handle physical key press during capture mode
+  React.useEffect(() => {
+    if (!isCapturingKey) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Allow Escape to cancel
+      if (e.code === 'Escape') {
+        cancelKeyCapture();
+        return;
+      }
+
+      // Map the DOM code to our key ID
+      const mappedKey = mapDomCodeToKeyId(e.code);
+      if (mappedKey) {
+        setCapturedKey(mappedKey);
+      } else {
+        // Unknown key - show error state
+        console.warn('Unknown key code:', e.code);
+      }
+    };
+
+    // Add listener at document level to capture all keys
+    document.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [isCapturingKey, cancelKeyCapture]);
 
   // Get recent and favorite key objects
   const recentKeys = React.useMemo(() => {
@@ -744,34 +856,48 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <Card className="h-full flex flex-col">
-        {/* Header with title and view toggle */}
+        {/* Header with title, capture button, and view toggle */}
         <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-slate-100">Key Palette</h3>
-        <div className="flex gap-1">
+        <div className="flex gap-2">
+          {/* Capture Key button */}
           <button
-            onClick={toggleViewMode}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'grid'
-                ? 'bg-primary-500 text-white'
-                : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
-            }`}
-            title="Grid view"
-            aria-label="Grid view"
+            onClick={startKeyCapture}
+            className="px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+            title="Press any physical key to select it"
+            aria-label="Capture physical key"
           >
-            <Grid3x3 className="w-4 h-4" />
+            <Keyboard className="w-4 h-4" />
+            <span>Capture Key</span>
           </button>
-          <button
-            onClick={toggleViewMode}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'list'
-                ? 'bg-primary-500 text-white'
-                : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
-            }`}
-            title="List view"
-            aria-label="List view"
-          >
-            <List className="w-4 h-4" />
-          </button>
+
+          {/* View toggle buttons */}
+          <div className="flex gap-1">
+            <button
+              onClick={toggleViewMode}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
+              }`}
+              title="Grid view"
+              aria-label="Grid view"
+            >
+              <Grid3x3 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={toggleViewMode}
+              className={`p-2 rounded-lg transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
+              }`}
+              title="List view"
+              aria-label="List view"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1154,6 +1280,77 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
         </div>
       ) : null}
     </DragOverlay>
+
+    {/* Key Capture Modal */}
+    {isCapturingKey && (
+      <div
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+        onClick={cancelKeyCapture}
+      >
+        <div
+          className="bg-slate-800 border-2 border-primary-500 rounded-xl p-8 shadow-2xl max-w-md w-full mx-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Waiting for key press */}
+          {!capturedKey ? (
+            <div className="text-center">
+              <div className="mb-6">
+                <Keyboard className="w-16 h-16 text-primary-400 mx-auto animate-pulse" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-3">
+                Press any key...
+              </h3>
+              <p className="text-slate-400 mb-6">
+                Press the physical key you want to select.
+              </p>
+              <div className="text-xs text-slate-500">
+                Press <kbd className="px-2 py-1 bg-slate-700 rounded border border-slate-600 font-mono">Esc</kbd> to cancel
+              </div>
+            </div>
+          ) : (
+            /* Key captured - show confirmation */
+            <div className="text-center">
+              <div className="mb-6">
+                <div className="inline-block p-4 bg-green-500/20 rounded-full">
+                  <Check className="w-12 h-12 text-green-400" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-3">
+                Key Captured!
+              </h3>
+              <div className="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                <div className="text-3xl font-bold text-white font-mono mb-2">
+                  {capturedKey.label}
+                </div>
+                <div className="text-sm text-slate-400 font-mono mb-1">
+                  {capturedKey.id}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {capturedKey.description}
+                </div>
+              </div>
+              <p className="text-slate-400 mb-6">
+                Use this key for mapping?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelKeyCapture}
+                  className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmCapturedKey}
+                  className="flex-1 px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium"
+                >
+                  Use This Key
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
   </DndContext>
   );
 }
