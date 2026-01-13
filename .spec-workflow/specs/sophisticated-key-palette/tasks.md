@@ -50,7 +50,7 @@ Sources:
 
 ## Task 2: Implement Advanced Search Functionality
 
-- [ ] 2.1 Add fuzzy search with highlighting
+- [x] 2.1 Add fuzzy search with highlighting
   - File: `keyrx_ui/src/components/KeyPalette.tsx`
   - Search input at top of palette, always visible
   - Fuzzy matching: "ctrl" matches "Left Ctrl", "LCTL", "KC_LCTL"
