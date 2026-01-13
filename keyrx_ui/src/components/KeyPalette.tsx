@@ -304,18 +304,16 @@ const MACRO_KEYS: PaletteKey[] = [
   { id: 'M15', label: 'M15', category: 'macro', description: 'Macro 15' },
 ];
 
-const LAYER_KEYS: PaletteKey[] = [
-  { id: 'MD_00', label: 'Base (MD_00)', category: 'layers', description: 'Base layer' },
-  { id: 'MD_01', label: 'Layer 1', category: 'layers', description: 'Layer 1' },
-  { id: 'MD_02', label: 'Layer 2', category: 'layers', description: 'Layer 2' },
-  { id: 'MD_03', label: 'Layer 3', category: 'layers', description: 'Layer 3' },
-  { id: 'MD_04', label: 'Layer 4', category: 'layers', description: 'Layer 4' },
-  { id: 'MD_05', label: 'Layer 5', category: 'layers', description: 'Layer 5' },
-  { id: 'MD_06', label: 'Layer 6', category: 'layers', description: 'Layer 6' },
-  { id: 'MD_07', label: 'Layer 7', category: 'layers', description: 'Layer 7' },
-  { id: 'MD_08', label: 'Layer 8', category: 'layers', description: 'Layer 8' },
-  { id: 'MD_09', label: 'Layer 9', category: 'layers', description: 'Layer 9' },
-];
+// LAYER_KEYS: Now sourced from KEY_DEFINITIONS for single source of truth
+const LAYER_KEYS: PaletteKey[] = KEY_DEFINITIONS
+  .filter(k => k.category === 'layers')
+  .map(k => ({
+    id: k.id,
+    label: k.label,
+    category: k.category,
+    subcategory: k.subcategory,
+    description: k.description,
+  }));
 
 const SPECIAL_KEYS: PaletteKey[] = [
   { id: 'LK_00', label: 'CapsLock', category: 'special', description: 'Caps Lock (LK_00)' },
@@ -777,13 +775,15 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
   const isSearching = searchQuery.trim().length > 0;
 
   // Filter by subcategory if one is active
-  if (activeSubcategory && activeCategory === 'basic' && !isSearching) {
+  if (activeSubcategory && (activeCategory === 'basic' || activeCategory === 'layers') && !isSearching) {
     activeKeys = activeKeys.filter(k => k.subcategory === activeSubcategory);
   }
 
-  // Get unique subcategories for Basic category
+  // Get unique subcategories for Basic and Layers categories
   const subcategories = activeCategory === 'basic'
     ? Array.from(new Set(BASIC_KEYS.map(k => k.subcategory).filter(Boolean)))
+    : activeCategory === 'layers'
+    ? Array.from(new Set(LAYER_KEYS.map(k => k.subcategory).filter(Boolean)))
     : [];
 
   // Handle keyboard navigation in search results
@@ -996,7 +996,7 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
         </div>
       )}
 
-      {/* Subcategory Pills (for Basic category) */}
+      {/* Subcategory Pills (for Basic and Layers categories) */}
       {!isSearching && subcategories.length > 0 && (
         <div className="flex gap-2 mb-3 flex-wrap">
           <button

@@ -200,18 +200,114 @@ export const KEY_DEFINITIONS: KeyDefinition[] = [
   { id: 'M15', label: 'M15', category: 'macro', description: 'User Macro 15', aliases: [] },
 
   // ============================================================
-  // LAYER KEYS
+  // LAYER KEYS - Basic Layer Activation
   // ============================================================
-  { id: 'Layer0', label: 'Base', category: 'layers', description: 'Base Layer (MD_00)', aliases: ['MD_00', 'L0'] },
-  { id: 'Layer1', label: 'Layer 1', category: 'layers', description: 'Layer 1 (MD_01)', aliases: ['MD_01', 'L1'] },
-  { id: 'Layer2', label: 'Layer 2', category: 'layers', description: 'Layer 2 (MD_02)', aliases: ['MD_02', 'L2'] },
-  { id: 'Layer3', label: 'Layer 3', category: 'layers', description: 'Layer 3 (MD_03)', aliases: ['MD_03', 'L3'] },
-  { id: 'Layer4', label: 'Layer 4', category: 'layers', description: 'Layer 4 (MD_04)', aliases: ['MD_04', 'L4'] },
-  { id: 'Layer5', label: 'Layer 5', category: 'layers', description: 'Layer 5 (MD_05)', aliases: ['MD_05', 'L5'] },
-  { id: 'Layer6', label: 'Layer 6', category: 'layers', description: 'Layer 6 (MD_06)', aliases: ['MD_06', 'L6'] },
-  { id: 'Layer7', label: 'Layer 7', category: 'layers', description: 'Layer 7 (MD_07)', aliases: ['MD_07', 'L7'] },
-  { id: 'Layer8', label: 'Layer 8', category: 'layers', description: 'Layer 8 (MD_08)', aliases: ['MD_08', 'L8'] },
-  { id: 'Layer9', label: 'Layer 9', category: 'layers', description: 'Layer 9 (MD_09)', aliases: ['MD_09', 'L9'] },
+  { id: 'Layer0', label: 'Base', category: 'layers', subcategory: 'basic', description: 'Base Layer (MD_00)', aliases: ['MD_00', 'L0'] },
+  { id: 'Layer1', label: 'Layer 1', category: 'layers', subcategory: 'basic', description: 'Layer 1 (MD_01)', aliases: ['MD_01', 'L1'] },
+  { id: 'Layer2', label: 'Layer 2', category: 'layers', subcategory: 'basic', description: 'Layer 2 (MD_02)', aliases: ['MD_02', 'L2'] },
+  { id: 'Layer3', label: 'Layer 3', category: 'layers', subcategory: 'basic', description: 'Layer 3 (MD_03)', aliases: ['MD_03', 'L3'] },
+  { id: 'Layer4', label: 'Layer 4', category: 'layers', subcategory: 'basic', description: 'Layer 4 (MD_04)', aliases: ['MD_04', 'L4'] },
+  { id: 'Layer5', label: 'Layer 5', category: 'layers', subcategory: 'basic', description: 'Layer 5 (MD_05)', aliases: ['MD_05', 'L5'] },
+  { id: 'Layer6', label: 'Layer 6', category: 'layers', subcategory: 'basic', description: 'Layer 6 (MD_06)', aliases: ['MD_06', 'L6'] },
+  { id: 'Layer7', label: 'Layer 7', category: 'layers', subcategory: 'basic', description: 'Layer 7 (MD_07)', aliases: ['MD_07', 'L7'] },
+  { id: 'Layer8', label: 'Layer 8', category: 'layers', subcategory: 'basic', description: 'Layer 8 (MD_08)', aliases: ['MD_08', 'L8'] },
+  { id: 'Layer9', label: 'Layer 9', category: 'layers', subcategory: 'basic', description: 'Layer 9 (MD_09)', aliases: ['MD_09', 'L9'] },
+
+  // ============================================================
+  // LAYER KEYS - Momentary (MO) - Hold to activate layer
+  // ============================================================
+  { id: 'MO(0)', label: 'MO(0)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 0 - Hold to activate, release to deactivate', aliases: ['MO0'] },
+  { id: 'MO(1)', label: 'MO(1)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 1 - Hold to activate, release to deactivate', aliases: ['MO1'] },
+  { id: 'MO(2)', label: 'MO(2)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 2 - Hold to activate, release to deactivate', aliases: ['MO2'] },
+  { id: 'MO(3)', label: 'MO(3)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 3 - Hold to activate, release to deactivate', aliases: ['MO3'] },
+  { id: 'MO(4)', label: 'MO(4)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 4 - Hold to activate, release to deactivate', aliases: ['MO4'] },
+  { id: 'MO(5)', label: 'MO(5)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 5 - Hold to activate, release to deactivate', aliases: ['MO5'] },
+  { id: 'MO(6)', label: 'MO(6)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 6 - Hold to activate, release to deactivate', aliases: ['MO6'] },
+  { id: 'MO(7)', label: 'MO(7)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 7 - Hold to activate, release to deactivate', aliases: ['MO7'] },
+  { id: 'MO(8)', label: 'MO(8)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 8 - Hold to activate, release to deactivate', aliases: ['MO8'] },
+  { id: 'MO(9)', label: 'MO(9)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 9 - Hold to activate, release to deactivate', aliases: ['MO9'] },
+  { id: 'MO(10)', label: 'MO(10)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 10 - Hold to activate, release to deactivate', aliases: ['MO10'] },
+  { id: 'MO(11)', label: 'MO(11)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 11 - Hold to activate, release to deactivate', aliases: ['MO11'] },
+  { id: 'MO(12)', label: 'MO(12)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 12 - Hold to activate, release to deactivate', aliases: ['MO12'] },
+  { id: 'MO(13)', label: 'MO(13)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 13 - Hold to activate, release to deactivate', aliases: ['MO13'] },
+  { id: 'MO(14)', label: 'MO(14)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 14 - Hold to activate, release to deactivate', aliases: ['MO14'] },
+  { id: 'MO(15)', label: 'MO(15)', category: 'layers', subcategory: 'momentary', description: 'Momentary Layer 15 - Hold to activate, release to deactivate', aliases: ['MO15'] },
+
+  // ============================================================
+  // LAYER KEYS - Toggle To (TO) - Switch to layer permanently
+  // ============================================================
+  { id: 'TO(0)', label: 'TO(0)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 0 - Tap to switch to this layer permanently', aliases: ['TO0'] },
+  { id: 'TO(1)', label: 'TO(1)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 1 - Tap to switch to this layer permanently', aliases: ['TO1'] },
+  { id: 'TO(2)', label: 'TO(2)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 2 - Tap to switch to this layer permanently', aliases: ['TO2'] },
+  { id: 'TO(3)', label: 'TO(3)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 3 - Tap to switch to this layer permanently', aliases: ['TO3'] },
+  { id: 'TO(4)', label: 'TO(4)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 4 - Tap to switch to this layer permanently', aliases: ['TO4'] },
+  { id: 'TO(5)', label: 'TO(5)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 5 - Tap to switch to this layer permanently', aliases: ['TO5'] },
+  { id: 'TO(6)', label: 'TO(6)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 6 - Tap to switch to this layer permanently', aliases: ['TO6'] },
+  { id: 'TO(7)', label: 'TO(7)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 7 - Tap to switch to this layer permanently', aliases: ['TO7'] },
+  { id: 'TO(8)', label: 'TO(8)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 8 - Tap to switch to this layer permanently', aliases: ['TO8'] },
+  { id: 'TO(9)', label: 'TO(9)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 9 - Tap to switch to this layer permanently', aliases: ['TO9'] },
+  { id: 'TO(10)', label: 'TO(10)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 10 - Tap to switch to this layer permanently', aliases: ['TO10'] },
+  { id: 'TO(11)', label: 'TO(11)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 11 - Tap to switch to this layer permanently', aliases: ['TO11'] },
+  { id: 'TO(12)', label: 'TO(12)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 12 - Tap to switch to this layer permanently', aliases: ['TO12'] },
+  { id: 'TO(13)', label: 'TO(13)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 13 - Tap to switch to this layer permanently', aliases: ['TO13'] },
+  { id: 'TO(14)', label: 'TO(14)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 14 - Tap to switch to this layer permanently', aliases: ['TO14'] },
+  { id: 'TO(15)', label: 'TO(15)', category: 'layers', subcategory: 'toggle-to', description: 'Toggle To Layer 15 - Tap to switch to this layer permanently', aliases: ['TO15'] },
+
+  // ============================================================
+  // LAYER KEYS - Toggle (TG) - Toggle layer on/off
+  // ============================================================
+  { id: 'TG(0)', label: 'TG(0)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 0 - Tap to toggle layer on/off', aliases: ['TG0'] },
+  { id: 'TG(1)', label: 'TG(1)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 1 - Tap to toggle layer on/off', aliases: ['TG1'] },
+  { id: 'TG(2)', label: 'TG(2)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 2 - Tap to toggle layer on/off', aliases: ['TG2'] },
+  { id: 'TG(3)', label: 'TG(3)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 3 - Tap to toggle layer on/off', aliases: ['TG3'] },
+  { id: 'TG(4)', label: 'TG(4)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 4 - Tap to toggle layer on/off', aliases: ['TG4'] },
+  { id: 'TG(5)', label: 'TG(5)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 5 - Tap to toggle layer on/off', aliases: ['TG5'] },
+  { id: 'TG(6)', label: 'TG(6)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 6 - Tap to toggle layer on/off', aliases: ['TG6'] },
+  { id: 'TG(7)', label: 'TG(7)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 7 - Tap to toggle layer on/off', aliases: ['TG7'] },
+  { id: 'TG(8)', label: 'TG(8)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 8 - Tap to toggle layer on/off', aliases: ['TG8'] },
+  { id: 'TG(9)', label: 'TG(9)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 9 - Tap to toggle layer on/off', aliases: ['TG9'] },
+  { id: 'TG(10)', label: 'TG(10)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 10 - Tap to toggle layer on/off', aliases: ['TG10'] },
+  { id: 'TG(11)', label: 'TG(11)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 11 - Tap to toggle layer on/off', aliases: ['TG11'] },
+  { id: 'TG(12)', label: 'TG(12)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 12 - Tap to toggle layer on/off', aliases: ['TG12'] },
+  { id: 'TG(13)', label: 'TG(13)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 13 - Tap to toggle layer on/off', aliases: ['TG13'] },
+  { id: 'TG(14)', label: 'TG(14)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 14 - Tap to toggle layer on/off', aliases: ['TG14'] },
+  { id: 'TG(15)', label: 'TG(15)', category: 'layers', subcategory: 'toggle', description: 'Toggle Layer 15 - Tap to toggle layer on/off', aliases: ['TG15'] },
+
+  // ============================================================
+  // LAYER KEYS - One Shot Layer (OSL) - Activate for next key only
+  // ============================================================
+  { id: 'OSL(0)', label: 'OSL(0)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 0 - Activate layer for the next key press only', aliases: ['OSL0'] },
+  { id: 'OSL(1)', label: 'OSL(1)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 1 - Activate layer for the next key press only', aliases: ['OSL1'] },
+  { id: 'OSL(2)', label: 'OSL(2)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 2 - Activate layer for the next key press only', aliases: ['OSL2'] },
+  { id: 'OSL(3)', label: 'OSL(3)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 3 - Activate layer for the next key press only', aliases: ['OSL3'] },
+  { id: 'OSL(4)', label: 'OSL(4)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 4 - Activate layer for the next key press only', aliases: ['OSL4'] },
+  { id: 'OSL(5)', label: 'OSL(5)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 5 - Activate layer for the next key press only', aliases: ['OSL5'] },
+  { id: 'OSL(6)', label: 'OSL(6)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 6 - Activate layer for the next key press only', aliases: ['OSL6'] },
+  { id: 'OSL(7)', label: 'OSL(7)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 7 - Activate layer for the next key press only', aliases: ['OSL7'] },
+  { id: 'OSL(8)', label: 'OSL(8)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 8 - Activate layer for the next key press only', aliases: ['OSL8'] },
+  { id: 'OSL(9)', label: 'OSL(9)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 9 - Activate layer for the next key press only', aliases: ['OSL9'] },
+  { id: 'OSL(10)', label: 'OSL(10)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 10 - Activate layer for the next key press only', aliases: ['OSL10'] },
+  { id: 'OSL(11)', label: 'OSL(11)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 11 - Activate layer for the next key press only', aliases: ['OSL11'] },
+  { id: 'OSL(12)', label: 'OSL(12)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 12 - Activate layer for the next key press only', aliases: ['OSL12'] },
+  { id: 'OSL(13)', label: 'OSL(13)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 13 - Activate layer for the next key press only', aliases: ['OSL13'] },
+  { id: 'OSL(14)', label: 'OSL(14)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 14 - Activate layer for the next key press only', aliases: ['OSL14'] },
+  { id: 'OSL(15)', label: 'OSL(15)', category: 'layers', subcategory: 'one-shot', description: 'One-Shot Layer 15 - Activate layer for the next key press only', aliases: ['OSL15'] },
+
+  // ============================================================
+  // LAYER KEYS - Layer Tap (LT) - Hold for layer, tap for key
+  // Note: LT requires specifying both layer and key, e.g., LT(1, KC_SPC)
+  // Providing examples for common combinations
+  // ============================================================
+  { id: 'LT(1,Space)', label: 'LT(1,Spc)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 1, tap for Space', aliases: ['LT1SPC', 'LT(1,KC_SPC)'] },
+  { id: 'LT(2,Space)', label: 'LT(2,Spc)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 2, tap for Space', aliases: ['LT2SPC', 'LT(2,KC_SPC)'] },
+  { id: 'LT(1,Enter)', label: 'LT(1,Ent)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 1, tap for Enter', aliases: ['LT1ENT', 'LT(1,KC_ENT)'] },
+  { id: 'LT(2,Enter)', label: 'LT(2,Ent)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 2, tap for Enter', aliases: ['LT2ENT', 'LT(2,KC_ENT)'] },
+  { id: 'LT(1,Backspace)', label: 'LT(1,BS)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 1, tap for Backspace', aliases: ['LT1BS', 'LT(1,KC_BSPC)'] },
+  { id: 'LT(2,Backspace)', label: 'LT(2,BS)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 2, tap for Backspace', aliases: ['LT2BS', 'LT(2,KC_BSPC)'] },
+  { id: 'LT(1,Tab)', label: 'LT(1,Tab)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 1, tap for Tab', aliases: ['LT1TAB', 'LT(1,KC_TAB)'] },
+  { id: 'LT(2,Tab)', label: 'LT(2,Tab)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 2, tap for Tab', aliases: ['LT2TAB', 'LT(2,KC_TAB)'] },
+  { id: 'LT(1,Escape)', label: 'LT(1,Esc)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 1, tap for Escape', aliases: ['LT1ESC', 'LT(1,KC_ESC)'] },
+  { id: 'LT(2,Escape)', label: 'LT(2,Esc)', category: 'layers', subcategory: 'layer-tap', description: 'Layer-Tap: Hold for Layer 2, tap for Escape', aliases: ['LT2ESC', 'LT(2,KC_ESC)'] },
 
   // ============================================================
   // SPECIAL KEYS (Locks, System Keys)

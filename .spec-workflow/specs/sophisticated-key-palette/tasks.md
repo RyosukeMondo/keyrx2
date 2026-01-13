@@ -149,7 +149,7 @@ Sources:
 
 ## Task 7: Layer Function Keys
 
-- [ ] 7.1 Add comprehensive layer function keys
+- [x] 7.1 Add comprehensive layer function keys
   - File: `keyrx_ui/src/data/keyDefinitions.ts`, `KeyPalette.tsx`
   - MO(n): Momentary layer (hold to activate)
   - TO(n): Toggle to layer (tap to switch)
