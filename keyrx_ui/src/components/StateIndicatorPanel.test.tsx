@@ -149,6 +149,20 @@ describe('StateIndicatorPanel', () => {
     const grid = container.querySelector('.grid');
 
     expect(grid).toHaveClass('grid-cols-1');
-    expect(grid).toHaveClass('md:grid-cols-3');
+    expect(grid).toHaveClass('md:grid-cols-2');
+    expect(grid).toHaveClass('lg:grid-cols-4');
+  });
+
+  it('displays connected devices with virtual/physical badges', async () => {
+    const state: DaemonState = {
+      modifiers: [],
+      locks: [],
+      layer: 0,
+    };
+
+    renderWithProviders(<StateIndicatorPanel state={state} />);
+
+    // Should show Connected Devices section
+    expect(screen.getByLabelText('Connected Devices')).toBeInTheDocument();
   });
 });
