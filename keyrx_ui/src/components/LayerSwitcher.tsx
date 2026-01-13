@@ -37,18 +37,18 @@ export function LayerSwitcher({
   }, [allLayers, searchFilter]);
 
   const formatLayerName = (layer: string) => {
-    if (layer === 'base') return 'Base Layer';
+    if (layer === 'base') return 'Base';
     return layer.toUpperCase().replace('MD-', 'MD_');
   };
 
   return (
-    <div className="flex flex-col bg-gradient-to-r from-red-900/20 to-red-800/20 rounded-lg border border-red-500/30">
-      {/* Header with search */}
-      <div className="p-4 border-b border-red-500/30">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-red-400 font-bold text-sm">LAYERS (256 Total)</span>
-          <span className="text-slate-400 text-xs">
-            {filteredLayers.length} shown
+    <div className="w-24 flex flex-col bg-gradient-to-r from-red-900/20 to-red-800/20 rounded-lg border border-red-500/30 flex-shrink-0">
+      {/* Header with search - compact for narrow width */}
+      <div className="p-2 border-b border-red-500/30">
+        <div className="mb-2">
+          <span className="text-red-400 font-bold text-xs block text-center">LAYERS</span>
+          <span className="text-slate-400 text-xs block text-center">
+            {filteredLayers.length}
           </span>
         </div>
 
@@ -56,20 +56,21 @@ export function LayerSwitcher({
           type="text"
           value={searchFilter}
           onChange={(e) => setSearchFilter(e.target.value)}
-          placeholder="Search layers (e.g., 'md-0a', 'base', '1f')..."
-          className="w-full px-3 py-2 bg-slate-800 border border-red-500/50 rounded text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
+          placeholder="..."
+          title="Search layers (e.g., 'md-0a', 'base', '1f')"
+          className="w-full px-1 py-1 bg-slate-800 border border-red-500/50 rounded text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
           aria-label="Search layers"
         />
       </div>
 
       {/* Scrollable layer list */}
-      <div className="overflow-y-auto max-h-96 p-2">
+      <div className="overflow-y-auto max-h-96 p-1">
         <div className="space-y-1">
           {filteredLayers.map((layer) => (
             <button
               key={layer}
               onClick={() => onLayerChange(layer)}
-              className={`w-full px-4 py-2 rounded-md text-sm font-medium text-left transition-all ${
+              className={`w-full px-1 py-1 rounded text-xs font-medium text-center transition-all break-words ${
                 activeLayer === layer
                   ? 'bg-red-500 text-white shadow-lg shadow-red-500/50'
                   : 'bg-slate-800 text-slate-300 border border-red-500/30 hover:bg-slate-700 hover:border-red-400'
