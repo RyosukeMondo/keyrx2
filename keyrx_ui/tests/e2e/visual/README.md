@@ -12,13 +12,27 @@ Visual regression tests capture screenshots of pages at different viewport sizes
 - **Tablet**: 768x1024px (iPad)
 - **Desktop**: 1024x768px
 
-## Pages Tested
+## Test Files
 
+### responsive.spec.ts
+Tests responsive design at different viewport sizes:
 1. **Profiles Page** (`/`)
 2. **Config Page - Visual Tab** (`/config/Default`)
 3. **Config Page - Code Tab** (with Monaco editor)
 4. **Dashboard Page** (`/dashboard`)
 5. **Devices Page** (`/devices`)
+
+### key-pages.spec.ts (NEW)
+Comprehensive visual regression tests for critical pages:
+1. **Dashboard** - Full page snapshot with loading states hidden
+2. **Devices** - Device list and management UI
+3. **Profiles** - Profile list and management UI
+4. **Configuration** - Monaco editor with Rhai config
+5. **Simulator** - Keyboard simulator interface
+
+Also includes:
+- Component state tests (modals, errors)
+- Responsive design tests (mobile, tablet, desktop viewports)
 
 ## Running Visual Tests
 
@@ -27,27 +41,36 @@ Visual regression tests capture screenshots of pages at different viewport sizes
 When running for the first time, you need to generate baseline images:
 
 ```bash
-# Generate baselines for all browsers
-npm run test:e2e -- tests/e2e/visual/responsive.spec.ts --update-snapshots
+# Generate baselines for all visual tests (recommended)
+npm run test:visual:update
 
-# Or for a specific browser
-npx playwright test tests/e2e/visual/responsive.spec.ts --project=chromium --update-snapshots
+# Generate baselines for specific tests
+npm run test:visual:key-pages:update
+
+# Or using playwright directly
+npx playwright test tests/e2e/visual/responsive.spec.ts --update-snapshots
+npx playwright test tests/e2e/visual/key-pages.spec.ts --update-snapshots
 ```
 
 This will create baseline images in:
 - `tests/e2e/visual/responsive.spec.ts-snapshots/`
+- `tests/e2e/visual/key-pages.spec.ts-snapshots/`
 
 ### Running Visual Regression Tests
 
 ```bash
-# Run visual tests only
-npx playwright test tests/e2e/visual/responsive.spec.ts
+# Run all visual tests
+npm run test:visual
+
+# Run key pages tests only
+npm run test:visual:key-pages
 
 # Run with UI mode for debugging
-npx playwright test tests/e2e/visual/responsive.spec.ts --ui
+npx playwright test tests/e2e/visual --ui
 
-# Run for specific viewport
+# Run for specific viewport or test
 npx playwright test tests/e2e/visual/responsive.spec.ts --grep "mobile"
+npx playwright test tests/e2e/visual/key-pages.spec.ts --grep "Dashboard"
 ```
 
 ### Reviewing Failed Tests

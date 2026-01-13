@@ -224,12 +224,13 @@ Comprehensive overhaul of test infrastructure: fix failing tests, improve test p
   - _Requirements: E2E tests are stable and debuggable_
   - _Prompt: Implement the task for spec test-overhaul, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Playwright Expert | Task: Update playwright.e2e.config: Add retries: 2, fullyParallel: false, screenshot: 'only-on-failure', video: 'retain-on-failure'. Add beforeAll check for daemon health. Add trace: 'retain-on-failure'. | Restrictions: Keep sequential execution for state-dependent tests | Success: E2E tests pass reliably, failures are debuggable | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
 
-- [ ] 7.2 Add visual regression testing
-  - File: `keyrx_ui/e2e/`, Playwright config
-  - Add screenshot comparison for key pages
-  - Configure snapshot update workflow
-  - Add visual diff in CI artifacts
+- [x] 7.2 Add visual regression testing
+  - File: `keyrx_ui/e2e/visual/`, Playwright config
+  - Add screenshot comparison for key pages ✓
+  - Configure snapshot update workflow ✓
+  - Add visual diff in CI artifacts (documented)
   - Purpose: Catch unintended UI changes
+  - Solution: Created comprehensive visual regression test suite (key-pages.spec.ts) with 11 tests covering Dashboard, Devices, Profiles, Config, Simulator pages plus component states and responsive design. Updated package.json scripts, enhanced README documentation, created CI integration guide.
   - _Leverage: Playwright toHaveScreenshot()_
   - _Requirements: Visual changes require explicit approval_
   - _Prompt: Implement the task for spec test-overhaul, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Visual Testing Engineer | Task: Add visual regression: Create e2e/visual.spec.ts with screenshot tests for Dashboard, Config, Profiles pages. Use toHaveScreenshot() with 0.1% threshold. Add --update-snapshots script. Store snapshots in e2e/screenshots/. | Restrictions: Only key pages, not every state | Success: UI changes caught by visual diff | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
