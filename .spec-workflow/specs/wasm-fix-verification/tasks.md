@@ -77,7 +77,7 @@ Fix WASM build issues, enhance build scripts for verification, and ensure WASM m
   - _Requirements: Build script verifies WASM output_
   - _Prompt: Implement the task for spec wasm-fix-verification, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Build Automation Engineer | Task: Enhance build-wasm.sh: 1) Check .wasm file exists in output dir, 2) Verify size > 100KB, 3) Generate sha256sum, 4) Write to wasm-manifest.json with {hash, size, timestamp, version}. Exit 1 if any check fails. | Restrictions: Use standard tools (sha256sum), cross-platform compatible | Success: Build fails fast if WASM output is invalid | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
 
-- [ ] 3.2 Add WASM version matching check
+- [x] 3.2 Add WASM version matching check
   - File: `scripts/verify-wasm.sh` (create)
   - Compare WASM hash in UI bundle vs built WASM
   - Verify keyrx_core version matches WASM version
