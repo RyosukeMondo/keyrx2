@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, X, Star, Clock, Check, AlertCircle, HelpCircle } from 'lucide-react';
 import { Card } from './Card';
 import { KEY_DEFINITIONS, KeyDefinition } from '../data/keyDefinitions';
+import { KeyPaletteItem } from './KeyPaletteItem';
 
 /**
  * Key Palette - Shows available keys/modifiers/layers for assignment
@@ -663,63 +664,20 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
     }
   };
 
-  // Render a key item with star button
+  // Render a key item with star button using KeyPaletteItem component
   const renderKeyItem = (key: PaletteKey, onClick: () => void, showStar: boolean = true) => {
     const favorite = isFavorite(key.id);
 
     return (
-      <div key={key.id} className="relative group">
-        <button
-          onClick={onClick}
-          className={`
-            w-full relative flex flex-col items-center justify-center
-            min-h-[50px] px-2 py-2
-            rounded border transition-all
-            hover:brightness-110 hover:-translate-y-0.5 hover:shadow-lg
-            ${
-              selectedKey?.id === key.id
-                ? 'border-primary-500 bg-primary-500/20 shadow-lg shadow-primary-500/50'
-                : 'border-slate-600 bg-slate-700 hover:border-slate-500'
-            }
-            ${key.category === 'modifiers' ? 'border-cyan-500/50' : ''}
-            ${key.category === 'special' ? 'border-purple-500/50' : ''}
-            ${key.category === 'layers' ? 'border-yellow-500/50' : ''}
-            ${key.category === 'macro' ? 'border-green-500/50' : ''}
-            ${key.category === 'media' ? 'border-pink-500/50' : ''}
-          `}
-          title={key.description || key.id}
-        >
-          {/* Key label (main) */}
-          <div className="text-sm font-bold text-white font-mono">
-            {key.label}
-          </div>
-          {/* Key ID (small, below) */}
-          {key.id !== key.label && (
-            <div className="text-[9px] text-slate-400 mt-0.5 font-mono">
-              {key.id}
-            </div>
-          )}
-        </button>
-        {/* Star button */}
-        {showStar && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(key.id);
-            }}
-            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            title={favorite ? "Remove from favorites" : "Add to favorites"}
-          >
-            <Star
-              className={`w-3 h-3 ${
-                favorite
-                  ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-slate-400 hover:text-yellow-400'
-              }`}
-            />
-          </button>
-        )}
-      </div>
+      <KeyPaletteItem
+        key={key.id}
+        keyItem={key}
+        isSelected={selectedKey?.id === key.id}
+        isFavorite={favorite}
+        showStar={showStar}
+        onClick={onClick}
+        onToggleFavorite={showStar ? () => toggleFavorite(key.id) : undefined}
+      />
     );
   };
 
