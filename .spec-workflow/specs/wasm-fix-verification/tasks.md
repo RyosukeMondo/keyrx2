@@ -92,7 +92,7 @@ Fix WASM build issues, enhance build scripts for verification, and ensure WASM m
 
 ## Task 4: Add npm Scripts for WASM
 
-- [ ] 4.1 Add convenient npm scripts for WASM operations
+- [x] 4.1 Add convenient npm scripts for WASM operations
   - File: `keyrx_ui/package.json`
   - `build:wasm` - Build WASM module
   - `verify:wasm` - Run WASM verification
