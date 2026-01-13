@@ -104,7 +104,7 @@ Comprehensive overhaul of test infrastructure: fix failing tests, improve test p
   - _Requirements: Tests run in parallel where possible_
   - _Prompt: Implement the task for spec test-overhaul, first run spec-workflow-guide to get the workflow guide then implement the task: Role: CI Performance Engineer | Task: Optimize parallel execution: Set pool: 'threads', poolOptions.threads.maxThreads based on CPU. Mark tests needing isolation with describe.sequential. Add npm script for sharded CI runs. | Restrictions: Don't break test isolation, verify no race conditions | Success: Test suite runs 30%+ faster | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
 
-- [-] 3.3 Create focused test run scripts
+- [x] 3.3 Create focused test run scripts
   - File: `keyrx_ui/package.json`
   - `test:changed` - Only test changed files (git diff)
   - `test:related` - Test files related to changes
