@@ -62,7 +62,7 @@ General UI/UX improvements for the KeyRX Web UI excluding key palette (separate 
 
 ## Task 4: Improve Config Editor Header
 
-- [ ] 4.1 Streamline profile selector and status area
+- [x] 4.1 Streamline profile selector and status area
   - File: `keyrx_ui/src/pages/ConfigPage.tsx`
   - Move profile selector to left, compact design
   - Add sync status indicator (saved/unsaved/syncing)
