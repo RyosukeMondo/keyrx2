@@ -54,75 +54,98 @@ export type SubscriptionChannel = "daemon-state" | "events" | "latency";
 /**
  * Messages sent from client to server.
  * Uses discriminated union with 'type' field for type safety.
+ * All message data is nested under a 'content' field as per the RPC protocol.
  */
 export type ClientMessage =
   | {
       /** Message type discriminator */
       type: "query";
-      /** Unique identifier for request/response correlation */
-      id: string;
-      /** Method name to invoke */
-      method: RpcMethod;
-      /** Optional parameters for the method */
-      params?: unknown;
+      /** Message content */
+      content: {
+        /** Unique identifier for request/response correlation */
+        id: string;
+        /** Method name to invoke */
+        method: RpcMethod;
+        /** Optional parameters for the method */
+        params?: unknown;
+      };
     }
   | {
       /** Message type discriminator */
       type: "command";
-      /** Unique identifier for request/response correlation */
-      id: string;
-      /** Method name to invoke */
-      method: RpcMethod;
-      /** Optional parameters for the method */
-      params?: unknown;
+      /** Message content */
+      content: {
+        /** Unique identifier for request/response correlation */
+        id: string;
+        /** Method name to invoke */
+        method: RpcMethod;
+        /** Optional parameters for the method */
+        params?: unknown;
+      };
     }
   | {
       /** Message type discriminator */
       type: "subscribe";
-      /** Unique identifier for request/response correlation */
-      id: string;
-      /** Channel name to subscribe to */
-      channel: SubscriptionChannel;
+      /** Message content */
+      content: {
+        /** Unique identifier for request/response correlation */
+        id: string;
+        /** Channel name to subscribe to */
+        channel: SubscriptionChannel;
+      };
     }
   | {
       /** Message type discriminator */
       type: "unsubscribe";
-      /** Unique identifier for request/response correlation */
-      id: string;
-      /** Channel name to unsubscribe from */
-      channel: SubscriptionChannel;
+      /** Message content */
+      content: {
+        /** Unique identifier for request/response correlation */
+        id: string;
+        /** Channel name to unsubscribe from */
+        channel: SubscriptionChannel;
+      };
     };
 
 /**
  * Messages sent from server to client.
  * Uses discriminated union with 'type' field for type safety.
+ * All message data is nested under a 'content' field as per the RPC protocol.
  */
 export type ServerMessage =
   | {
       /** Message type discriminator */
       type: "response";
-      /** Request ID this response corresponds to */
-      id: string;
-      /** Result data (success) - only present if no error */
-      result?: unknown;
-      /** Error information (failure) - only present if error occurred */
-      error?: RpcError;
+      /** Message content */
+      content: {
+        /** Request ID this response corresponds to */
+        id: string;
+        /** Result data (success) - only present if no error */
+        result?: unknown;
+        /** Error information (failure) - only present if error occurred */
+        error?: RpcError;
+      };
     }
   | {
       /** Message type discriminator */
       type: "event";
-      /** Channel this event was published on */
-      channel: SubscriptionChannel;
-      /** Event data */
-      data: unknown;
+      /** Message content */
+      content: {
+        /** Channel this event was published on */
+        channel: SubscriptionChannel;
+        /** Event data */
+        data: unknown;
+      };
     }
   | {
       /** Message type discriminator */
       type: "connected";
-      /** Protocol version */
-      version: string;
-      /** Server timestamp in microseconds since UNIX epoch */
-      timestamp: number;
+      /** Message content */
+      content: {
+        /** Protocol version */
+        version: string;
+        /** Server timestamp in microseconds since UNIX epoch */
+        timestamp: number;
+      };
     };
 
 /**

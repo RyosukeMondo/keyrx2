@@ -411,9 +411,11 @@ export function createQueryMessage(
 ): ClientMessage {
   return {
     type: 'query',
-    id: id ?? faker.string.uuid(),
-    method: method as any,
-    params,
+    content: {
+      id: id ?? faker.string.uuid(),
+      method: method as any,
+      params,
+    },
   };
 }
 
@@ -427,9 +429,11 @@ export function createCommandMessage(
 ): ClientMessage {
   return {
     type: 'command',
-    id: id ?? faker.string.uuid(),
-    method: method as any,
-    params,
+    content: {
+      id: id ?? faker.string.uuid(),
+      method: method as any,
+      params,
+    },
   };
 }
 
@@ -443,9 +447,11 @@ export function createResponse(
 ): Extract<ServerMessage, { type: 'response' }> {
   return {
     type: 'response',
-    id,
-    result,
-    error,
+    content: {
+      id,
+      result,
+      error,
+    },
   };
 }
 
@@ -457,8 +463,10 @@ export function createConnectedMessage(
 ): Extract<ServerMessage, { type: 'connected' }> {
   return {
     type: 'connected',
-    version: '1.0.0',
-    timestamp: Date.now() * 1000,
+    content: {
+      version: '1.0.0',
+      timestamp: Date.now() * 1000,
+    },
   };
 }
 
@@ -471,7 +479,9 @@ export function createEventMessage(
 ): Extract<ServerMessage, { type: 'event' }> {
   return {
     type: 'event',
-    channel: channel as any,
-    data,
+    content: {
+      channel: channel as any,
+      data,
+    },
   };
 }

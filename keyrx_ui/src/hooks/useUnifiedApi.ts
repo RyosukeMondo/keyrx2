@@ -161,29 +161,29 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
 
       // Handle Response messages
       if (checkIsResponse(message)) {
-        const pending = pendingRequests.current.get(message.id);
+        const pending = pendingRequests.current.get(message.content.id);
         if (pending) {
           clearTimeout(pending.timeoutId);
-          pendingRequests.current.delete(message.id);
+          pendingRequests.current.delete(message.content.id);
 
-          if (message.error) {
-            pending.reject(new Error(message.error.message));
+          if (message.content.error) {
+            pending.reject(new Error(message.content.error.message));
           } else {
-            pending.resolve(message.result);
+            pending.resolve(message.content.result);
           }
         } else {
-          console.warn('[useUnifiedApi] Received response for unknown request:', message.id);
+          console.warn('[useUnifiedApi] Received response for unknown request:', message.content.id);
         }
         return;
       }
 
       // Handle Event messages (broadcasts)
       if (checkIsEvent(message)) {
-        const handlers = subscriptions.current.get(message.channel);
+        const handlers = subscriptions.current.get(message.content.channel);
         if (handlers) {
           handlers.forEach((handler) => {
             try {
-              handler(message.data);
+              handler(message.content.data);
             } catch (error) {
               console.error('[useUnifiedApi] Subscription handler error:', error);
             }
@@ -242,7 +242,7 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
           return;
         }
 
-        const id = message.id;
+        const id = message.content.id;
 
         // Setup timeout
         const timeoutId = setTimeout(() => {
@@ -289,9 +289,11 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
       const id = uuidv4();
       const message: ClientMessage = {
         type: 'query',
-        id,
-        method,
-        params,
+        content: {
+          id,
+          method,
+          params,
+        },
       };
       return sendRequest<T>(message);
     },
@@ -306,9 +308,11 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
       const id = uuidv4();
       const message: ClientMessage = {
         type: 'command',
-        id,
-        method,
-        params,
+        content: {
+          id,
+          method,
+          params,
+        },
       };
       return sendRequest<T>(message);
     },
@@ -339,8 +343,10 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
         const id = uuidv4();
         const message: ClientMessage = {
           type: 'subscribe',
-          id,
-          channel,
+          content: {
+            id,
+            channel,
+          },
         };
         sendMessage(JSON.stringify(message));
       }
@@ -358,8 +364,10 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
               const id = uuidv4();
               const message: ClientMessage = {
                 type: 'unsubscribe',
-                id,
-                channel,
+                content: {
+                  id,
+                  channel,
+                },
               };
               sendMessage(JSON.stringify(message));
             }
@@ -384,8 +392,10 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
           const id = uuidv4();
           const message: ClientMessage = {
             type: 'unsubscribe',
-            id,
-            channel,
+            content: {
+              id,
+              channel,
+            },
           };
           sendMessage(JSON.stringify(message));
         }
@@ -410,8 +420,10 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
           const id = uuidv4();
           const message: ClientMessage = {
             type: 'unsubscribe',
-            id,
-            channel,
+            content: {
+              id,
+              channel,
+            },
           };
           try {
             sendMessage(JSON.stringify(message));
