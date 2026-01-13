@@ -264,7 +264,7 @@ Comprehensive overhaul of test infrastructure: fix failing tests, improve test p
 
 ## Task 9: Test Quality Metrics Dashboard
 
-- [ ] 9.1 Add test metrics collection
+- [x] 9.1 Add test metrics collection
   - File: `scripts/test-metrics.sh` (create)
   - Collect: pass rate, duration, coverage, flaky test count
   - Store in JSON format for trending
