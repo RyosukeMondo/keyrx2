@@ -1,5 +1,7 @@
 import React from 'react';
+import { Search, X } from 'lucide-react';
 import { Card } from './Card';
+import { KEY_DEFINITIONS, KeyDefinition } from '../data/keyDefinitions';
 
 /**
  * Key Palette - Shows available keys/modifiers/layers for assignment
@@ -14,9 +16,163 @@ export interface PaletteKey {
   description?: string;
 }
 
+interface SearchMatch {
+  key: KeyDefinition;
+  score: number;
+  matches: {
+    field: 'id' | 'label' | 'description' | 'alias';
+    text: string;
+    indices: number[];
+  }[];
+}
+
 interface KeyPaletteProps {
   onKeySelect: (key: PaletteKey) => void;
   selectedKey?: PaletteKey | null;
+}
+
+/**
+ * Calculate fuzzy match score and find matching character indices
+ * Returns { score, indices } where score is higher for better matches
+ */
+function fuzzyMatch(text: string, query: string): { score: number; indices: number[] } | null {
+  const textLower = text.toLowerCase();
+  const queryLower = query.toLowerCase();
+
+  // Exact match gets highest score
+  if (textLower === queryLower) {
+    return { score: 1000, indices: Array.from({ length: text.length }, (_, i) => i) };
+  }
+
+  // Starts with query gets high score
+  if (textLower.startsWith(queryLower)) {
+    return { score: 500, indices: Array.from({ length: query.length }, (_, i) => i) };
+  }
+
+  // Contains query gets medium score
+  const containsIndex = textLower.indexOf(queryLower);
+  if (containsIndex >= 0) {
+    const indices = Array.from({ length: query.length }, (_, i) => containsIndex + i);
+    return { score: 200 - containsIndex, indices };
+  }
+
+  // Fuzzy matching: find all query characters in order
+  const indices: number[] = [];
+  let textIdx = 0;
+  let queryIdx = 0;
+  let consecutiveMatches = 0;
+  let score = 0;
+
+  while (textIdx < textLower.length && queryIdx < queryLower.length) {
+    if (textLower[textIdx] === queryLower[queryIdx]) {
+      indices.push(textIdx);
+      queryIdx++;
+      consecutiveMatches++;
+      // Bonus for consecutive matches
+      score += 10 + consecutiveMatches;
+    } else {
+      consecutiveMatches = 0;
+    }
+    textIdx++;
+  }
+
+  // All query characters must be found
+  if (queryIdx !== queryLower.length) {
+    return null;
+  }
+
+  // Penalty for gaps between matches
+  score -= (textIdx - queryLower.length) * 2;
+
+  return { score: Math.max(score, 1), indices };
+}
+
+/**
+ * Search keys with fuzzy matching across all fields
+ */
+function searchKeysWithFuzzy(query: string): SearchMatch[] {
+  if (!query.trim()) return [];
+
+  const results: SearchMatch[] = [];
+
+  for (const key of KEY_DEFINITIONS) {
+    const matches: SearchMatch['matches'] = [];
+    let totalScore = 0;
+
+    // Search in ID
+    const idMatch = fuzzyMatch(key.id, query);
+    if (idMatch) {
+      matches.push({ field: 'id', text: key.id, indices: idMatch.indices });
+      totalScore += idMatch.score * 2; // ID matches are important
+    }
+
+    // Search in label
+    const labelMatch = fuzzyMatch(key.label, query);
+    if (labelMatch) {
+      matches.push({ field: 'label', text: key.label, indices: labelMatch.indices });
+      totalScore += labelMatch.score * 1.5;
+    }
+
+    // Search in description
+    const descMatch = fuzzyMatch(key.description, query);
+    if (descMatch) {
+      matches.push({ field: 'description', text: key.description, indices: descMatch.indices });
+      totalScore += descMatch.score;
+    }
+
+    // Search in aliases
+    for (const alias of key.aliases) {
+      const aliasMatch = fuzzyMatch(alias, query);
+      if (aliasMatch) {
+        matches.push({ field: 'alias', text: alias, indices: aliasMatch.indices });
+        totalScore += aliasMatch.score * 1.5;
+        break; // Only count first matching alias
+      }
+    }
+
+    if (matches.length > 0) {
+      results.push({ key, score: totalScore, matches });
+    }
+  }
+
+  // Sort by score descending
+  return results.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Highlight matching characters in text
+ */
+function highlightMatches(text: string, indices: number[]): React.ReactNode {
+  if (indices.length === 0) return text;
+
+  const result: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  // Create set for O(1) lookup
+  const indexSet = new Set(indices);
+
+  for (let i = 0; i < text.length; i++) {
+    if (indexSet.has(i)) {
+      // Add non-highlighted text before this match
+      if (i > lastIndex) {
+        result.push(text.slice(lastIndex, i));
+      }
+      // Add highlighted character
+      result.push(
+        <mark key={i} className="bg-yellow-400/40 text-yellow-200 font-semibold">
+          {text[i]}
+        </mark>
+      );
+      lastIndex = i + 1;
+    }
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    result.push(text.slice(lastIndex));
+  }
+
+  return <>{result}</>;
 }
 
 // VIA-style key definitions with categories and subcategories
@@ -175,6 +331,9 @@ const SPECIAL_KEYS: PaletteKey[] = [
 export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
   const [activeCategory, setActiveCategory] = React.useState<PaletteKey['category']>('basic');
   const [activeSubcategory, setActiveSubcategory] = React.useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [selectedSearchIndex, setSelectedSearchIndex] = React.useState(0);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const categories = [
     { id: 'basic' as const, label: 'Basic', keys: BASIC_KEYS, icon: '⌨️' },
@@ -186,11 +345,24 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
     { id: 'any' as const, label: 'Any', keys: [], icon: '✏️' },
   ];
 
+  // Search results (if query is active)
+  const searchResults = React.useMemo(() => {
+    return searchQuery.trim() ? searchKeysWithFuzzy(searchQuery) : [];
+  }, [searchQuery]);
+
+  // Reset selected index when search changes
+  React.useEffect(() => {
+    setSelectedSearchIndex(0);
+  }, [searchQuery]);
+
   const activeCategoryData = categories.find(c => c.id === activeCategory);
   let activeKeys = activeCategoryData?.keys || [];
 
+  // If searching, use search results instead
+  const isSearching = searchQuery.trim().length > 0;
+
   // Filter by subcategory if one is active
-  if (activeSubcategory && activeCategory === 'basic') {
+  if (activeSubcategory && activeCategory === 'basic' && !isSearching) {
     activeKeys = activeKeys.filter(k => k.subcategory === activeSubcategory);
   }
 
@@ -199,12 +371,77 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
     ? Array.from(new Set(BASIC_KEYS.map(k => k.subcategory).filter(Boolean)))
     : [];
 
+  // Handle keyboard navigation in search results
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (searchResults.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSearchIndex(prev => Math.min(prev + 1, searchResults.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSearchIndex(prev => Math.max(prev - 1, 0));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (searchResults[selectedSearchIndex]) {
+          const match = searchResults[selectedSearchIndex];
+          onKeySelect({
+            id: match.key.id,
+            label: match.key.label,
+            category: match.key.category,
+            subcategory: match.key.subcategory,
+            description: match.key.description,
+          });
+          setSearchQuery('');
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setSearchQuery('');
+        searchInputRef.current?.blur();
+        break;
+    }
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <h3 className="text-lg font-semibold text-slate-100 mb-4">Key Palette</h3>
 
+      {/* Search Input */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Search keys (e.g., ctrl, enter, KC_A)..."
+          className="w-full pl-10 pr-10 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+        {/* Search result count */}
+        {searchQuery && (
+          <div className="absolute -bottom-5 left-0 text-xs text-slate-400">
+            {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
+          </div>
+        )}
+      </div>
+
       {/* Category Tabs */}
-      <div className="flex gap-1 mb-4 border-b border-slate-700 overflow-x-auto">
+      {!isSearching && (
+        <div className="flex gap-1 mb-4 border-b border-slate-700 overflow-x-auto">
         {categories.map(cat => (
           <button
             key={cat.id}
@@ -222,10 +459,11 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
             <span>{cat.label}</span>
           </button>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Subcategory Pills (for Basic category) */}
-      {subcategories.length > 0 && (
+      {!isSearching && subcategories.length > 0 && (
         <div className="flex gap-2 mb-3 flex-wrap">
           <button
             onClick={() => setActiveSubcategory(null)}
@@ -255,7 +493,93 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
 
       {/* Key Grid - Keyboard keycap style */}
       <div className="flex-1 overflow-y-auto">
-        {activeCategory === 'any' ? (
+        {isSearching ? (
+          // Search Results View
+          searchResults.length === 0 ? (
+            <div className="p-4 text-center text-slate-400">
+              <p className="mb-2">No results found for "{searchQuery}"</p>
+              <p className="text-xs text-slate-500">Try different search terms like "ctrl", "enter", or "KC_A"</p>
+            </div>
+          ) : (
+            <div className="space-y-2 p-4">
+              {searchResults.map((result, idx) => {
+                const match = result.matches[0]; // Primary match for highlighting
+                const isSelected = idx === selectedSearchIndex;
+
+                return (
+                  <button
+                    key={`search-${result.key.id}`}
+                    onClick={() => {
+                      onKeySelect({
+                        id: result.key.id,
+                        label: result.key.label,
+                        category: result.key.category,
+                        subcategory: result.key.subcategory,
+                        description: result.key.description,
+                      });
+                      setSearchQuery('');
+                    }}
+                    className={`
+                      w-full text-left p-3 rounded-lg border transition-all
+                      ${isSelected
+                        ? 'border-primary-500 bg-primary-500/10 ring-2 ring-primary-500/50'
+                        : 'border-slate-700 bg-slate-800 hover:border-slate-600 hover:bg-slate-750'
+                      }
+                    `}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        {/* Key label with highlighting */}
+                        <div className="text-lg font-bold text-white font-mono mb-1">
+                          {match.field === 'label'
+                            ? highlightMatches(result.key.label, match.indices)
+                            : result.key.label
+                          }
+                        </div>
+
+                        {/* Key ID */}
+                        <div className="text-xs text-slate-400 font-mono mb-1">
+                          {match.field === 'id'
+                            ? highlightMatches(result.key.id, match.indices)
+                            : result.key.id
+                          }
+                        </div>
+
+                        {/* Description */}
+                        <div className="text-sm text-slate-300">
+                          {match.field === 'description'
+                            ? highlightMatches(result.key.description, match.indices)
+                            : result.key.description
+                          }
+                        </div>
+
+                        {/* Matched alias */}
+                        {match.field === 'alias' && (
+                          <div className="text-xs text-slate-500 mt-1">
+                            Alias: {highlightMatches(match.text, match.indices)}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Category badge */}
+                      <div className={`
+                        px-2 py-1 text-xs rounded capitalize whitespace-nowrap
+                        ${result.key.category === 'basic' ? 'bg-blue-500/20 text-blue-300' : ''}
+                        ${result.key.category === 'modifiers' ? 'bg-cyan-500/20 text-cyan-300' : ''}
+                        ${result.key.category === 'media' ? 'bg-pink-500/20 text-pink-300' : ''}
+                        ${result.key.category === 'macro' ? 'bg-green-500/20 text-green-300' : ''}
+                        ${result.key.category === 'layers' ? 'bg-yellow-500/20 text-yellow-300' : ''}
+                        ${result.key.category === 'special' ? 'bg-purple-500/20 text-purple-300' : ''}
+                      `}>
+                        {result.key.category}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : activeCategory === 'any' ? (
           <div className="p-4 text-center text-slate-400">
             <p className="mb-2">Custom keycode input coming soon...</p>
             <p className="text-xs text-slate-500">Task 3.1: Add custom keycode input field</p>
@@ -306,7 +630,10 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
 
       {/* Hint */}
       <p className="text-xs text-slate-500 mt-4">
-        Click a key from palette, then click a keyboard key to assign
+        {isSearching
+          ? 'Use ↑↓ arrows to navigate, Enter to select, Esc to clear'
+          : 'Search for keys or browse by category. Click to select.'
+        }
       </p>
     </Card>
   );
