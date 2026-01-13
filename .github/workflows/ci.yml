@@ -244,6 +244,29 @@ jobs:
             exit 1
           fi
 
+      - name: Track Coverage Trend (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        continue-on-error: true
+        id: coverage-trend
+        run: |
+          chmod +x scripts/coverage-trend.sh
+
+          # On main branch, update baseline after successful coverage
+          if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ steps.frontend-coverage.outcome }}" == "success" ]; then
+            echo "Main branch - updating coverage baseline"
+            scripts/coverage-trend.sh --update-baseline
+          else
+            # On PRs/branches, check for regression
+            echo "Checking for coverage regression..."
+            scripts/coverage-trend.sh --generate-badge --json | tee coverage-trend.json || true
+
+            # Display badge URL if generated
+            if [ -f coverage-trend.json ]; then
+              echo "Coverage trend results:"
+              cat coverage-trend.json
+            fi
+          fi
+
       - name: Run Accessibility Audit (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         working-directory: keyrx_ui
@@ -328,6 +351,8 @@ jobs:
             keyrx_ui/test-output.log
             keyrx_ui/coverage-output.log
             keyrx_ui/a11y-output.log
+            coverage-trend.json
+            .coverage-baseline.json
           retention-days: 30
 
   e2e-playwright-tests:
