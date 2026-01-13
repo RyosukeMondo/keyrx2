@@ -120,8 +120,11 @@ export function useRhaiSyncEngine(options: RhaiSyncEngineOptions): RhaiSyncEngin
   const codeRef = useRef<string>('');
   const astRef = useRef<RhaiAST | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const parseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const generateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
   const syncLockRef = useRef(false); // Prevent infinite sync loops
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Update state and notify
   const updateState = useCallback((newState: SyncState) => {
@@ -176,10 +179,29 @@ export function useRhaiSyncEngine(options: RhaiSyncEngineOptions): RhaiSyncEngin
 
   // Cleanup on unmount
   useEffect(() => {
+    // Create new AbortController for this mount
+    abortControllerRef.current = new AbortController();
+
     return () => {
       isMountedRef.current = false;
+
+      // Abort any ongoing async operations
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Clear all timeouts
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      if (parseTimeoutRef.current) {
+        clearTimeout(parseTimeoutRef.current);
+        parseTimeoutRef.current = null;
+      }
+      if (generateTimeoutRef.current) {
+        clearTimeout(generateTimeoutRef.current);
+        generateTimeoutRef.current = null;
       }
     };
   }, []);
@@ -189,30 +211,48 @@ export function useRhaiSyncEngine(options: RhaiSyncEngineOptions): RhaiSyncEngin
     if (!isMountedRef.current || syncLockRef.current) return;
 
     syncLockRef.current = true;
-    updateState('parsing');
-    setDirection('code-to-visual');
+
+    // Only update state if mounted
+    if (isMountedRef.current) {
+      updateState('parsing');
+      setDirection('code-to-visual');
+    }
+
+    // Clear any existing parse timeout
+    if (parseTimeoutRef.current) {
+      clearTimeout(parseTimeoutRef.current);
+    }
 
     // Small delay to allow UI to update
-    setTimeout(() => {
-      if (!isMountedRef.current) return;
+    parseTimeoutRef.current = setTimeout(() => {
+      // Check if component is still mounted
+      if (!isMountedRef.current) {
+        syncLockRef.current = false;
+        return;
+      }
 
       const result = parseRhaiScript(code);
 
       if (result.success && result.ast) {
         // Success: update AST and last valid state
         astRef.current = result.ast;
-        setLastValidAST(result.ast);
-        setError(null);
-        updateState('idle');
-        setDirection('none');
+        if (isMountedRef.current) {
+          setLastValidAST(result.ast);
+          setError(null);
+          updateState('idle');
+          setDirection('none');
+        }
       } else if (result.error) {
         // Error: preserve last valid AST, show error
-        setError(result.error);
-        updateState('error');
-        onError?.(result.error, 'code-to-visual');
+        if (isMountedRef.current) {
+          setError(result.error);
+          updateState('error');
+          onError?.(result.error, 'code-to-visual');
+        }
       }
 
       syncLockRef.current = false;
+      parseTimeoutRef.current = null;
     }, 10);
   }, [updateState, onError]);
 
@@ -221,35 +261,54 @@ export function useRhaiSyncEngine(options: RhaiSyncEngineOptions): RhaiSyncEngin
     if (!isMountedRef.current || syncLockRef.current) return;
 
     syncLockRef.current = true;
-    updateState('generating');
-    setDirection('visual-to-code');
+
+    // Only update state if mounted
+    if (isMountedRef.current) {
+      updateState('generating');
+      setDirection('visual-to-code');
+    }
+
+    // Clear any existing generate timeout
+    if (generateTimeoutRef.current) {
+      clearTimeout(generateTimeoutRef.current);
+    }
 
     // Small delay to allow UI to update
-    setTimeout(() => {
-      if (!isMountedRef.current) return;
+    generateTimeoutRef.current = setTimeout(() => {
+      // Check if component is still mounted
+      if (!isMountedRef.current) {
+        syncLockRef.current = false;
+        return;
+      }
 
       try {
         const code = generateRhaiScript(ast);
         codeRef.current = code;
         astRef.current = ast;
-        setLastValidAST(ast);
-        persistToStorage(code);
-        setError(null);
-        updateState('idle');
-        setDirection('none');
+
+        if (isMountedRef.current) {
+          setLastValidAST(ast);
+          persistToStorage(code);
+          setError(null);
+          updateState('idle');
+          setDirection('none');
+        }
       } catch (err) {
-        const error: ParseError = {
-          line: 0,
-          column: 0,
-          message: err instanceof Error ? err.message : 'Code generation failed',
-          suggestion: 'Check visual editor state for invalid mappings',
-        };
-        setError(error);
-        updateState('error');
-        onError?.(error, 'visual-to-code');
+        if (isMountedRef.current) {
+          const error: ParseError = {
+            line: 0,
+            column: 0,
+            message: err instanceof Error ? err.message : 'Code generation failed',
+            suggestion: 'Check visual editor state for invalid mappings',
+          };
+          setError(error);
+          updateState('error');
+          onError?.(error, 'visual-to-code');
+        }
       }
 
       syncLockRef.current = false;
+      generateTimeoutRef.current = null;
     }, 10);
   }, [updateState, onError, persistToStorage]);
 
