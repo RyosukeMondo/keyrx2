@@ -7,7 +7,7 @@ Fix UI issues identified during User Acceptance Testing for Dashboard, Devices, 
 
 ## Task 1: Dashboard - Add Virtual/Physical Device Indicator
 
-- [-] 1.1 Add device type detection to API/types
+- [x] 1.1 Add device type detection to API/types
   - File: `src/types/index.ts`, `src/api/devices.ts`
   - Add `isVirtual: boolean` field to DeviceEntry interface
   - Detection logic: device name starts with "keyrx" = virtual (uinput-created)
