@@ -65,6 +65,13 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
   // Responsive layout state: 'global' or 'device' for mobile/tablet views
   const [activePane, setActivePane] = useState<'global' | 'device'>('global');
 
+  // Keyboard layout selector
+  const [keyboardLayout, setKeyboardLayout] = useState<'ANSI_104' | 'ISO_105' | 'JIS_109'>('ANSI_104');
+
+  // Sync status tracking
+  const [syncStatus, setSyncStatus] = useState<'saved' | 'unsaved' | 'saving'>('saved');
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
+
   // Query for profile config - doesn't block rendering
   const { data: profileConfig, isLoading, error } = useGetProfileConfig(selectedProfileName);
   const { mutateAsync: setProfileConfig } = useSetProfileConfig();
@@ -94,6 +101,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     if (profileConfig?.source) {
       // Initialize sync engine with loaded config
       syncEngine.onCodeChange(profileConfig.source);
+      setSyncStatus('saved');
     } else if (configMissing) {
       // Default config template when config file doesn't exist
       const defaultTemplate = `// Configuration for profile: ${selectedProfileName}
@@ -108,8 +116,21 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 // Add your key mappings here...
 `;
       syncEngine.onCodeChange(defaultTemplate);
+      setSyncStatus('unsaved');
     }
   }, [profileConfig, configMissing, selectedProfileName]);
+
+  // Track code changes to update sync status
+  useEffect(() => {
+    // Mark as unsaved when code changes (except during save)
+    if (syncStatus === 'saved' && syncEngine.state === 'idle') {
+      const currentCode = syncEngine.getCode();
+      const originalCode = profileConfig?.source || '';
+      if (currentCode !== originalCode) {
+        setSyncStatus('unsaved');
+      }
+    }
+  }, [syncEngine.state, syncEngine.getCode()]);
 
   // Rhai-driven device detection: Extract devices from parsed Rhai and merge with connected devices
   useEffect(() => {
@@ -298,9 +319,13 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
   const handleSaveConfig = async () => {
     try {
+      setSyncStatus('saving');
       await setProfileConfig({ name: selectedProfileName, source: syncEngine.getCode() });
+      setSyncStatus('saved');
+      setLastSaveTime(new Date());
     } catch (err) {
       console.error('Failed to save config:', err);
+      setSyncStatus('unsaved');
     }
   };
 
@@ -386,105 +411,124 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
   return (
     <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6 lg:p-8">
-      {/* Header with Profile Selector */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-100 mb-3">
-            Configuration Editor
-          </h1>
+      {/* Streamlined Header */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-slate-700">
+        {/* Left: Profile Selector */}
+        <div className="flex items-center gap-3">
+          <label htmlFor="profile-selector" className="text-sm font-medium text-slate-300 whitespace-nowrap">
+            Profile:
+          </label>
+          <select
+            id="profile-selector"
+            value={selectedProfileName}
+            onChange={(e) => handleProfileChange(e.target.value)}
+            disabled={isLoadingProfiles || !api.isConnected}
+            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+          >
+            {profiles?.map((profile) => (
+              <option key={profile.name} value={profile.name}>
+                {profile.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          {/* Profile Selector */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <label htmlFor="profile-selector" className="text-sm font-medium text-slate-300">
-              Profile:
-            </label>
-            <select
-              id="profile-selector"
-              value={selectedProfileName}
-              onChange={(e) => handleProfileChange(e.target.value)}
-              disabled={isLoadingProfiles || !api.isConnected}
-              className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-            >
-              {profiles?.map((profile) => (
-                <option key={profile.name} value={profile.name}>
-                  {profile.name}
-                </option>
-              ))}
-            </select>
+        {/* Center: Keyboard Layout Selector */}
+        <div className="flex items-center gap-3">
+          <label htmlFor="layout-selector" className="text-sm font-medium text-slate-300 whitespace-nowrap">
+            Layout:
+          </label>
+          <select
+            id="layout-selector"
+            value={keyboardLayout}
+            onChange={(e) => setKeyboardLayout(e.target.value as 'ANSI_104' | 'ISO_105' | 'JIS_109')}
+            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500"
+            aria-label="Select keyboard layout"
+          >
+            <option value="ANSI_104">ANSI (104)</option>
+            <option value="ISO_105">ISO (105)</option>
+            <option value="JIS_109">JIS (109)</option>
+          </select>
+        </div>
 
-            {/* Status indicators */}
+        {/* Right: Sync Status and Save Button */}
+        <div className="flex items-center gap-3">
+          {/* Sync Status Indicator */}
+          <div className="flex items-center gap-2">
+            {syncStatus === 'saved' && (
+              <div className="flex items-center gap-2 text-xs text-green-400" title="All changes saved">
+                <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                <span className="hidden sm:inline">Saved</span>
+                {lastSaveTime && (
+                  <span className="text-slate-500 hidden md:inline">
+                    {new Date().getTime() - lastSaveTime.getTime() < 60000
+                      ? 'just now'
+                      : `${Math.floor((new Date().getTime() - lastSaveTime.getTime()) / 60000)}m ago`}
+                  </span>
+                )}
+              </div>
+            )}
+            {syncStatus === 'unsaved' && (
+              <div className="flex items-center gap-2 text-xs text-yellow-400" title="Unsaved changes">
+                <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                <span className="hidden sm:inline">Unsaved</span>
+              </div>
+            )}
+            {syncStatus === 'saving' && (
+              <div className="flex items-center gap-2 text-xs text-blue-400" title="Saving...">
+                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                <span className="hidden sm:inline">Saving...</span>
+              </div>
+            )}
             {!api.isConnected && (
-              <span className="text-xs px-2 py-1 bg-yellow-900/30 border border-yellow-500 text-yellow-400 rounded">
-                ⚠️ Disconnected
-              </span>
-            )}
-            {isLoading && api.isConnected && (
-              <span className="text-xs px-2 py-1 bg-blue-900/30 border border-blue-500 text-blue-400 rounded">
-                ⏳ Loading configuration...
-              </span>
-            )}
-            {configExists && (
-              <span className="text-xs px-2 py-1 bg-green-900/30 border border-green-500 text-green-400 rounded">
-                ✅ Loaded
-              </span>
-            )}
-            {configMissing && (
-              <span className="text-xs px-2 py-1 bg-orange-900/30 border border-orange-500 text-orange-400 rounded">
-                📝 New configuration
-              </span>
-            )}
-            {error && (
-              <span className="text-xs px-2 py-1 bg-red-900/30 border border-red-500 text-red-400 rounded">
-                ❌ Error
-              </span>
-            )}
-            {!profileExists && !isLoading && api.isConnected && (
-              <span className="text-xs px-2 py-1 bg-orange-900/30 border border-orange-500 text-orange-400 rounded">
-                ⚠️ Profile not found
-              </span>
+              <div className="flex items-center gap-2 text-xs text-red-400" title="Disconnected from daemon">
+                <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                <span className="hidden sm:inline">Disconnected</span>
+              </div>
             )}
           </div>
 
-          {/* Error message with action */}
-          {!profileExists && !isLoading && api.isConnected && (
-            <div className="mt-3 p-3 bg-orange-900/20 border border-orange-500 rounded-md">
-              <p className="text-sm text-orange-300 mb-2">
-                Profile "{selectedProfileName}" does not exist.
-              </p>
-              <button
-                onClick={handleCreateProfile}
-                className="px-4 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded transition-colors"
-              >
-                Create Profile "{selectedProfileName}"
-              </button>
-            </div>
-          )}
-
-          {configMissing && (
-            <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500 rounded-md">
-              <p className="text-sm text-blue-300">
-                📝 No configuration file found for "{selectedProfileName}". A template has been loaded - click <strong>Save Configuration</strong> to create it.
-              </p>
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-3 p-3 bg-red-900/20 border border-red-500 rounded-md">
-              <p className="text-sm text-red-300">
-                {error instanceof Error ? error.message : 'Failed to load configuration'}
-              </p>
-            </div>
-          )}
+          {/* Save Button */}
+          <button
+            onClick={handleSaveConfig}
+            disabled={!api.isConnected || !profileExists || syncStatus === 'saving'}
+            className="px-4 py-2 bg-primary-500 text-white text-sm font-medium rounded-md hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            {configMissing ? 'Create' : 'Save'}
+          </button>
         </div>
-
-        <button
-          onClick={handleSaveConfig}
-          disabled={!api.isConnected || !profileExists}
-          className="px-6 py-3 bg-primary-500 text-white font-medium rounded-md hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {configMissing ? 'Create Configuration' : 'Save Configuration'}
-        </button>
       </div>
+
+      {/* Error/Info Messages */}
+      {!profileExists && !isLoading && api.isConnected && (
+        <div className="p-3 bg-orange-900/20 border border-orange-500 rounded-md">
+          <p className="text-sm text-orange-300 mb-2">
+            Profile "{selectedProfileName}" does not exist.
+          </p>
+          <button
+            onClick={handleCreateProfile}
+            className="px-4 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded transition-colors"
+          >
+            Create Profile "{selectedProfileName}"
+          </button>
+        </div>
+      )}
+
+      {configMissing && (
+        <div className="p-3 bg-blue-900/20 border border-blue-500 rounded-md">
+          <p className="text-sm text-blue-300">
+            📝 No configuration file found for "{selectedProfileName}". A template has been loaded - click <strong>Save</strong> to create it.
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3 bg-red-900/20 border border-red-500 rounded-md">
+          <p className="text-sm text-red-300">
+            {error instanceof Error ? error.message : 'Failed to load configuration'}
+          </p>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-slate-700" data-testid="editor-tabs">
@@ -642,7 +686,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                     </h3>
                     <div className="flex justify-center p-4">
                       <KeyboardVisualizer
-                        layout="ANSI_104"
+                        layout={keyboardLayout}
                         keyMappings={keyMappings}
                         onKeyClick={handlePhysicalKeyClick}
                         simulatorMode={false}
@@ -720,7 +764,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                       </h3>
                       <div className="flex justify-center p-4">
                         <KeyboardVisualizer
-                          layout="ANSI_104"
+                          layout={keyboardLayout}
                           keyMappings={keyMappings}
                           onKeyClick={handlePhysicalKeyClick}
                           simulatorMode={false}
