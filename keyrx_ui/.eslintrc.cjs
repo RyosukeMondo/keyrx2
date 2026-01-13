@@ -8,10 +8,16 @@ module.exports = {
     },
   },
   extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:react-hooks/recommended', 'plugin:storybook/recommended'],
-  plugins: ['@typescript-eslint', 'react-hooks'],
+  plugins: [
+    '@typescript-eslint',
+    'react-hooks',
+    'local-rules',
+  ],
   rules: {
     'no-console': ['error', { allow: ['warn', 'error'] }],
     '@typescript-eslint/no-explicit-any': 'error',
+    // Enable custom test naming convention rule as warning
+    'local-rules/test-naming-convention': 'warn',
   },
   env: {
     browser: true,

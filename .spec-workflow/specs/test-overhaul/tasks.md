@@ -131,7 +131,7 @@ Comprehensive overhaul of test infrastructure: fix failing tests, improve test p
   - _Requirements: Clear test guidelines documented_
   - _Prompt: Implement the task for spec test-overhaul, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Test Strategy Architect | Task: Create tests/README.md with: Test pyramid ratios, when to use unit/integration/E2E, naming conventions (*.test.tsx, *.integration.test.tsx, *.e2e.ts), file organization, coverage expectations per layer. | Restrictions: Align with existing patterns, practical guidelines | Success: New contributors can understand test strategy | After completion: Mark task [-] as in-progress in tasks.md before starting, use log-implementation tool to record artifacts, then mark [x] complete_
 
-- [ ] 4.2 Add test category enforcement
+- [-] 4.2 Add test category enforcement
   - File: `keyrx_ui/vitest.config.base.ts`, `.eslintrc.js`
   - Add ESLint rule: test files must match naming convention
   - Add Vitest config validation for test categories

@@ -585,6 +585,95 @@ Tests run automatically in CI pipeline (`.github/workflows/ci.yml`):
 
 ---
 
+## Automatic Test Quality Enforcement
+
+The project includes automated enforcement tools to maintain test quality and balance:
+
+### ESLint Rule: Test Naming Convention
+
+**Location**: `.eslintrc.cjs` + `eslint-local-rules/test-naming-convention.cjs`
+
+**What it does**: Validates that test files follow the correct naming conventions:
+- Unit tests: `*.test.ts` or `*.test.tsx`
+- Integration tests: `*.integration.test.ts` or `*.integration.test.tsx`
+- E2E tests: `*.e2e.ts`
+
+**Errors detected**:
+- Using `.spec.*` instead of `.test.*`
+- Missing type indicators (e.g., `.integration.`)
+- Inconsistent naming patterns
+
+**Example output**:
+```
+src/components/Button.spec.tsx
+  1:1  warning  Use ".test.*" instead of ".spec.*" for test files  local-rules/test-naming-convention
+```
+
+**To run**:
+```bash
+npm run lint           # Check all files
+npm run lint:fix       # Auto-fix naming issues where possible
+```
+
+### Vitest Reporter: Test Balance Reporter
+
+**Location**: `vitest-reporters/test-balance-reporter.ts`
+
+**What it does**: Monitors test distribution across categories and warns if the pyramid balance is off.
+
+**Target ranges** (warning if outside):
+- Unit: 65-85% (target: 70%)
+- Integration: 15-30% (target: 20%)
+- E2E: 5-15% (target: 10%)
+
+**Example output**:
+```
+═══════════════════════════════════════════════════════
+  Test Pyramid Balance Report
+═══════════════════════════════════════════════════════
+
+  Category       Count    Percentage    Target    Status
+  ───────────────────────────────────────────────────────
+  Unit             90     71.4%    70%       ✓ OK
+  Integration      25     19.8%    20%       ✓ OK
+  E2E              11      8.7%    10%       ✓ OK
+  ───────────────────────────────────────────────────────
+  Total           126
+
+  ✓ Test distribution is within acceptable ranges
+
+═══════════════════════════════════════════════════════
+```
+
+**When warnings appear**:
+```
+  Test Balance Warnings:
+
+  ⚠️  Unit test percentage (85.2%) is above target (65-85%)
+  ⚠️  Integration test percentage (10.1%) is below target (15-30%)
+
+  Recommendation: Review tests/README.md for test pyramid guidelines
+```
+
+**To view**: The reporter runs automatically with every test execution:
+```bash
+npm test              # See balance report at end
+npm test -- --run     # Non-watch mode
+```
+
+**Why these tools exist**:
+1. **Naming consistency**: Makes it easy to identify and categorize tests
+2. **Balance enforcement**: Prevents test suite from becoming top-heavy with slow tests
+3. **Maintainability**: Ensures test suite scales sustainably as project grows
+4. **Team alignment**: Clear, automated guidelines prevent confusion
+
+**Configuration**:
+- ESLint rule: Warning level (won't block commits)
+- Vitest reporter: Always runs, informational only
+- Both can be temporarily disabled if needed, but this is NOT recommended
+
+---
+
 ## References
 
 - [Vitest Documentation](https://vitest.dev/)

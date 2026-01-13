@@ -35,6 +35,11 @@ export const baseConfig: UserConfig = {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
+    // Custom reporters for test quality monitoring
+    reporters: [
+      'default',
+      './vitest-reporters/test-balance-reporter.ts',
+    ],
     // Parallel execution configuration
     pool: 'threads',
     poolOptions: {
