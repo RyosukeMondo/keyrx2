@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Tooltip } from './Tooltip';
 import { cn } from '../utils/cn';
 import type { KeyMapping } from '@/types';
@@ -12,9 +12,43 @@ interface KeyButtonProps {
   className?: string;
 }
 
+// Mapping type icons (using simple SVG shapes for performance)
+const MappingTypeIcon: React.FC<{ type: string }> = ({ type }) => {
+  const iconColor = {
+    simple: 'text-green-400',
+    tap_hold: 'text-red-400',
+    macro: 'text-purple-400',
+    layer_switch: 'text-yellow-400',
+  }[type] || 'text-slate-400';
+
+  const icon = {
+    simple: '→',
+    tap_hold: '↕',
+    macro: '⚡',
+    layer_switch: '⇄',
+  }[type] || '';
+
+  return (
+    <span
+      className={cn('absolute top-0.5 right-0.5 text-[10px] font-bold', iconColor)}
+      aria-hidden="true"
+    >
+      {icon}
+    </span>
+  );
+};
+
 export const KeyButton = React.memo<KeyButtonProps>(
   ({ keyCode, label, mapping, onClick, isPressed = false, className = '' }) => {
     const hasMapping = !!mapping;
+    const [isClicked, setIsClicked] = useState(false);
+
+    // Handle click with animation
+    const handleClick = () => {
+      setIsClicked(true);
+      setTimeout(() => setIsClicked(false), 300);
+      onClick();
+    };
 
     const tooltipContent = useMemo(() => {
       if (!mapping) return `${keyCode} (Default)`;
@@ -54,34 +88,34 @@ export const KeyButton = React.memo<KeyButtonProps>(
     // Determine border and background color based on mapping type
     const getKeyStyle = () => {
       if (!mapping) return {
-        border: 'border-slate-600',
-        bg: 'bg-slate-700',
+        border: 'border-dashed border-slate-600',
+        bg: 'bg-slate-700/50',
       };
 
       switch (mapping.type) {
         case 'simple':
           return {
-            border: 'border-green-500',
+            border: 'border-solid border-green-500',
             bg: 'bg-slate-700',
           };
         case 'tap_hold':
           return {
-            border: 'border-red-500',
+            border: 'border-solid border-red-500',
             bg: 'bg-red-900/15',
           };
         case 'macro':
           return {
-            border: 'border-purple-500',
+            border: 'border-solid border-purple-500',
             bg: 'bg-purple-900/15',
           };
         case 'layer_switch':
           return {
-            border: 'border-yellow-500',
+            border: 'border-solid border-yellow-500',
             bg: 'bg-yellow-900/15',
           };
         default:
           return {
-            border: 'border-slate-600',
+            border: 'border-solid border-slate-600',
             bg: 'bg-slate-700',
           };
       }
@@ -92,23 +126,27 @@ export const KeyButton = React.memo<KeyButtonProps>(
     return (
       <Tooltip content={tooltipContent}>
         <button
-          onClick={onClick}
+          onClick={handleClick}
           aria-label={`Key ${keyCode}. Current mapping: ${tooltipContent}. Click to configure.`}
           className={cn(
             'relative flex flex-col items-center justify-center',
-            'rounded border transition-all duration-150',
-            'hover:brightness-110 hover:-translate-y-0.5',
+            'rounded border-2 transition-all duration-150',
+            'hover:brightness-110 hover:-translate-y-0.5 hover:shadow-lg',
             'focus:outline focus:outline-2 focus:outline-primary-500',
             'min-h-[50px]',
             style.border,
             style.bg,
             isPressed && 'bg-green-500 border-green-400',
+            isClicked && 'scale-95 brightness-125',
             className
           )}
           style={{
             aspectRatio: '1',
           }}
         >
+          {/* Mapping type icon overlay */}
+          {hasMapping && mapping && <MappingTypeIcon type={mapping.type} />}
+
           {/* Original key label (small, gray) */}
           <span className="text-[10px] text-slate-400 font-mono">
             {label}
@@ -119,6 +157,14 @@ export const KeyButton = React.memo<KeyButtonProps>(
             <span className="text-[12px] text-yellow-300 font-bold font-mono mt-0.5">
               {remapText}
             </span>
+          )}
+
+          {/* Click ripple effect */}
+          {isClicked && (
+            <span
+              className="absolute inset-0 rounded animate-ping opacity-75 bg-primary-500/30"
+              aria-hidden="true"
+            />
           )}
         </button>
       </Tooltip>

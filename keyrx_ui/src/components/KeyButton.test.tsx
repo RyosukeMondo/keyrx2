@@ -25,7 +25,8 @@ describe('KeyButton', () => {
     renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} />);
 
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-slate-700');
+    expect(button).toHaveClass('bg-slate-700/50');
+    expect(button).toHaveClass('border-dashed');
     expect(button).toHaveAttribute('aria-label', expect.stringContaining('Default'));
   });
 
@@ -55,7 +56,8 @@ describe('KeyButton', () => {
     renderWithProviders(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
 
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-blue-700');
+    expect(button).toHaveClass('bg-red-900/15');
+    expect(button).toHaveClass('border-red-500');
     expect(button).toHaveAttribute('aria-label', expect.stringContaining('Tap: A, Hold: Ctrl'));
   });
 
@@ -73,7 +75,8 @@ describe('KeyButton', () => {
     renderWithProviders(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
 
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-blue-700');
+    expect(button).toHaveClass('bg-purple-900/15');
+    expect(button).toHaveClass('border-purple-500');
     expect(button).toHaveAttribute('aria-label', expect.stringContaining('Macro (3 steps)'));
   });
 
@@ -87,7 +90,8 @@ describe('KeyButton', () => {
     renderWithProviders(<KeyButton keyCode="A" label="A" mapping={mapping} onClick={onClick} />);
 
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-blue-700');
+    expect(button).toHaveClass('bg-yellow-900/15');
+    expect(button).toHaveClass('border-yellow-500');
     expect(button).toHaveAttribute('aria-label', expect.stringContaining('Layer: gaming'));
   });
 
@@ -122,7 +126,7 @@ describe('KeyButton', () => {
     renderWithProviders(<KeyButton keyCode="A" label="A" onClick={onClick} />);
 
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('hover:bg-slate-600', 'hover:scale-105');
+    expect(button).toHaveClass('hover:brightness-110', 'hover:-translate-y-0.5', 'hover:shadow-lg');
     expect(button).toHaveClass('focus:outline', 'focus:outline-2', 'focus:outline-primary-500');
   });
 });
