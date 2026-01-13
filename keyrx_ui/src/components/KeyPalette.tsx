@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X, Star, Clock, Check, AlertCircle, HelpCircle } from 'lucide-react';
+import { Search, X, Star, Clock, Check, AlertCircle, HelpCircle, Grid3x3, List } from 'lucide-react';
 import { Card } from './Card';
 import { KEY_DEFINITIONS, KeyDefinition } from '../data/keyDefinitions';
 import { KeyPaletteItem } from './KeyPaletteItem';
@@ -334,7 +334,10 @@ const SPECIAL_KEYS: PaletteKey[] = [
  */
 const STORAGE_KEY_RECENT = 'keyrx_recent_keys';
 const STORAGE_KEY_FAVORITES = 'keyrx_favorite_keys';
+const STORAGE_KEY_VIEW_MODE = 'keyrx_palette_view_mode';
 const MAX_RECENT_KEYS = 10;
+
+type ViewMode = 'grid' | 'list';
 
 /**
  * Load array from localStorage with error handling
@@ -360,6 +363,32 @@ function saveToStorage(key: string, data: string[]): void {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (err) {
     console.error(`Failed to save ${key} to localStorage:`, err);
+  }
+}
+
+/**
+ * Load view mode from localStorage with error handling
+ */
+function loadViewMode(): ViewMode {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_VIEW_MODE);
+    if (stored === 'grid' || stored === 'list') {
+      return stored;
+    }
+  } catch (err) {
+    console.warn(`Failed to load view mode from localStorage:`, err);
+  }
+  return 'grid'; // Default to grid view
+}
+
+/**
+ * Save view mode to localStorage with error handling
+ */
+function saveViewMode(mode: ViewMode): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_VIEW_MODE, mode);
+  } catch (err) {
+    console.error(`Failed to save view mode to localStorage:`, err);
   }
 }
 
@@ -521,6 +550,9 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
   const [selectedSearchIndex, setSelectedSearchIndex] = React.useState(0);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
+  // View mode state
+  const [viewMode, setViewMode] = React.useState<ViewMode>(() => loadViewMode());
+
   // Recent and Favorite keys state
   const [recentKeyIds, setRecentKeyIds] = React.useState<string[]>(() => loadFromStorage(STORAGE_KEY_RECENT));
   const [favoriteKeyIds, setFavoriteKeyIds] = React.useState<string[]>(() => loadFromStorage(STORAGE_KEY_FAVORITES));
@@ -555,6 +587,15 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
   const isFavorite = React.useCallback((keyId: string) => {
     return favoriteKeyIds.includes(keyId);
   }, [favoriteKeyIds]);
+
+  // Toggle view mode
+  const toggleViewMode = React.useCallback(() => {
+    setViewMode(prev => {
+      const newMode = prev === 'grid' ? 'list' : 'grid';
+      saveViewMode(newMode);
+      return newMode;
+    });
+  }, []);
 
   // Handle key selection with recent tracking
   const handleKeySelect = React.useCallback((key: PaletteKey) => {
@@ -675,6 +716,7 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
         isSelected={selectedKey?.id === key.id}
         isFavorite={favorite}
         showStar={showStar}
+        viewMode={viewMode}
         onClick={onClick}
         onToggleFavorite={showStar ? () => toggleFavorite(key.id) : undefined}
       />
@@ -683,7 +725,36 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
 
   return (
     <Card className="h-full flex flex-col">
-      <h3 className="text-lg font-semibold text-slate-100 mb-4">Key Palette</h3>
+      {/* Header with title and view toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-slate-100">Key Palette</h3>
+        <div className="flex gap-1">
+          <button
+            onClick={toggleViewMode}
+            className={`p-2 rounded-lg transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-primary-500 text-white'
+                : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
+            }`}
+            title="Grid view"
+            aria-label="Grid view"
+          >
+            <Grid3x3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={toggleViewMode}
+            className={`p-2 rounded-lg transition-colors ${
+              viewMode === 'list'
+                ? 'bg-primary-500 text-white'
+                : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
+            }`}
+            title="List view"
+            aria-label="List view"
+          >
+            <List className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
       {/* Favorites Section */}
       {favoriteKeys.length > 0 && (
@@ -692,7 +763,11 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
             <h4 className="text-sm font-semibold text-slate-300">Favorites</h4>
           </div>
-          <div className="grid grid-cols-8 gap-2 p-3 bg-slate-800/50 rounded-lg">
+          <div className={`p-3 bg-slate-800/50 rounded-lg ${
+            viewMode === 'grid'
+              ? 'grid grid-cols-8 gap-2'
+              : 'flex flex-col gap-2'
+          }`}>
             {favoriteKeys.map(key => renderKeyItem(key, () => handleKeySelect(key), true))}
           </div>
         </div>
@@ -705,7 +780,11 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
             <Clock className="w-4 h-4 text-slate-400" />
             <h4 className="text-sm font-semibold text-slate-300">Recent</h4>
           </div>
-          <div className="grid grid-cols-8 gap-2 p-3 bg-slate-800/50 rounded-lg">
+          <div className={`p-3 bg-slate-800/50 rounded-lg ${
+            viewMode === 'grid'
+              ? 'grid grid-cols-8 gap-2'
+              : 'flex flex-col gap-2'
+          }`}>
             {recentKeys.map(key => renderKeyItem(key, () => handleKeySelect(key), true))}
           </div>
         </div>
@@ -1021,7 +1100,11 @@ export function KeyPalette({ onKeySelect, selectedKey }: KeyPaletteProps) {
             <p>No keys in this category yet</p>
           </div>
         ) : (
-          <div className="grid grid-cols-8 gap-2 p-4 bg-slate-800/50 rounded-lg">
+          <div className={`p-4 bg-slate-800/50 rounded-lg ${
+            viewMode === 'grid'
+              ? 'grid grid-cols-8 gap-2'
+              : 'flex flex-col gap-2'
+          }`}>
             {activeKeys.map(key => renderKeyItem(key, () => handleKeySelect(key), true))}
           </div>
         )}
