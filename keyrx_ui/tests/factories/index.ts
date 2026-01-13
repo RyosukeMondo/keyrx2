@@ -175,6 +175,7 @@ export function createDevice(overrides?: Partial<DeviceEntry>): DeviceEntry {
     scope: overrides?.scope ?? faker.helpers.arrayElement(['global', 'device-specific', null]),
     layout: overrides?.layout ?? faker.helpers.arrayElement(['ANSI_104', 'ISO_105', 'JIS_109', null]),
     isVirtual: overrides?.isVirtual ?? false, // Default to physical device
+    enabled: overrides?.enabled ?? true, // Default to enabled
   };
 }
 
