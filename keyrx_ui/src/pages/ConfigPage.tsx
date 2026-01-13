@@ -512,51 +512,88 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
       {/* Content */}
       {activeTab === 'visual' ? (
         <>
-          {/* Device Selector (compact at top) */}
-          <DeviceSelector
-            devices={devices}
-            selectedDevices={selectedDevices}
-            globalSelected={globalSelected}
-            onSelectionChange={(deviceIds, global) => {
-              setSelectedDevices(deviceIds);
-              setGlobalSelected(global);
-            }}
-          />
+          {/* Device Selection Panel (compact at top) */}
+          <Card>
+            <div className="flex items-center gap-4 flex-wrap">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={globalSelected}
+                  onChange={(e) => setGlobalSelected(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 bg-slate-700 border-slate-600 rounded focus:ring-primary-500 focus:ring-2"
+                  aria-label="Enable global configuration"
+                />
+                <span className="text-sm font-medium text-slate-200">
+                  Global (All Devices)
+                </span>
+              </label>
+
+              <div className="h-5 w-px bg-slate-700"></div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-slate-300">Devices:</span>
+                {devices.length > 0 ? (
+                  devices.map((device) => (
+                    <label
+                      key={device.id}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-md hover:bg-slate-700 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedDevices.includes(device.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedDevices([...selectedDevices, device.id]);
+                          } else {
+                            setSelectedDevices(selectedDevices.filter((id) => id !== device.id));
+                          }
+                        }}
+                        className="w-4 h-4 text-primary-600 bg-slate-700 border-slate-600 rounded focus:ring-primary-500 focus:ring-2"
+                        aria-label={`Select device ${device.name}`}
+                      />
+                      <span className="text-sm text-slate-200">{device.name}</span>
+                      {device.connected !== undefined && (
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            device.connected ? 'bg-green-400' : 'bg-gray-500'
+                          }`}
+                          title={device.connected ? 'Connected' : 'Disconnected'}
+                          aria-label={device.connected ? 'Connected' : 'Disconnected'}
+                        />
+                      )}
+                    </label>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-500">No devices detected</span>
+                )}
+              </div>
+            </div>
+          </Card>
 
           {/* Dual-Pane Layout: Global Keys (left) and Device-Specific Keys (right) */}
           <div className="flex gap-4">
-            {/* Left Pane: Global Keyboard with Layer Switcher */}
+            {/* Left Pane: Global Keyboard with Header and Layer Switcher */}
             {globalSelected && (
-              <div className="flex gap-2 flex-1">
-                <LayerSwitcher
-                  activeLayer={activeLayer}
-                  availableLayers={availableLayers}
-                  onLayerChange={setActiveLayer}
-                />
-                <Card className="bg-gradient-to-br from-slate-800 to-slate-900 flex-1">
-                  <h3 className="text-xl font-bold text-primary-400 mb-4">
-                    Global Keyboard (All Devices)
-                  </h3>
-                  <div className="flex justify-center p-4">
-                    <KeyboardVisualizer
-                      layout="ANSI_104"
-                      keyMappings={keyMappings}
-                      onKeyClick={handlePhysicalKeyClick}
-                      simulatorMode={false}
+              <div className="flex flex-col gap-3 flex-1">
+                {/* Global Pane Header */}
+                <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-md">
+                  <h2 className="text-lg font-semibold text-slate-200">Global Keys</h2>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="global-checkbox"
+                      checked={globalSelected}
+                      onChange={(e) => setGlobalSelected(e.target.checked)}
+                      className="w-4 h-4 text-primary-600 bg-slate-700 border-slate-600 rounded focus:ring-primary-500 focus:ring-2"
                     />
+                    <label htmlFor="global-checkbox" className="text-sm text-slate-300">
+                      Enable
+                    </label>
                   </div>
-                  <p className="text-center text-sm text-slate-400 mt-4">
-                    Click any key to configure global mappings
-                  </p>
-                </Card>
-              </div>
-            )}
+                </div>
 
-            {/* Right Pane: Device-Specific Keyboard with Layer Switcher */}
-            {selectedDevices.length > 0 && devices
-              .filter((d) => selectedDevices.includes(d.id))
-              .map((device) => (
-                <div key={device.id} className="flex gap-2 flex-1">
+                {/* Global Keyboard Content */}
+                <div className="flex gap-2 flex-1 bg-slate-900/30 rounded-lg p-3">
                   <LayerSwitcher
                     activeLayer={activeLayer}
                     availableLayers={availableLayers}
@@ -564,12 +601,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                   />
                   <Card className="bg-gradient-to-br from-slate-800 to-slate-900 flex-1">
                     <h3 className="text-xl font-bold text-primary-400 mb-4">
-                      {device.name}
-                      {device.serial && (
-                        <span className="ml-2 text-sm text-slate-400 font-normal">
-                          ({device.serial})
-                        </span>
-                      )}
+                      Global Keyboard (All Devices)
                     </h3>
                     <div className="flex justify-center p-4">
                       <KeyboardVisualizer
@@ -580,9 +612,83 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                       />
                     </div>
                     <p className="text-center text-sm text-slate-400 mt-4">
-                      Click any key to configure device-specific mappings for {device.name}
+                      Click any key to configure global mappings
                     </p>
                   </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Right Pane: Device-Specific Keyboard with Header and Layer Switcher */}
+            {selectedDevices.length > 0 && devices
+              .filter((d) => selectedDevices.includes(d.id))
+              .map((device) => (
+                <div key={device.id} className="flex flex-col gap-3 flex-1">
+                  {/* Device Pane Header */}
+                  <div className="flex items-center justify-between px-4 py-2 bg-zinc-800/50 border border-zinc-700 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <label htmlFor={`device-selector-${device.id}`} className="text-lg font-semibold text-slate-200">
+                        Device:
+                      </label>
+                      <select
+                        id={`device-selector-${device.id}`}
+                        value={device.id}
+                        onChange={(e) => {
+                          const newDeviceId = e.target.value;
+                          // Replace current device with new selection
+                          const updatedDevices = selectedDevices.filter(id => id !== device.id);
+                          setSelectedDevices([...updatedDevices, newDeviceId]);
+                        }}
+                        className="px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded-md text-slate-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        aria-label="Select device to configure"
+                      >
+                        {devices.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} {d.serial ? `(${d.serial})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        device.connected
+                          ? 'bg-green-900/30 border border-green-500 text-green-400'
+                          : 'bg-gray-900/30 border border-gray-500 text-gray-400'
+                      }`}>
+                        {device.connected ? '● Connected' : '○ Disconnected'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Device Keyboard Content */}
+                  <div className="flex gap-2 flex-1 bg-zinc-900/30 rounded-lg p-3">
+                    <LayerSwitcher
+                      activeLayer={activeLayer}
+                      availableLayers={availableLayers}
+                      onLayerChange={setActiveLayer}
+                    />
+                    <Card className="bg-gradient-to-br from-zinc-800 to-zinc-900 flex-1">
+                      <h3 className="text-xl font-bold text-primary-400 mb-4">
+                        {device.name}
+                        {device.serial && (
+                          <span className="ml-2 text-sm text-slate-400 font-normal">
+                            ({device.serial})
+                          </span>
+                        )}
+                      </h3>
+                      <div className="flex justify-center p-4">
+                        <KeyboardVisualizer
+                          layout="ANSI_104"
+                          keyMappings={keyMappings}
+                          onKeyClick={handlePhysicalKeyClick}
+                          simulatorMode={false}
+                        />
+                      </div>
+                      <p className="text-center text-sm text-slate-400 mt-4">
+                        Click any key to configure device-specific mappings for {device.name}
+                      </p>
+                    </Card>
+                  </div>
                 </div>
               ))}
 
@@ -592,7 +698,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                 <div className="text-center py-8">
                   <p className="text-yellow-200 text-lg mb-2">⚠️ No devices selected</p>
                   <p className="text-yellow-300 text-sm">
-                    Select at least one device or "Global" to configure key mappings
+                    Select at least one device or enable "Global Keys" to configure key mappings
                   </p>
                 </div>
               </Card>
