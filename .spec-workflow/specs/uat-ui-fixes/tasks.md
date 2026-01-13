@@ -124,7 +124,7 @@ Fix UI issues identified during User Acceptance Testing for Dashboard, Devices, 
 
 ## Task 5: Config Page - Fix RPC Error
 
-- [ ] 5.1 Debug and fix "Invalid client RPC message" error
+- [x] 5.1 Debug and fix "Invalid client RPC message" error
   - File: `src/hooks/useProfileConfig.ts`, `src/api/profiles.ts`
   - Error: Invalid input - "content" field expected object but got wrong type
   - Investigate WebSocket/API message format
