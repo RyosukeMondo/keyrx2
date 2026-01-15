@@ -27,7 +27,9 @@ use tempfile::TempDir;
 /// Helper to create a test command with a temporary config directory.
 fn test_cmd(temp_dir: &TempDir) -> Command {
     let mut cmd = cargo_bin_cmd!("keyrx_daemon");
-    cmd.env("XDG_CONFIG_HOME", temp_dir.path());
+    let config_dir = temp_dir.path().join("keyrx");
+    std::fs::create_dir_all(&config_dir).unwrap_or(());
+    cmd.env("KEYRX_CONFIG_DIR", config_dir);
     cmd
 }
 
@@ -880,7 +882,9 @@ fn test_concurrent_profile_operations() {
             let temp_path = temp_dir.path().to_path_buf();
             std::thread::spawn(move || {
                 let mut cmd = cargo_bin_cmd!("keyrx_daemon");
-                cmd.env("XDG_CONFIG_HOME", &temp_path);
+                let config_dir = temp_path.join("keyrx");
+                std::fs::create_dir_all(&config_dir).unwrap_or(());
+                cmd.env("KEYRX_CONFIG_DIR", &config_dir);
                 cmd.arg("profiles")
                     .arg("create")
                     .arg(format!("concurrent-{}", i))

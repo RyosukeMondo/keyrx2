@@ -116,35 +116,7 @@ fn resolve_krx_path(profile: Option<&str>) -> Result<PathBuf, Box<dyn std::error
 
 /// Get configuration directory.
 fn get_config_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
-    if let Ok(dir) = std::env::var("KEYRX_CONFIG_DIR") {
-        return Ok(PathBuf::from(dir));
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(xdg_config) = std::env::var("XDG_CONFIG_HOME") {
-            return Ok(PathBuf::from(xdg_config).join("keyrx"));
-        }
-        if let Ok(home) = std::env::var("HOME") {
-            return Ok(PathBuf::from(home).join(".config/keyrx"));
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        if let Ok(appdata) = std::env::var("APPDATA") {
-            return Ok(PathBuf::from(appdata).join("keyrx"));
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        if let Ok(home) = std::env::var("HOME") {
-            return Ok(PathBuf::from(home).join("Library/Application Support/keyrx"));
-        }
-    }
-
-    Err("Could not determine config directory".into())
+    crate::cli::config_dir::get_config_dir()
 }
 
 /// Print human-readable output.

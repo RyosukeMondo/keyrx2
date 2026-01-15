@@ -11,9 +11,10 @@ use tempfile::TempDir;
 fn profiles_cmd(temp_dir: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("keyrx_daemon").unwrap();
 
-    // Set XDG_CONFIG_HOME to use temp directory
-    let config_dir = temp_dir.path();
-    cmd.env("XDG_CONFIG_HOME", config_dir);
+    // Set KEYRX_CONFIG_DIR to use temp directory (works on all platforms)
+    let config_dir = temp_dir.path().join("keyrx");
+    std::fs::create_dir_all(&config_dir).unwrap();
+    cmd.env("KEYRX_CONFIG_DIR", config_dir);
 
     cmd
 }

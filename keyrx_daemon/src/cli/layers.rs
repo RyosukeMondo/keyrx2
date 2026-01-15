@@ -405,8 +405,7 @@ fn handle_show(
 
 /// Get config directory path.
 fn get_config_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE"))?;
-    Ok(PathBuf::from(home).join(".config/keyrx"))
+    crate::cli::config_dir::get_config_dir()
 }
 
 /// Resolve profile name (use active if not specified).

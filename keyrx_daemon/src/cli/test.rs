@@ -118,11 +118,7 @@ fn resolve_krx_path(profile: Option<&str>) -> Result<PathBuf, Box<dyn std::error
 
 /// Get config directory path.
 fn get_config_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| "Could not determine home directory")?;
-
-    Ok(PathBuf::from(home).join(".config").join("keyrx"))
+    crate::cli::config_dir::get_config_dir()
 }
 
 /// Print JSON output.
