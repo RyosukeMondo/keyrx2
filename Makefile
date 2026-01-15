@@ -1,7 +1,7 @@
 # KeyRx2 Makefile
 # Provides simple top-level commands for common operations
 
-.PHONY: help build verify test launch clean setup
+.PHONY: help build verify test launch clean setup msi
 
 # Default target - show help
 .DEFAULT_GOAL := help
@@ -57,3 +57,11 @@ setup-quick: ## Quick setup (no sudo, Cargo tools only)
 	@echo "Installing git hooks..."
 	@scripts/setup_hooks.sh
 	@echo "Quick setup complete. For full setup (with system dependencies), run: make setup"
+
+msi: ## Build Windows MSI installer (Windows only, requires WiX)
+ifeq ($(OS),Windows_NT)
+	@cmd /c scripts\windows\build_msi.bat
+else
+	@echo "MSI build is only supported on Windows"
+	@echo "Use: scripts/windows/build_msi.bat (from cmd/PowerShell)"
+endif

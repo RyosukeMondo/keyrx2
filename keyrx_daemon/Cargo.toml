@@ -97,5 +97,12 @@ harness = false
 [build-dependencies]
 chrono = "0.4"
 
+[target.'cfg(target_os = "windows")'.build-dependencies]
+winres = "0.1"
+
 [package.metadata.typeshare]
 output_directory = "../keyrx_ui/src/types"
+
+[package.metadata.wix]
+# Use our custom WiX file
+wxs = "keyrx_installer.wxs"

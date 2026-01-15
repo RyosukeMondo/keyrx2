@@ -23,6 +23,7 @@
       <ComponentGroupRef Id="ProductComponents" />
       <ComponentGroupRef Id="ProductBinaries" />
       <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="AppDataFolderComponent" />
     </Feature>
 
     <!-- Custom icon for Add/Remove Programs -->
@@ -55,13 +56,27 @@
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="KeyRx">
           <Directory Id="BinFolder" Name="bin" />
-          <Directory Id="ConfigFolder" Name="config" />
         </Directory>
       </Directory>
       <Directory Id="ProgramMenuFolder">
         <Directory Id="ApplicationProgramsFolder" Name="KeyRx" />
       </Directory>
+      <!-- User config folder in %APPDATA%\keyrx -->
+      <Directory Id="AppDataFolder">
+        <Directory Id="KeyRxAppDataFolder" Name="keyrx" />
+      </Directory>
     </Directory>
+  </Fragment>
+
+  <!-- Create the %APPDATA%\keyrx folder -->
+  <Fragment>
+    <DirectoryRef Id="KeyRxAppDataFolder">
+      <Component Id="AppDataFolderComponent" Guid="B2C3D4E5-F6A7-8B9C-0D1E-2F3A4B5C6D7E">
+        <CreateFolder />
+        <RemoveFolder Id="RemoveKeyRxAppDataFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\KeyRx" Name="appdata_created" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
   </Fragment>
 
   <Fragment>
@@ -103,7 +118,7 @@
       <Component Id="ExampleConfigComponent" Guid="F5A6B7C8-D9E0-1F2A-3B4C-5D6E7F8A9B0C" Win64="yes">
         <File
           Id="user_layout.krx"
-          Source="user_layout.krx"
+          Source="examples\user_layout.krx"
           KeyPath="yes" />
       </Component>
     </ComponentGroup>

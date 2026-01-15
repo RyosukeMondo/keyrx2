@@ -462,8 +462,15 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
   const rebuildAndSyncAST = () => {
     // Convert a KeyMapping to RhaiKeyMapping
     const convertToRhaiMapping = (key: string, m: KeyMapping): RhaiKeyMapping => {
+      // Map internal types to Rhai-compatible types
+      // modifier, lock, layer_active are treated as 'simple' for Rhai output
+      const rhaiType: RhaiKeyMapping['type'] =
+        m.type === 'modifier' || m.type === 'lock' || m.type === 'layer_active'
+          ? 'simple'
+          : m.type;
+
       const baseMapping: RhaiKeyMapping = {
-        type: m.type,
+        type: rhaiType,
         sourceKey: key,
         line: 0,
       };
