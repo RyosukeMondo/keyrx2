@@ -164,9 +164,11 @@ impl Platform for WindowsPlatform {
         use crate::platform::OutputDevice;
         let mut output = WindowsKeyboardOutput::new();
         output.inject_event(event).map_err(|e| match e {
-            crate::platform::DeviceError::InjectionFailed(msg) => {
-                PlatformError::InjectionFailed(msg)
-            }
+            crate::platform::DeviceError::InjectionFailed(msg) => PlatformError::InjectionFailed {
+                reason: msg,
+                suggestion: "Check Windows SendInput API permissions and event structure"
+                    .to_string(),
+            },
             crate::platform::DeviceError::Io(io_err) => PlatformError::Io(io_err),
             _ => PlatformError::Io(std::io::Error::other(format!("Injection error: {}", e))),
         })
