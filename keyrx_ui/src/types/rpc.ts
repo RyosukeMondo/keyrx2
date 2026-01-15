@@ -28,6 +28,7 @@ export type RpcMethod =
   | "get_events"
   | "get_profile_config"
   | "get_active_profile"
+  | "get_global_layout"
   // Command methods (state-modifying)
   | "create_profile"
   | "activate_profile"
@@ -44,7 +45,10 @@ export type RpcMethod =
   | "simulate"
   | "reset_simulator"
   | "set_profile_config"
-  | "set_device_layout";
+  | "set_device_layout"
+  | "set_global_layout"
+  // Daemon control methods
+  | "restart_daemon";
 
 /**
  * Available subscription channels for real-time updates.

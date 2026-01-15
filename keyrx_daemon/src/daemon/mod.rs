@@ -38,6 +38,7 @@
 //! # Ok::<(), keyrx_daemon::daemon::DaemonError>(())
 //! ```
 
+use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -45,19 +46,27 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
+use keyrx_core::config::DeviceConfig;
 use log::{info, warn};
 
+use crate::config_loader::load_config;
 use crate::error::ConfigError;
 use crate::platform::{Platform, PlatformError};
+
+use state::convert_archived_device_config;
 
 // Submodules
 pub mod event_broadcaster;
 pub mod event_loop;
+pub mod metrics;
+pub mod remapping_state;
 pub mod signals;
 pub mod state;
 
 // Re-exports for public API
 pub use event_broadcaster::{start_latency_broadcast_task, EventBroadcaster};
+pub use metrics::{LatencyRecorder, LatencySnapshot, MetricsAggregator};
+pub use remapping_state::RemappingState;
 pub use signals::{install_signal_handlers, SignalHandler};
 pub use state::ReloadState;
 
@@ -158,6 +167,9 @@ pub struct Daemon {
     /// Path to the configuration file (for reload support).
     config_path: PathBuf,
 
+    /// Path to the keyrx config directory (~/.config/keyrx).
+    config_dir: PathBuf,
+
     /// Platform abstraction for input/output operations.
     platform: Box<dyn Platform>,
 
@@ -169,6 +181,19 @@ pub struct Daemon {
 
     /// Event broadcaster for WebSocket real-time updates (optional).
     event_broadcaster: Option<EventBroadcaster>,
+
+    /// Lock-free latency recorder for metrics collection.
+    ///
+    /// This is shared between the event loop (writing samples) and
+    /// the broadcast task (reading statistics). Lock-free design
+    /// ensures no mutex contention on the hot path.
+    latency_recorder: Arc<LatencyRecorder>,
+
+    /// Remapping state for key remapping (KeyLookup + DeviceState).
+    ///
+    /// This is `Some` when a profile is active and remapping is enabled.
+    /// It is `None` in pass-through mode (no active profile).
+    remapping_state: Option<RemappingState>,
 }
 
 impl Daemon {
@@ -215,6 +240,11 @@ impl Daemon {
             config_path.display()
         );
 
+        // Determine config directory (~/.config/keyrx)
+        let config_dir = dirs::config_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("keyrx");
+
         // Step 1: Initialize the platform
         info!("Initializing platform...");
         platform.initialize()?;
@@ -226,14 +256,39 @@ impl Daemon {
         let signal_handler = install_signal_handlers(Arc::clone(&running))?;
         info!("Signal handlers installed");
 
+        // Create lock-free latency recorder for metrics collection
+        let latency_recorder = Arc::new(LatencyRecorder::new());
+
+        // Step 3: Load active profile and create remapping state (if any)
+        let remapping_state = match Self::load_active_profile_config(&config_dir) {
+            Ok(Some(device_config)) => {
+                info!("Loaded active profile, creating remapping state");
+                Some(RemappingState::new(&device_config))
+            }
+            Ok(None) => {
+                info!("No active profile found, running in pass-through mode");
+                None
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to load active profile: {}. Running in pass-through mode",
+                    e
+                );
+                None
+            }
+        };
+
         info!("Daemon initialization complete");
 
         Ok(Self {
             config_path: config_path.to_path_buf(),
+            config_dir,
             platform,
             running,
             signal_handler,
             event_broadcaster: None,
+            latency_recorder,
+            remapping_state,
         })
     }
 
@@ -243,6 +298,65 @@ impl Daemon {
     /// The broadcaster will receive key events and state updates during event processing.
     pub fn set_event_broadcaster(&mut self, broadcaster: EventBroadcaster) {
         self.event_broadcaster = Some(broadcaster);
+    }
+
+    /// Loads the active profile's DeviceConfig from the .krx file.
+    ///
+    /// Returns `Ok(Some(config))` if an active profile exists and was loaded successfully,
+    /// `Ok(None)` if no active profile is set, or `Err` on load failure.
+    fn load_active_profile_config(config_dir: &Path) -> Result<Option<DeviceConfig>, DaemonError> {
+        // Read the .active file to get the active profile name
+        let active_file = config_dir.join(".active");
+        if !active_file.exists() {
+            return Ok(None);
+        }
+
+        let active_name = fs::read_to_string(&active_file)
+            .map_err(|e| DaemonError::RuntimeError(format!("Failed to read .active file: {}", e)))?
+            .trim()
+            .to_string();
+
+        if active_name.is_empty() {
+            return Ok(None);
+        }
+
+        // Construct path to the .krx file
+        let krx_path = config_dir
+            .join("profiles")
+            .join(format!("{}.krx", active_name));
+        if !krx_path.exists() {
+            warn!(
+                "Active profile '{}' has no compiled .krx file at {}",
+                active_name,
+                krx_path.display()
+            );
+            return Ok(None);
+        }
+
+        // Load the .krx file
+        info!(
+            "Loading active profile '{}' from {}",
+            active_name,
+            krx_path.display()
+        );
+        let archived_config = load_config(&krx_path)?;
+
+        // Get the first device config (global config)
+        // Most profiles use a single wildcard pattern "*" for global remapping
+        if archived_config.devices.is_empty() {
+            warn!("Profile '{}' has no device configurations", active_name);
+            return Ok(None);
+        }
+
+        // Convert the first (global) device config to owned type
+        let device_config = convert_archived_device_config(&archived_config.devices[0]);
+        info!(
+            "Loaded {} key mappings from profile '{}'",
+            device_config.mappings.len(),
+            active_name
+        );
+
+        Ok(Some(device_config))
     }
 
     /// Returns the number of managed devices.
@@ -282,14 +396,20 @@ impl Daemon {
         Arc::clone(&self.running)
     }
 
+    /// Returns a clone of the latency recorder Arc.
+    ///
+    /// This is used to share the recorder with the latency broadcast task.
+    /// The recorder is lock-free and safe for concurrent access.
+    #[must_use]
+    pub fn latency_recorder(&self) -> Arc<LatencyRecorder> {
+        Arc::clone(&self.latency_recorder)
+    }
+
     /// Reloads the configuration from disk.
     ///
-    /// **Note**: Configuration reload is not currently supported with the Platform trait abstraction.
-    /// The Platform trait would need to be extended with a `reload()` method to support this functionality.
-    ///
-    /// # Error Handling
-    ///
-    /// Currently returns an error indicating reload is not supported.
+    /// This method reads the active profile from the `.active` file and
+    /// rebuilds the remapping state. Called when SIGHUP is received or
+    /// when profile activation triggers a reload.
     ///
     /// # Example
     ///
@@ -301,7 +421,6 @@ impl Daemon {
     /// let platform = create_platform()?;
     /// let mut daemon = Daemon::new(platform, Path::new("config.krx"))?;
     ///
-    /// // Reload is not currently supported with Platform trait
     /// match daemon.reload() {
     ///     Ok(()) => println!("Configuration reloaded successfully"),
     ///     Err(e) => eprintln!("Reload failed: {}", e),
@@ -309,10 +428,35 @@ impl Daemon {
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn reload(&mut self) -> Result<(), DaemonError> {
-        warn!("Configuration reload requested but not supported with Platform trait abstraction");
-        Err(DaemonError::RuntimeError(
-            "Configuration reload not supported with Platform trait".to_string(),
-        ))
+        info!("Reloading configuration from active profile...");
+
+        match Self::load_active_profile_config(&self.config_dir) {
+            Ok(Some(device_config)) => {
+                let mapping_count = device_config.mappings.len();
+                if let Some(ref mut state) = self.remapping_state {
+                    // Update existing state
+                    state.reload(&device_config);
+                    info!("Remapping state reloaded with {} mappings", mapping_count);
+                } else {
+                    // Create new state
+                    self.remapping_state = Some(RemappingState::new(&device_config));
+                    info!(
+                        "Created new remapping state with {} mappings",
+                        mapping_count
+                    );
+                }
+                Ok(())
+            }
+            Ok(None) => {
+                info!("No active profile found, switching to pass-through mode");
+                self.remapping_state = None;
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Failed to reload configuration: {}", e);
+                Err(e)
+            }
+        }
     }
 
     /// Runs the main event processing loop.
@@ -335,7 +479,7 @@ impl Daemon {
     /// # Signal Handling
     ///
     /// - **SIGTERM/SIGINT**: Sets the running flag to false, causing graceful exit
-    /// - **SIGHUP**: Triggers configuration reload (currently not supported)
+    /// - **SIGHUP**: Triggers configuration reload (logs but requires restart for full effect)
     ///
     /// # Errors
     ///
@@ -359,15 +503,32 @@ impl Daemon {
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn run(&mut self) -> Result<(), DaemonError> {
-        // Create a closure that returns the reload error without actually calling self.reload()
-        // This avoids the borrow checker issue
-        let reload_fn = || -> Result<(), DaemonError> {
-            warn!(
-                "Configuration reload requested but not supported with Platform trait abstraction"
-            );
-            Err(DaemonError::RuntimeError(
-                "Configuration reload not supported with Platform trait".to_string(),
-            ))
+        // Clone config_dir for the reload closure (avoids borrowing self)
+        let config_dir = self.config_dir.clone();
+
+        // Create reload callback that reloads from active profile
+        // Note: Due to borrow constraints, this callback cannot directly update
+        // self.remapping_state. For now, it loads the new config and logs.
+        // Full hot-reload would require Arc<RwLock> for the remapping state.
+        let reload_fn = move || -> Result<(), DaemonError> {
+            info!("Reload signal received, reloading configuration...");
+            match Daemon::load_active_profile_config(&config_dir) {
+                Ok(Some(device_config)) => {
+                    info!(
+                        "Loaded active profile with {} mappings. Note: Full hot-reload requires daemon restart.",
+                        device_config.mappings.len()
+                    );
+                    Ok(())
+                }
+                Ok(None) => {
+                    info!("No active profile found after reload signal");
+                    Ok(())
+                }
+                Err(e) => {
+                    warn!("Failed to reload configuration: {}", e);
+                    Err(e)
+                }
+            }
         };
 
         event_loop::run_event_loop(
@@ -376,6 +537,8 @@ impl Daemon {
             &self.signal_handler,
             reload_fn,
             self.event_broadcaster.as_ref(),
+            self.remapping_state.as_mut(),
+            Some(&self.latency_recorder),
         )
     }
 

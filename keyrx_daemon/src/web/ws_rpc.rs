@@ -219,7 +219,7 @@ async fn handle_command(
     params: Value,
     state: &AppState,
 ) -> ServerMessage {
-    use crate::web::handlers::{config, device, metrics, profile, settings};
+    use crate::web::handlers::{config, daemon, device, metrics, profile, settings};
 
     log::debug!("Handling command: {} with params: {}", method, params);
 
@@ -239,6 +239,7 @@ async fn handle_command(
         "clear_events" => metrics::clear_events(&state.macro_recorder, params).await,
         "simulate" => metrics::simulate(&state.macro_recorder, params).await,
         "reset_simulator" => metrics::reset_simulator(&state.macro_recorder, params).await,
+        "restart_daemon" => daemon::restart_daemon(params).await,
         _ => Err(RpcError::method_not_found(&method)),
     };
 

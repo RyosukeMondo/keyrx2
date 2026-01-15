@@ -177,6 +177,11 @@ export const ProfilesPage: React.FC = () => {
   };
 
   const handleActivateProfile = async (profileId: string) => {
+    // Prevent rapid activation - wait for previous to complete
+    if (activateProfileMutation.isPending) {
+      return;
+    }
+
     // Clear any previous activation errors and success messages
     setActivationError(null);
     setActivationSuccess(null);
@@ -190,13 +195,13 @@ export const ProfilesPage: React.FC = () => {
         setActivationError(`Compilation failed:\n${errorMessage}`);
         console.error('Compilation errors:', result.errors);
       } else {
-        // Show success notification
-        setActivationSuccess(`Profile '${profileId}' is now active!`);
+        // Show success notification - daemon auto-restarts so profile is immediately applied
+        setActivationSuccess(`Profile '${profileId}' applied!`);
 
-        // Auto-dismiss after 5 seconds
+        // Auto-dismiss after 3 seconds (shorter since no action needed)
         setTimeout(() => {
           setActivationSuccess(null);
-        }, 5000);
+        }, 3000);
       }
     } catch (err) {
       // Handle API errors
@@ -318,19 +323,19 @@ export const ProfilesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Activation Success Notification */}
+      {/* Activation Success Notification - Fixed position toast */}
       {activationSuccess && (
-        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+        <div className="fixed top-4 right-4 z-50 p-4 bg-green-600 border border-green-500 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-300 max-w-sm">
           <div className="flex items-start gap-3">
-            <CheckCircle size={20} className="text-green-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <CheckCircle size={20} className="text-white flex-shrink-0 mt-0.5" aria-hidden="true" />
             <div className="flex-1">
-              <p className="text-sm text-green-300">
+              <p className="text-sm text-white font-medium">
                 {activationSuccess}
               </p>
             </div>
             <button
               onClick={() => setActivationSuccess(null)}
-              className="text-green-400 hover:text-green-300 ml-2"
+              className="text-white/70 hover:text-white ml-2"
               aria-label="Dismiss notification"
             >
               ×
@@ -339,19 +344,19 @@ export const ProfilesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Auto-Generate Success Notification */}
+      {/* Auto-Generate Success Notification - Fixed position toast */}
       {autoGenerateNotification && (
-        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+        <div className="fixed top-4 right-4 z-50 p-4 bg-green-600 border border-green-500 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-300 max-w-sm">
           <div className="flex items-start gap-3">
-            <CheckCircle size={20} className="text-green-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <CheckCircle size={20} className="text-white flex-shrink-0 mt-0.5" aria-hidden="true" />
             <div className="flex-1">
-              <p className="text-sm text-green-300">
+              <p className="text-sm text-white font-medium">
                 {autoGenerateNotification}
               </p>
             </div>
             <button
               onClick={() => setAutoGenerateNotification(null)}
-              className="text-green-400 hover:text-green-300 ml-2"
+              className="text-white/70 hover:text-white ml-2"
               aria-label="Dismiss notification"
             >
               ×
@@ -418,6 +423,7 @@ export const ProfilesPage: React.FC = () => {
             name={profile.name}
             description={profile.description}
             isActive={profile.isActive}
+            isActivating={activateProfileMutation.isPending}
             lastModified={profile.lastModified}
             rhaiPath={profile.rhaiPath}
             fileExists={profile.fileExists}

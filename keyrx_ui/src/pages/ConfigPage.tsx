@@ -5,16 +5,16 @@ import { SimpleCodeEditor } from '@/components/SimpleCodeEditor';
 import { KeyPalette, type PaletteKey } from '@/components/KeyPalette';
 import { DeviceSelector, type Device } from '@/components/DeviceSelector';
 import { KeyConfigModal } from '@/components/KeyConfigModal';
+import { CurrentMappingsSummary } from '@/components/CurrentMappingsSummary';
 import { LayerSwitcher } from '@/components/LayerSwitcher';
 import { KeyboardVisualizer } from '@/components/KeyboardVisualizer';
-import { WasmStatusBadge } from '@/components/WasmStatusBadge';
 import { useGetProfileConfig, useSetProfileConfig } from '@/hooks/useProfileConfig';
-import { useProfiles, useCreateProfile } from '@/hooks/useProfiles';
+import { useProfiles, useCreateProfile, useActiveProfileQuery } from '@/hooks/useProfiles';
 import { useUnifiedApi } from '@/hooks/useUnifiedApi';
 import { useDevices } from '@/hooks/useDevices';
-import { useWasm } from '@/hooks/useWasm';
 import { useRhaiSyncEngine } from '@/components/RhaiSyncEngine';
 import { extractDevicePatterns, hasGlobalMappings } from '@/utils/rhaiParser';
+import { useConfigStore } from '@/stores/configStore';
 import type { KeyMapping } from '@/types';
 import type { KeyMapping as RhaiKeyMapping } from '@/utils/rhaiParser';
 
@@ -29,9 +29,25 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
   const navigate = useNavigate();
   const { name: profileNameFromRoute } = useParams<{ name: string }>();
   const profileNameFromQuery = searchParams.get('profile');
-  const defaultProfileName = propProfileName || profileNameFromRoute || profileNameFromQuery || 'Default';
 
-  const [selectedProfileName, setSelectedProfileName] = useState<string>(defaultProfileName);
+  // Get active profile from daemon - used as fallback when no profile specified
+  const { data: activeProfileName } = useActiveProfileQuery();
+
+  // Track user's manual selection separately from the computed default
+  const [manualSelection, setManualSelection] = useState<string | null>(null);
+
+  // Effective profile: manual selection > explicit URL/prop > active profile > 'Default'
+  const selectedProfileName = manualSelection
+    ?? propProfileName
+    ?? profileNameFromRoute
+    ?? profileNameFromQuery
+    ?? activeProfileName
+    ?? 'Default';
+
+  // Wrapper to track manual selection changes
+  const setSelectedProfileName = (name: string) => {
+    setManualSelection(name);
+  };
 
   const api = useUnifiedApi();
 
@@ -55,14 +71,17 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
   const { data: profiles, isLoading: isLoadingProfiles } = useProfiles();
   const { mutateAsync: createProfile } = useCreateProfile();
 
-  // Visual editor state
+  // Visual editor state - now using Zustand store for layer-aware mappings
+  const configStore = useConfigStore();
   const [selectedPaletteKey, setSelectedPaletteKey] = useState<PaletteKey | null>(null);
   const [selectedPhysicalKey, setSelectedPhysicalKey] = useState<string | null>(null);
-  const [keyMappings, setKeyMappings] = useState<Map<string, KeyMapping>>(new Map());
-  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
-  const [globalSelected, setGlobalSelected] = useState<boolean>(true);
-  const [activeLayer, setActiveLayer] = useState<string>('base');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Computed: Get current layer's mappings for display
+  const keyMappings = configStore.getLayerMappings(configStore.activeLayer);
+  const activeLayer = configStore.activeLayer;
+  const globalSelected = configStore.globalSelected;
+  const selectedDevices = configStore.selectedDevices;
 
   // Available layers
   const availableLayers = ['base', 'md-00', 'md-01', 'md-02', 'md-03', 'md-04', 'md-05'];
@@ -83,9 +102,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
   // Fetch devices
   const { data: devicesData } = useDevices();
-
-  // WASM status
-  const { isWasmReady, isLoading: isLoadingWasm, error: wasmError } = useWasm();
 
   // Merged device list: connected devices + devices from Rhai (even if disconnected)
   const [mergedDevices, setMergedDevices] = useState<Device[]>([]);
@@ -225,7 +241,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     // Auto-populate device selector based on Rhai content
     // If Rhai has global mappings, select global
     if (hasGlobalMappings(ast)) {
-      setGlobalSelected(true);
+      configStore.setGlobalSelected(true);
     }
 
     // If Rhai has device blocks, auto-select those devices
@@ -238,18 +254,38 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         .map((device) => device.id);
 
       if (devicesToSelect.length > 0) {
-        setSelectedDevices(devicesToSelect);
+        configStore.setSelectedDevices(devicesToSelect);
       }
     }
   }, [syncEngine.state, devicesData]); // Re-run when sync state changes (parsing complete) or devices change
 
-  // Sync visual editor state from parsed AST when code changes
+  // Sync visual editor state from parsed AST - LAYER-AWARE VERSION
   useEffect(() => {
     // Only sync when state is idle (parsing complete)
     if (syncEngine.state !== 'idle') return;
 
     const ast = syncEngine.getAST();
     if (!ast) return;
+
+    // Normalize key codes to VK_ format for consistent lookup
+    // Handles: "1" -> "VK_1", "KC_A" -> "VK_A", "VK_A" -> "VK_A"
+    const normalizeKeyCode = (key: string): string => {
+      if (!key) return key;
+      // Already VK_ format
+      if (key.startsWith('VK_')) return key;
+      // Convert KC_ to VK_
+      if (key.startsWith('KC_')) return key.replace(/^KC_/, 'VK_');
+      // Single character or number - add VK_ prefix
+      if (/^[A-Z0-9]$/i.test(key)) return `VK_${key.toUpperCase()}`;
+      // Named keys without prefix
+      const knownKeys = ['ESCAPE', 'ENTER', 'SPACE', 'TAB', 'BACKSPACE', 'DELETE',
+        'INSERT', 'HOME', 'END', 'PAGEUP', 'PAGEDOWN', 'UP', 'DOWN', 'LEFT', 'RIGHT',
+        'CAPSLOCK', 'NUMLOCK', 'SCROLLLOCK', 'LEFTSHIFT', 'RIGHTSHIFT',
+        'LEFTCONTROL', 'RIGHTCONTROL', 'LEFTALT', 'RIGHTALT', 'LEFTMETA', 'RIGHTMETA'];
+      if (knownKeys.includes(key.toUpperCase())) return `VK_${key.toUpperCase()}`;
+      // Already has some prefix or unknown - return as-is
+      return key;
+    };
 
     // Helper to convert RhaiKeyMapping to visual KeyMapping
     const convertToVisualMapping = (m: RhaiKeyMapping): KeyMapping => {
@@ -275,39 +311,69 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
       return visualMapping;
     };
 
-    // Convert RhaiAST to visual editor KeyMapping format
-    const newMappings = new Map<string, KeyMapping>();
+    // Build layer-aware mappings: Map<layerId, Map<keyCode, KeyMapping>>
+    const layerMappings = new Map<string, Map<string, KeyMapping>>();
 
-    // Add global mappings if global is selected
+    // Initialize base layer
+    layerMappings.set('base', new Map());
+
+    // Process global mappings
     if (globalSelected) {
+      const baseMap = layerMappings.get('base')!;
       ast.globalMappings.forEach((m) => {
-        newMappings.set(m.sourceKey, convertToVisualMapping(m));
+        baseMap.set(normalizeKeyCode(m.sourceKey), convertToVisualMapping(m));
       });
     }
 
-    // Add device-specific mappings for selected devices
-    if (selectedDevices.length > 0 && devicesData) {
+    // Process device-specific mappings for selected devices
+    if (selectedDevices.length > 0) {
       ast.deviceBlocks.forEach((block) => {
+        // Special handling for wildcard pattern "*" - applies to all devices
+        const isWildcard = block.pattern === '*';
+
         // Check if this device block matches any selected device
-        const matchesSelectedDevice = devicesData.some((device) => {
-          const isSelected = selectedDevices.includes(device.id);
-          const matchesPattern =
-            block.pattern === device.serial ||
-            block.pattern === device.name ||
-            block.pattern === device.id;
-          return isSelected && matchesPattern;
-        });
+        const matchesSelectedDevice = isWildcard
+          ? selectedDevices.includes('disconnected-*') || selectedDevices.length > 0
+          : (devicesData?.some((device) => {
+              const isSelected = selectedDevices.includes(device.id);
+              const matchesPattern =
+                block.pattern === device.serial ||
+                block.pattern === device.name ||
+                block.pattern === device.id;
+              return isSelected && matchesPattern;
+            }) ?? false);
 
         if (matchesSelectedDevice) {
+          // Add base mappings
+          const baseMap = layerMappings.get('base')!;
           block.mappings.forEach((m) => {
-            // Device-specific mappings override global mappings
-            newMappings.set(m.sourceKey, convertToVisualMapping(m));
+            baseMap.set(normalizeKeyCode(m.sourceKey), convertToVisualMapping(m));
+          });
+
+          // Add layer-specific mappings
+          block.layers.forEach((layer) => {
+            const layerModifiers = Array.isArray(layer.modifiers) ? layer.modifiers : [layer.modifiers];
+
+            // Convert each modifier to layer ID format (MD_00 -> md-00)
+            layerModifiers.forEach((mod: string) => {
+              const layerId = mod.toLowerCase().replace('_', '-'); // MD_00 -> md-00
+
+              if (!layerMappings.has(layerId)) {
+                layerMappings.set(layerId, new Map());
+              }
+
+              const layerMap = layerMappings.get(layerId)!;
+              layer.mappings.forEach((m: RhaiKeyMapping) => {
+                layerMap.set(normalizeKeyCode(m.sourceKey), convertToVisualMapping(m));
+              });
+            });
           });
         }
       });
     }
 
-    setKeyMappings(newMappings);
+    // Load into store
+    configStore.loadLayerMappings(layerMappings);
   }, [syncEngine.state, globalSelected, selectedDevices, devicesData]);
 
   // Handle profile selection change
@@ -343,79 +409,122 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     setIsModalOpen(true);
   };
 
-  // Handle save from modal
+  // Handle clear mapping from summary - LAYER-AWARE
+  const handleClearMapping = (keyCode: string) => {
+    configStore.deleteKeyMapping(keyCode, activeLayer);
+    setSyncStatus('unsaved');
+    rebuildAndSyncAST();
+  };
+
+  // Handle save from modal - LAYER-AWARE
   const handleSaveMapping = (mapping: KeyMapping) => {
-    if (selectedPhysicalKey) {
-      const newMappings = new Map(keyMappings);
-      newMappings.set(selectedPhysicalKey, mapping);
-      setKeyMappings(newMappings);
+    if (!selectedPhysicalKey) return;
 
-      // Convert visual editor state to RhaiAST and trigger sync
-      const convertToRhaiMappings = (mappings: Map<string, KeyMapping>): RhaiKeyMapping[] => {
-        return Array.from(mappings.entries()).map(([key, m]) => {
-          const baseMapping: RhaiKeyMapping = {
-            type: m.type,
-            sourceKey: key,
-            line: 0,
-          };
+    // Save to active layer in store
+    configStore.setKeyMapping(selectedPhysicalKey, mapping, activeLayer);
+    setSyncStatus('unsaved');
+    rebuildAndSyncAST();
+  };
 
-          if (m.type === 'simple' && m.tapAction) {
-            baseMapping.targetKey = m.tapAction;
-          } else if (m.type === 'tap_hold' && m.tapAction && m.holdAction) {
-            baseMapping.tapHold = {
-              tapAction: m.tapAction,
-              holdAction: m.holdAction,
-              thresholdMs: m.threshold || 200,
-            };
-          } else if (m.type === 'macro' && m.macroSteps) {
-            baseMapping.macro = {
-              keys: m.macroSteps.filter(s => s.key).map(s => s.key!),
-              delayMs: m.macroSteps.find(s => s.delayMs)?.delayMs,
-            };
-          } else if (m.type === 'layer_switch' && m.targetLayer) {
-            baseMapping.layerSwitch = {
-              layerId: m.targetLayer,
-            };
-          }
-
-          return baseMapping;
-        });
+  // Helper: Rebuild AST from store and sync to code editor
+  const rebuildAndSyncAST = () => {
+    // Convert a KeyMapping to RhaiKeyMapping
+    const convertToRhaiMapping = (key: string, m: KeyMapping): RhaiKeyMapping => {
+      const baseMapping: RhaiKeyMapping = {
+        type: m.type,
+        sourceKey: key,
+        line: 0,
       };
 
-      // Build device blocks based on current selection
-      const deviceBlocks = selectedDevices.map((deviceId, index) => {
-        const device = devices.find((d) => d.id === deviceId);
-        if (!device) return null;
-
-        return {
-          pattern: device.serial || device.name,
-          mappings: convertToRhaiMappings(newMappings),
-          layers: [],
-          startLine: 0,
-          endLine: 0,
+      if (m.type === 'simple' && m.tapAction) {
+        baseMapping.targetKey = m.tapAction;
+      } else if (m.type === 'tap_hold' && m.tapAction && m.holdAction) {
+        baseMapping.tapHold = {
+          tapAction: m.tapAction,
+          holdAction: m.holdAction,
+          thresholdMs: m.threshold || 200,
         };
-      }).filter((block): block is NonNullable<typeof block> => block !== null);
+      } else if (m.type === 'macro' && m.macroSteps) {
+        baseMapping.macro = {
+          keys: m.macroSteps.filter(s => s.key).map(s => s.key!),
+          delayMs: m.macroSteps.find(s => s.delayMs)?.delayMs,
+        };
+      } else if (m.type === 'layer_switch' && m.targetLayer) {
+        baseMapping.layerSwitch = {
+          layerId: m.targetLayer,
+        };
+      }
 
-      // Update sync engine with new AST
-      syncEngine.onVisualChange({
-        imports: [],
-        globalMappings: globalSelected ? convertToRhaiMappings(newMappings) : [],
-        deviceBlocks,
-        comments: [],
+      return baseMapping;
+    };
+
+    // Get all layers from store
+    const allLayers = configStore.getAllLayers();
+
+    // Build global mappings (base layer only)
+    const globalMappings: RhaiKeyMapping[] = [];
+    if (globalSelected) {
+      const baseMappings = configStore.getLayerMappings('base');
+      baseMappings.forEach((mapping, key) => {
+        globalMappings.push(convertToRhaiMapping(key, mapping));
       });
     }
+
+    // Build device blocks with layer structures
+    const deviceBlocks = selectedDevices.map((deviceId) => {
+      const device = devices.find((d) => d.id === deviceId);
+      if (!device) return null;
+
+      // Base mappings for this device
+      const baseMappings = configStore.getLayerMappings('base');
+      const deviceBaseMappings: RhaiKeyMapping[] = [];
+      baseMappings.forEach((mapping, key) => {
+        deviceBaseMappings.push(convertToRhaiMapping(key, mapping));
+      });
+
+      // Layer-specific mappings
+      const layers = allLayers
+        .filter(layerId => layerId !== 'base')
+        .map(layerId => {
+          const layerMappings = configStore.getLayerMappings(layerId);
+          const rhaiMappings: RhaiKeyMapping[] = [];
+
+          layerMappings.forEach((mapping, key) => {
+            rhaiMappings.push(convertToRhaiMapping(key, mapping));
+          });
+
+          // Convert layer ID to modifier format (md-00 -> MD_00)
+          const modifierName = layerId.toUpperCase().replace('-', '_');
+
+          return {
+            modifiers: [modifierName],
+            mappings: rhaiMappings,
+            startLine: 0,
+            endLine: 0,
+          };
+        })
+        .filter(layer => layer.mappings.length > 0); // Only include layers with mappings
+
+      return {
+        pattern: device.serial || device.name,
+        mappings: deviceBaseMappings,
+        layers,
+        startLine: 0,
+        endLine: 0,
+      };
+    }).filter((block): block is NonNullable<typeof block> => block !== null);
+
+    // Update sync engine with new AST
+    syncEngine.onVisualChange({
+      imports: [],
+      globalMappings,
+      deviceBlocks,
+      comments: [],
+    });
   };
 
   // Use merged device list (connected + disconnected from Rhai)
   const devices: Device[] = mergedDevices;
-
-  // Get all available keys for modal (will be passed from KeyPalette component data)
-  // For now, use a simplified list
-  const getAllAvailableKeys = (): PaletteKey[] => {
-    // This should include all VK_, MD_, LK_ keys
-    // For now returning empty array, will be populated from KeyPalette
-    return [];
-  };
 
   return (
     <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6 lg:p-8">
@@ -458,13 +567,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             <option value="JIS_109">JIS (109)</option>
           </select>
         </div>
-
-        {/* WASM Status Badge */}
-        <WasmStatusBadge
-          isLoading={isLoadingWasm}
-          isReady={isWasmReady}
-          error={wasmError}
-        />
 
         {/* Right: Sync Status and Save Button */}
         <div className="flex items-center gap-3">
@@ -562,7 +664,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                 <input
                   type="checkbox"
                   checked={globalSelected}
-                  onChange={(e) => setGlobalSelected(e.target.checked)}
+                  onChange={(e) => configStore.setGlobalSelected(e.target.checked)}
                   className="w-4 h-4 text-primary-600 bg-slate-700 border-slate-600 rounded focus:ring-primary-500 focus:ring-2"
                   aria-label="Enable global configuration"
                   data-testid="global-checkbox"
@@ -588,9 +690,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                         checked={selectedDevices.includes(device.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedDevices([...selectedDevices, device.id]);
+                            configStore.setSelectedDevices([...selectedDevices, device.id]);
                           } else {
-                            setSelectedDevices(selectedDevices.filter((id) => id !== device.id));
+                            configStore.setSelectedDevices(selectedDevices.filter((id) => id !== device.id));
                           }
                         }}
                         className="w-4 h-4 text-primary-600 bg-slate-700 border-slate-600 rounded focus:ring-primary-500 focus:ring-2"
@@ -615,13 +717,22 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             </div>
           </Card>
 
-          {/* Mobile/Tablet Pane Switcher - Hidden on desktop (lg+) and when only one pane is shown */}
+          {/* Tab Navigation - Accessible tabs for Global/Device switching */}
           {globalSelected && selectedDevices.length > 0 && (
-            <div className="flex gap-2 lg:hidden border-b border-slate-700" data-testid="pane-switcher">
+            <div
+              role="tablist"
+              aria-label="Keyboard configuration scope"
+              className="flex gap-2 border-b border-slate-700"
+              data-testid="pane-switcher"
+            >
               <button
+                role="tab"
+                aria-selected={activePane === 'global'}
+                aria-controls="panel-global"
+                id="tab-global"
                 onClick={() => setActivePane('global')}
                 data-testid="pane-global"
-                className={`flex-1 px-4 py-2 font-medium transition-colors ${
+                className={`flex-1 px-4 py-2 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
                   activePane === 'global'
                     ? 'text-primary-400 border-b-2 border-primary-400'
                     : 'text-slate-400 hover:text-slate-300'
@@ -630,9 +741,13 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                 Global Keys
               </button>
               <button
+                role="tab"
+                aria-selected={activePane === 'device'}
+                aria-controls="panel-device"
+                id="tab-device"
                 onClick={() => setActivePane('device')}
                 data-testid="pane-device"
-                className={`flex-1 px-4 py-2 font-medium transition-colors ${
+                className={`flex-1 px-4 py-2 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
                   activePane === 'device'
                     ? 'text-primary-400 border-b-2 border-primary-400'
                     : 'text-slate-400 hover:text-slate-300'
@@ -643,17 +758,19 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             </div>
           )}
 
-          {/* Dual-Pane Layout: Global Keys (left) and Device-Specific Keys (right) */}
-          {/* Desktop: side-by-side (flex-row), Tablet/Mobile: stacked with conditional visibility */}
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Left Pane: Global Keyboard with Header and Layer Switcher */}
+          {/* Single-Pane Layout: Show one pane at a time (tabs control visibility) */}
+          <div className="flex flex-col gap-4">
+            {/* Global Keyboard Panel */}
             {globalSelected && (
-              <div className={`flex flex-col gap-3 flex-1 ${
-                // Always show on desktop (lg), on mobile/tablet show based on activePane
-                selectedDevices.length > 0
-                  ? (activePane === 'global' ? 'flex' : 'hidden lg:flex')
-                  : 'flex'
-              }`}>
+              <div
+                role="tabpanel"
+                id="panel-global"
+                aria-labelledby="tab-global"
+                className={`flex flex-col gap-3 ${
+                  // Show only when selected (or when device tabs don't exist)
+                  selectedDevices.length > 0 && activePane !== 'global' ? 'hidden' : 'flex'
+                }`}
+              >
                 {/* Global Pane Header */}
                 <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-md">
                   <h2 className="text-lg font-semibold text-slate-200">Global Keys</h2>
@@ -662,7 +779,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                       type="checkbox"
                       id="global-checkbox"
                       checked={globalSelected}
-                      onChange={(e) => setGlobalSelected(e.target.checked)}
+                      onChange={(e) => configStore.setGlobalSelected(e.target.checked)}
                       className="w-4 h-4 text-primary-600 bg-slate-700 border-slate-600 rounded focus:ring-primary-500 focus:ring-2"
                     />
                     <label htmlFor="global-checkbox" className="text-sm text-slate-300">
@@ -676,19 +793,21 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                   <LayerSwitcher
                     activeLayer={activeLayer}
                     availableLayers={availableLayers}
-                    onLayerChange={setActiveLayer}
+                    onLayerChange={configStore.setActiveLayer}
                   />
                   <Card className="bg-gradient-to-br from-slate-800 to-slate-900 flex-1">
                     <h3 className="text-xl font-bold text-primary-400 mb-4">
                       Global Keyboard (All Devices)
                     </h3>
-                    <div className="flex justify-center p-4">
-                      <KeyboardVisualizer
-                        layout={keyboardLayout}
-                        keyMappings={keyMappings}
-                        onKeyClick={handlePhysicalKeyClick}
-                        simulatorMode={false}
-                      />
+                    <div className="overflow-x-auto p-4">
+                      <div className="flex justify-center min-w-fit">
+                        <KeyboardVisualizer
+                          layout={keyboardLayout}
+                          keyMappings={keyMappings}
+                          onKeyClick={handlePhysicalKeyClick}
+                          simulatorMode={false}
+                        />
+                      </div>
                     </div>
                     <p className="text-center text-sm text-slate-400 mt-4">
                       Click any key to configure global mappings
@@ -698,16 +817,20 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
               </div>
             )}
 
-            {/* Right Pane: Device-Specific Keyboard with Header and Layer Switcher */}
+            {/* Device-Specific Keyboard Panel */}
             {selectedDevices.length > 0 && devices
               .filter((d) => selectedDevices.includes(d.id))
               .map((device) => (
-                <div key={device.id} className={`flex flex-col gap-3 flex-1 ${
-                  // Always show on desktop (lg), on mobile/tablet show based on activePane
-                  globalSelected
-                    ? (activePane === 'device' ? 'flex' : 'hidden lg:flex')
-                    : 'flex'
-                }`}>
+                <div
+                  key={device.id}
+                  role="tabpanel"
+                  id="panel-device"
+                  aria-labelledby="tab-device"
+                  className={`flex flex-col gap-3 ${
+                    // Show only when selected (or when global is not selected)
+                    globalSelected && activePane !== 'device' ? 'hidden' : 'flex'
+                  }`}
+                >
                   {/* Device Pane Header */}
                   <div className="flex items-center justify-between px-4 py-2 bg-zinc-800/50 border border-zinc-700 rounded-md">
                     <div className="flex items-center gap-2">
@@ -721,7 +844,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                           const newDeviceId = e.target.value;
                           // Replace current device with new selection
                           const updatedDevices = selectedDevices.filter(id => id !== device.id);
-                          setSelectedDevices([...updatedDevices, newDeviceId]);
+                          configStore.setSelectedDevices([...updatedDevices, newDeviceId]);
                         }}
                         className="px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded-md text-slate-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500"
                         aria-label="Select device to configure"
@@ -749,7 +872,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                     <LayerSwitcher
                       activeLayer={activeLayer}
                       availableLayers={availableLayers}
-                      onLayerChange={setActiveLayer}
+                      onLayerChange={configStore.setActiveLayer}
                     />
                     <Card className="bg-gradient-to-br from-zinc-800 to-zinc-900 flex-1">
                       <h3 className="text-xl font-bold text-primary-400 mb-4">
@@ -760,13 +883,15 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                           </span>
                         )}
                       </h3>
-                      <div className="flex justify-center p-4">
-                        <KeyboardVisualizer
-                          layout={keyboardLayout}
-                          keyMappings={keyMappings}
-                          onKeyClick={handlePhysicalKeyClick}
-                          simulatorMode={false}
-                        />
+                      <div className="overflow-x-auto p-4">
+                        <div className="flex justify-center min-w-fit">
+                          <KeyboardVisualizer
+                            layout={keyboardLayout}
+                            keyMappings={keyMappings}
+                            onKeyClick={handlePhysicalKeyClick}
+                            simulatorMode={false}
+                          />
+                        </div>
                       </div>
                       <p className="text-center text-sm text-slate-400 mt-4">
                         Click any key to configure device-specific mappings for {device.name}
@@ -813,15 +938,14 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             </div>
           </div>
 
-          {/* Key Palette - Comprehensive list at bottom */}
-          <Card>
-            <KeyPalette
-              onKeySelect={setSelectedPaletteKey}
-              selectedKey={selectedPaletteKey}
-            />
-          </Card>
+          {/* Current Mappings Summary - Shows active mappings with edit/delete */}
+          <CurrentMappingsSummary
+            keyMappings={keyMappings}
+            onEditMapping={handlePhysicalKeyClick}
+            onClearMapping={handleClearMapping}
+          />
 
-          {/* Configuration Modal */}
+          {/* Configuration Modal - Now includes key selection palette */}
           {isModalOpen && selectedPhysicalKey && (
             <KeyConfigModal
               isOpen={isModalOpen}
@@ -829,7 +953,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
               physicalKey={selectedPhysicalKey}
               currentMapping={keyMappings.get(selectedPhysicalKey)}
               onSave={handleSaveMapping}
-              availableKeys={getAllAvailableKeys()}
+              activeLayer={activeLayer}
             />
           )}
       </div>
@@ -840,6 +964,18 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
           className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-600 shadow-2xl z-50 transition-all duration-300 ease-in-out"
           style={{ height: `${codePanelHeight}px` }}
         >
+          {/* Header with collapse button */}
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-b border-slate-600">
+            <h3 className="text-sm font-semibold text-slate-300">Code</h3>
+            <button
+              onClick={() => setIsCodePanelOpen(false)}
+              className="px-3 py-1 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded transition-colors"
+              title="Hide code editor"
+            >
+              ▼ Hide
+            </button>
+          </div>
+
           {/* Resize Handle */}
           <div
             className="h-1 bg-slate-600 hover:bg-primary-500 cursor-ns-resize transition-colors"

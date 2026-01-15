@@ -11,6 +11,7 @@ export interface ProfileCardProps {
   name: string;
   description?: string;
   isActive: boolean;
+  isActivating?: boolean;
   lastModified?: string;
   rhaiPath?: string;
   fileExists?: boolean;
@@ -37,6 +38,7 @@ export const ProfileCard = React.memo<ProfileCardProps>(
     name,
     description,
     isActive,
+    isActivating = false,
     lastModified,
     rhaiPath,
     fileExists = true,
@@ -150,14 +152,22 @@ export const ProfileCard = React.memo<ProfileCardProps>(
             ) : (
               <Tooltip
                 content={
-                  firstError
-                    ? `Line ${firstError.line}: ${firstError.message}`
-                    : 'Invalid configuration'
+                  firstError ? (
+                    <div className="space-y-1">
+                      <div className="text-yellow-300 font-bold text-sm">Configuration Error:</div>
+                      <div className="text-white">
+                        <span className="text-yellow-400 font-semibold">Line {firstError.line}:</span>{' '}
+                        {firstError.message}
+                      </div>
+                    </div>
+                  ) : (
+                    'Invalid configuration'
+                  )
                 }
                 position="top"
               >
-                <div className="inline-flex items-center gap-1 bg-yellow-900/30 text-yellow-400 border border-yellow-700 px-2 py-1 rounded text-xs font-medium cursor-help">
-                  <AlertTriangle size={14} aria-hidden="true" />
+                <div className="inline-flex items-center gap-2 bg-yellow-500/20 text-yellow-200 border-2 border-yellow-500/60 px-3 py-1.5 rounded-md text-sm font-semibold cursor-help shadow-sm hover:bg-yellow-500/30 transition-colors">
+                  <AlertTriangle size={16} className="flex-shrink-0" aria-hidden="true" />
                   <span>Invalid Configuration</span>
                 </div>
               </Tooltip>
@@ -179,14 +189,16 @@ export const ProfileCard = React.memo<ProfileCardProps>(
               variant="primary"
               size="sm"
               onClick={onActivate}
-              disabled={!isValid}
+              disabled={!isValid || isActivating}
               aria-label={
-                !isValid
+                isActivating
+                  ? 'Activating profile...'
+                  : !isValid
                   ? `Cannot activate invalid profile ${name}`
                   : `Activate profile ${name}`
               }
             >
-              Activate
+              {isActivating ? 'Activating...' : 'Activate'}
             </Button>
           )}
           <Button

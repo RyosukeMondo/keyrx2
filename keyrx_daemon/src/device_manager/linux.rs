@@ -87,7 +87,8 @@ pub fn enumerate_keyboards() -> Result<Vec<KeyboardInfo>, DiscoveryError> {
         let name = device.name().unwrap_or("Unknown Device").to_string();
 
         // Skip the daemon's own virtual output device to prevent grabbing it
-        if name == "keyrx Virtual Keyboard" {
+        // The virtual device name is "keyrx" as set in platform/linux/mod.rs
+        if name == "keyrx" {
             continue;
         }
 

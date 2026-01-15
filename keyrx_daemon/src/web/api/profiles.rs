@@ -76,7 +76,9 @@ async fn list_profiles() -> Result<Json<ProfilesListResponse>, DaemonError> {
     pm.scan_profiles()
         .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
-    let active_profile = query_active_profile();
+    // Use ProfileManager's persisted active profile instead of IPC for consistency
+    // This ensures the active profile survives daemon restarts
+    let active_profile = pm.get_active().ok().flatten();
 
     let profiles: Vec<ProfileResponse> = pm
         .list()
@@ -162,6 +164,7 @@ async fn activate_profile(Path(name): Path<String>) -> Result<Json<Value>, Daemo
 
     Ok(Json(json!({
         "success": true,
+        "profile": name,
         "compile_time_ms": result.compile_time_ms,
         "reload_time_ms": result.reload_time_ms,
     })))
@@ -382,26 +385,6 @@ fn get_config_dir() -> Result<std::path::PathBuf, DaemonError> {
         })?;
 
     Ok(std::path::PathBuf::from(home).join(".config/keyrx"))
-}
-
-/// Query active profile name
-fn query_active_profile() -> Option<String> {
-    use crate::ipc::{DaemonIpc, IpcRequest, IpcResponse, DEFAULT_SOCKET_PATH};
-
-    let socket_path = std::path::PathBuf::from(DEFAULT_SOCKET_PATH);
-    let mut ipc = crate::ipc::unix_socket::UnixSocketIpc::new(socket_path);
-
-    let response = ipc.send_request(&IpcRequest::GetStatus).ok()?;
-
-    match response {
-        IpcResponse::Status {
-            running: _,
-            uptime_secs: _,
-            active_profile,
-            device_count: _,
-        } => active_profile,
-        _ => None,
-    }
 }
 
 #[cfg(test)]

@@ -20,6 +20,9 @@ const MAX_PROFILES: usize = 100;
 /// Maximum profile name length
 const MAX_PROFILE_NAME_LEN: usize = 32;
 
+/// File name for persisting active profile
+const ACTIVE_PROFILE_FILE: &str = ".active";
+
 /// Profile manager for CRUD operations and hot-reload.
 pub struct ProfileManager {
     config_dir: PathBuf,
@@ -121,6 +124,13 @@ impl ProfileManager {
 
         // Scan for existing profiles
         manager.scan_profiles()?;
+
+        // Restore persisted active profile if it exists
+        if let Some(active_name) = manager.load_active_profile() {
+            if let Ok(mut guard) = manager.active_profile.write() {
+                *guard = Some(active_name);
+            }
+        }
 
         Ok(manager)
     }
@@ -338,6 +348,11 @@ impl ProfileManager {
         })? = Some(name.to_string());
         let reload_time = reload_start.elapsed().as_millis() as u64;
 
+        // Persist active profile to disk for restore on restart
+        if let Err(e) = self.save_active_profile(name) {
+            log::warn!("Failed to persist active profile (non-fatal): {}", e);
+        }
+
         Ok((compile_time, reload_time))
     }
 
@@ -359,6 +374,8 @@ impl ProfileManager {
             *self.active_profile.write().map_err(|e| {
                 ProfileError::LockError(format!("Failed to acquire write lock: {}", e))
             })? = None;
+            // Clear persisted active profile since we're deleting it
+            self.clear_active_profile_file();
         }
 
         // Delete both .rhai and .krx files
@@ -521,6 +538,76 @@ impl ProfileManager {
             .read()
             .map(|guard| guard.clone())
             .map_err(|e| ProfileError::LockError(format!("Failed to acquire read lock: {}", e)))
+    }
+
+    /// Save the active profile name to persistent storage.
+    ///
+    /// This writes the profile name to a `.active` file in the config directory
+    /// so it can be restored on daemon restart.
+    fn save_active_profile(&self, name: &str) -> Result<(), ProfileError> {
+        let active_file = self.config_dir.join(ACTIVE_PROFILE_FILE);
+        fs::write(&active_file, name).map_err(|e| {
+            log::warn!(
+                "Failed to persist active profile to {:?}: {}",
+                active_file,
+                e
+            );
+            ProfileError::IoError(e)
+        })?;
+        log::info!("Persisted active profile '{}' to {:?}", name, active_file);
+        Ok(())
+    }
+
+    /// Load the active profile name from persistent storage.
+    ///
+    /// This reads the `.active` file from the config directory.
+    /// Returns None if the file doesn't exist or the profile no longer exists.
+    fn load_active_profile(&self) -> Option<String> {
+        let active_file = self.config_dir.join(ACTIVE_PROFILE_FILE);
+        if !active_file.exists() {
+            log::debug!(
+                "No persisted active profile file found at {:?}",
+                active_file
+            );
+            return None;
+        }
+
+        match fs::read_to_string(&active_file) {
+            Ok(name) => {
+                let name = name.trim().to_string();
+                // Verify the profile still exists
+                if self.profiles.contains_key(&name) {
+                    log::info!("Restored active profile '{}' from {:?}", name, active_file);
+                    Some(name)
+                } else {
+                    log::warn!(
+                        "Persisted active profile '{}' no longer exists, ignoring",
+                        name
+                    );
+                    // Clean up stale file
+                    let _ = fs::remove_file(&active_file);
+                    None
+                }
+            }
+            Err(e) => {
+                log::warn!(
+                    "Failed to read active profile from {:?}: {}",
+                    active_file,
+                    e
+                );
+                None
+            }
+        }
+    }
+
+    /// Clear the persisted active profile (used when deleting the active profile).
+    fn clear_active_profile_file(&self) {
+        let active_file = self.config_dir.join(ACTIVE_PROFILE_FILE);
+        if active_file.exists() {
+            if let Err(e) = fs::remove_file(&active_file) {
+                log::warn!("Failed to remove active profile file: {}", e);
+            }
+        }
     }
 
     /// Get profile metadata by name.

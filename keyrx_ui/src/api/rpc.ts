@@ -383,6 +383,40 @@ export class RpcClient {
   }
 
   // ========================================
+  // Daemon Control
+  // ========================================
+
+  /**
+   * Restart the daemon process.
+   *
+   * This triggers a full process restart to apply configuration changes.
+   * The WebSocket connection will be lost and the client should reconnect.
+   *
+   * @returns Success status with message
+   * @throws Error if restart fails to initiate
+   */
+  async restartDaemon(): Promise<{ success: boolean; message: string }> {
+    return this.api.command<{ success: boolean; message: string }>('restart_daemon', {});
+  }
+
+  /**
+   * Activate a profile and restart the daemon to apply changes.
+   *
+   * This is a convenience method that activates a profile and then restarts
+   * the daemon so the new configuration takes effect immediately.
+   *
+   * @param name - Name of the profile to activate
+   * @returns Success status
+   * @throws Error if activation or restart fails
+   */
+  async activateProfileAndRestart(name: string): Promise<void> {
+    await this.activateProfile(name);
+    // Brief delay to ensure activation is complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await this.restartDaemon();
+  }
+
+  // ========================================
   // Connection State
   // ========================================
 

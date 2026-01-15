@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
 import * as profileApi from '../api/profiles';
+import { useUnifiedApi } from './useUnifiedApi';
+import { RpcClient } from '../api/rpc';
 import type { ProfileMetadata, Template } from '../types';
 
 /**
@@ -14,11 +16,24 @@ export function useProfiles() {
 }
 
 /**
- * Get the currently active profile
+ * Get the currently active profile from the profiles list
+ * @deprecated Use useActiveProfileQuery for direct API access
  */
 export function useActiveProfile() {
   const { data: profiles } = useProfiles();
   return profiles?.find((p) => p.isActive) ?? null;
+}
+
+/**
+ * Fetch active profile name directly from the daemon
+ * This provides a dedicated query that can be invalidated independently
+ */
+export function useActiveProfileQuery() {
+  return useQuery({
+    queryKey: queryKeys.activeProfile,
+    queryFn: profileApi.fetchActiveProfile,
+    staleTime: 10 * 1000, // 10 seconds - more frequent checks for active profile
+  });
 }
 
 /**
@@ -35,14 +50,25 @@ export function useCreateProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.profiles });
     },
+
+    // Also refetch on error - profile might exist but cache is stale
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profiles });
+    },
   });
 }
 
 /**
- * Activate a profile with optimistic updates
+ * Activate a profile with optimistic updates and auto-restart.
+ *
+ * When a profile is successfully activated, the daemon automatically restarts
+ * to apply the new configuration. This ensures "active" always means
+ * "the daemon is currently remapping with this profile".
  */
 export function useActivateProfile() {
   const queryClient = useQueryClient();
+  const api = useUnifiedApi();
+  const rpcClient = new RpcClient(api);
 
   return useMutation({
     mutationFn: (name: string) => profileApi.activateProfile(name),
@@ -75,21 +101,33 @@ export function useActivateProfile() {
       }
     },
 
-    onSuccess: (result, _variables, context) => {
-      // Only invalidate cache if there are no compilation errors
-      // If there are errors, rollback to previous state
+    onSuccess: async (result, _variables, context) => {
+      // Only proceed if there are no compilation errors
       if (result.errors && result.errors.length > 0) {
         // Rollback optimistic update on compilation error
         if (context?.previousProfiles) {
           queryClient.setQueryData(queryKeys.profiles, context.previousProfiles);
         }
-      } else {
-        // Success - invalidate profiles, config, daemon state, and active profile queries
+        return;
+      }
+
+      // Success - restart daemon to apply the new configuration
+      // This ensures "active" = "daemon is remapping with this profile"
+      try {
+        await rpcClient.restartDaemon();
+        // Queries will be invalidated after reconnection
+      } catch {
+        // Restart initiated but may fail to get response (expected - daemon is restarting)
+        // The WebSocket disconnects during restart, so this catch is expected behavior
+      }
+
+      // Invalidate queries - they'll refetch after WebSocket reconnects
+      setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: queryKeys.profiles });
         queryClient.invalidateQueries({ queryKey: ['config'] });
         queryClient.invalidateQueries({ queryKey: queryKeys.daemonState });
         queryClient.invalidateQueries({ queryKey: queryKeys.activeProfile });
-      }
+      }, 2000);
     },
   });
 }

@@ -5,6 +5,7 @@
 //! validate inputs, and delegate to service layer for business logic.
 
 pub mod config;
+pub mod daemon;
 pub mod device;
 pub mod metrics;
 pub mod profile;
