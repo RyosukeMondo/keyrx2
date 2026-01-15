@@ -19,8 +19,11 @@ Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if WiX is installed
-$wixPath = (Get-Command candle.exe -ErrorAction SilentlyContinue).Path
-if (-not $wixPath) {
+$wixBinPath = "C:\Program Files (x86)\WiX Toolset v3.14\bin"
+$candlePath = Join-Path $wixBinPath "candle.exe"
+$lightPath = Join-Path $wixBinPath "light.exe"
+
+if (-not (Test-Path $candlePath)) {
     Write-Host "ERROR: WiX Toolset not found!" -ForegroundColor Red
     Write-Host ""
     Write-Host "Please install WiX Toolset:" -ForegroundColor Yellow
@@ -29,7 +32,7 @@ if (-not $wixPath) {
     exit 1
 }
 
-Write-Host "Found WiX at: $wixPath" -ForegroundColor Green
+Write-Host "Found WiX at: $wixBinPath" -ForegroundColor Green
 
 # Check if release binaries exist
 $daemonExe = "target\release\keyrx_daemon.exe"
@@ -57,7 +60,7 @@ Write-Host ""
 Write-Host "Compiling WiX source..." -ForegroundColor Cyan
 $wixObj = Join-Path $OutputDir "keyrx_installer.wixobj"
 
-candle.exe `
+& $candlePath `
     -nologo `
     -ext WixUIExtension `
     -ext WixUtilExtension `
@@ -77,7 +80,7 @@ Write-Host ""
 Write-Host "Linking MSI..." -ForegroundColor Cyan
 $msiPath = Join-Path $OutputDir "KeyRx-$Version-x64.msi"
 
-light.exe `
+& $lightPath `
     -nologo `
     -ext WixUIExtension `
     -ext WixUtilExtension `
