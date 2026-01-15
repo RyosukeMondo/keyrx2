@@ -231,6 +231,8 @@ where
                 };
 
                 // Inject output events
+                // On Linux, grab() blocks original events so we MUST always inject.
+                // On Windows, Raw Input doesn't block events so they flow naturally.
                 for output_event in &output_events {
                     if let Err(e) = platform.inject_output(output_event.clone()) {
                         warn!("Failed to inject event: {}", e);
@@ -311,6 +313,114 @@ where
     );
 
     Ok(())
+}
+
+/// Process a single event from the platform (non-blocking).
+///
+/// This function is designed for platforms like Windows where the event loop
+/// must be integrated with a system message pump. It attempts to capture one
+/// event and process it, returning immediately if no event is available.
+///
+/// # Arguments
+///
+/// * `platform` - Platform abstraction for input/output operations
+/// * `event_broadcaster` - Optional broadcaster for real-time WebSocket updates
+/// * `remapping_state` - Optional remapping state for key remapping
+/// * `latency_recorder` - Optional latency recorder for metrics
+///
+/// # Returns
+///
+/// * `Ok(true)` - An event was processed
+/// * `Ok(false)` - No event was available (non-blocking return)
+/// * `Err(...)` - A fatal error occurred
+pub fn process_one_event(
+    platform: &mut Box<dyn Platform>,
+    event_broadcaster: Option<&EventBroadcaster>,
+    remapping_state: Option<&mut RemappingState>,
+    latency_recorder: Option<&LatencyRecorder>,
+) -> Result<bool, DaemonError> {
+    // Try to capture an input event (non-blocking on Windows)
+    match platform.capture_input() {
+        Ok(event) => {
+            let capture_time = Instant::now();
+            trace!("Input event: {:?}", event);
+
+            // Get device info from event
+            let device_id = event.device_id().map(String::from);
+            let input_keycode = event.keycode();
+
+            // Process event through remapping engine if available
+            let (output_events, mapping_type, mapping_triggered) =
+                if let Some(remap_state) = remapping_state {
+                    let (lookup, state) = remap_state.lookup_and_state_mut();
+                    let mapping = lookup.find_mapping(input_keycode, state);
+                    let mapping_type_str = mapping.map(get_mapping_type);
+                    let triggered = mapping.is_some();
+                    let outputs = process_event(event.clone(), lookup, state);
+                    (outputs, mapping_type_str, triggered)
+                } else {
+                    // Pass-through mode - no remapping
+                    (vec![event.clone()], None, false)
+                };
+
+            // Compute output description for broadcast
+            let output_desc = if output_events.is_empty() {
+                "(suppressed)".to_string()
+            } else {
+                output_events
+                    .iter()
+                    .map(|e| format!("{:?}", e.keycode()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
+
+            // Only inject output events if remapping was triggered
+            // In pass-through mode (no remapping), we must NOT inject because:
+            // 1. The original key event will reach applications naturally
+            // 2. Injecting would cause a feedback loop (captured again by Raw Input)
+            if mapping_triggered {
+                for output_event in &output_events {
+                    if let Err(e) = platform.inject_output(output_event.clone()) {
+                        warn!("Failed to inject event: {}", e);
+                    }
+                }
+            }
+
+            // Record latency after injection
+            let latency_us = capture_time.elapsed().as_micros() as u64;
+            if let Some(recorder) = latency_recorder {
+                recorder.record(latency_us);
+            }
+
+            // Broadcast key event to WebSocket clients if broadcaster is available
+            if let Some(broadcaster) = event_broadcaster {
+                let timestamp = current_timestamp_us();
+
+                let event_data = KeyEventData {
+                    timestamp,
+                    key_code: format!("{:?}", input_keycode),
+                    event_type: match event.event_type() {
+                        keyrx_core::runtime::KeyEventType::Press => "press".to_string(),
+                        keyrx_core::runtime::KeyEventType::Release => "release".to_string(),
+                    },
+                    input: format!("{:?}", input_keycode),
+                    output: output_desc,
+                    latency: latency_us,
+                    device_id: device_id.clone(),
+                    device_name: device_id,
+                    mapping_type: mapping_type.map(String::from),
+                    mapping_triggered,
+                };
+                broadcaster.broadcast_key_event(event_data);
+            }
+
+            Ok(true)
+        }
+        Err(_) => {
+            // No event available (non-blocking return)
+            Ok(false)
+        }
+    }
 }
 
 #[cfg(test)]

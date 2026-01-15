@@ -40,11 +40,10 @@ async fn get_layout(Path(name): Path<String>) -> Result<Json<Value>, ApiError> {
     Ok(Json(layout.kle_json.clone()))
 }
 
-/// Get config directory path
+/// Get config directory path (cross-platform)
 fn get_config_dir() -> Result<std::path::PathBuf, ApiError> {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| ApiError::InternalError("Cannot determine home directory".to_string()))?;
+    let config_dir = dirs::config_dir()
+        .ok_or_else(|| ApiError::InternalError("Cannot determine config directory".to_string()))?;
 
-    Ok(std::path::PathBuf::from(home).join(".config/keyrx"))
+    Ok(config_dir.join("keyrx"))
 }

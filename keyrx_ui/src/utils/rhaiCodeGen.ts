@@ -90,7 +90,8 @@ export function generateRhaiScript(ast: RhaiAST, options?: FormatOptions): strin
     }
   }
 
-  // Generate global mappings
+  // Generate global mappings wrapped in device_start("*") block
+  // This ensures compatibility with the Rhai validator which requires all mappings inside device blocks
   if (ast.globalMappings.length > 0) {
     // Add comments that appear before global mappings
     const globalComments = getCommentsForSection(ast.comments, 0, getFirstDeviceLineOrEnd(ast));
@@ -98,9 +99,13 @@ export function generateRhaiScript(ast: RhaiAST, options?: FormatOptions): strin
       lines.push(generateComment(comment));
     }
 
+    // Wrap global mappings in device_start("*") block
+    lines.push('device_start("*");');
+    const indent = ' '.repeat(opts.indentSize);
     for (const mapping of ast.globalMappings) {
-      lines.push(generateKeyMapping(mapping, 0, opts));
+      lines.push(indent + generateKeyMapping(mapping, 1, opts));
     }
+    lines.push('device_end();');
 
     // Add blank lines after global mappings if there are device blocks
     if (ast.deviceBlocks.length > 0) {

@@ -65,6 +65,7 @@ pub mod state;
 
 // Re-exports for public API
 pub use event_broadcaster::{start_latency_broadcast_task, EventBroadcaster};
+pub use event_loop::process_one_event;
 pub use metrics::{LatencyRecorder, LatencySnapshot, MetricsAggregator};
 pub use remapping_state::RemappingState;
 pub use signals::{install_signal_handlers, SignalHandler};
@@ -502,6 +503,26 @@ impl Daemon {
     /// println!("Daemon stopped gracefully");
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
+    /// Process a single event from the platform (non-blocking).
+    ///
+    /// This method is designed for Windows where the event loop must be
+    /// integrated with the system message pump. Call this repeatedly in
+    /// the Windows message loop to process keyboard events.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(true)` - An event was processed
+    /// * `Ok(false)` - No event was available
+    /// * `Err(...)` - A fatal error occurred
+    pub fn process_one_event(&mut self) -> Result<bool, DaemonError> {
+        event_loop::process_one_event(
+            &mut self.platform,
+            self.event_broadcaster.as_ref(),
+            self.remapping_state.as_mut(),
+            Some(&self.latency_recorder),
+        )
+    }
+
     pub fn run(&mut self) -> Result<(), DaemonError> {
         // Clone config_dir for the reload closure (avoids borrowing self)
         let config_dir = self.config_dir.clone();

@@ -10,6 +10,12 @@
 //! - `list-devices`: List available input devices
 //! - `validate`: Validate configuration and device matching without grabbing
 
+// Hide console window on Windows release builds
+#![cfg_attr(
+    all(target_os = "windows", not(debug_assertions)),
+    windows_subsystem = "windows"
+)]
+
 // Note: platform and web modules are used via the library (keyrx_daemon::platform)
 
 use clap::{Parser, Subcommand};
@@ -475,17 +481,126 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
     Ok(())
 }
 
+/// Ensure only one instance of the daemon is running.
+/// Kills any existing instance before starting.
+/// Returns true if an old instance was killed.
+#[cfg(target_os = "windows")]
+fn ensure_single_instance(config_dir: &std::path::Path) -> bool {
+    let pid_file = config_dir.join("daemon.pid");
+    let mut killed = false;
+
+    // Check if PID file exists and process is running
+    if pid_file.exists() {
+        if let Ok(contents) = std::fs::read_to_string(&pid_file) {
+            if let Ok(old_pid) = contents.trim().parse::<u32>() {
+                // Try to kill the old process
+                log::info!("Found existing daemon (PID {}), terminating...", old_pid);
+                unsafe {
+                    use windows_sys::Win32::Foundation::CloseHandle;
+                    use windows_sys::Win32::System::Threading::{
+                        OpenProcess, TerminateProcess, PROCESS_TERMINATE,
+                    };
+
+                    let handle = OpenProcess(PROCESS_TERMINATE, 0, old_pid);
+                    if !handle.is_null() {
+                        if TerminateProcess(handle, 0) != 0 {
+                            log::info!("Terminated previous daemon instance (PID {})", old_pid);
+                            killed = true;
+                            // Give it a moment to clean up
+                            std::thread::sleep(std::time::Duration::from_millis(500));
+                        }
+                        CloseHandle(handle);
+                    }
+                }
+            }
+        }
+        // Remove old PID file
+        let _ = std::fs::remove_file(&pid_file);
+    }
+
+    // Write current PID
+    let current_pid = std::process::id();
+    if let Err(e) = std::fs::write(&pid_file, current_pid.to_string()) {
+        log::warn!("Failed to write PID file: {}", e);
+    } else {
+        log::debug!("Wrote PID {} to {:?}", current_pid, pid_file);
+    }
+
+    killed
+}
+
+/// Clean up PID file on exit
+#[cfg(target_os = "windows")]
+fn cleanup_pid_file(config_dir: &std::path::Path) {
+    let pid_file = config_dir.join("daemon.pid");
+    let _ = std::fs::remove_file(&pid_file);
+}
+
+/// Find an available port starting from the given port.
+/// Tries ports in sequence: port, port+1, port+2, ... up to 10 attempts.
+#[cfg(target_os = "windows")]
+fn find_available_port(start_port: u16) -> u16 {
+    use std::net::TcpListener;
+
+    for offset in 0..10 {
+        let port = start_port.saturating_add(offset);
+        if port == 0 {
+            continue;
+        }
+
+        match TcpListener::bind(format!("127.0.0.1:{}", port)) {
+            Ok(_listener) => {
+                // Port is available (listener is dropped immediately, releasing the port)
+                return port;
+            }
+            Err(_) => {
+                // Port is in use, try next
+                continue;
+            }
+        }
+    }
+
+    // Fallback: return the original port (will fail with a clear error later)
+    start_port
+}
+
 #[cfg(target_os = "windows")]
 fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, String)> {
     use keyrx_daemon::daemon::Daemon;
     use keyrx_daemon::platform::windows::tray::TrayIconController;
     use keyrx_daemon::platform::{SystemTray, TrayControlEvent};
+    use keyrx_daemon::services::SettingsService;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE, WM_QUIT,
     };
 
     // Initialize logging
     init_logging(debug);
+
+    // Determine config directory (always use standard location for profile management)
+    let config_dir = {
+        let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push("keyrx");
+        path
+    };
+
+    // Ensure single instance - kill any existing daemon before starting
+    let killed_old = ensure_single_instance(&config_dir);
+
+    // Load settings to get configured port
+    let settings_service_for_port = SettingsService::new(config_dir.clone());
+
+    // If we killed an old instance, reset port to default since it should be free now
+    let configured_port = if killed_old {
+        let default_port = keyrx_daemon::services::DEFAULT_PORT;
+        if let Err(e) = settings_service_for_port.set_port(default_port) {
+            log::warn!("Failed to reset port to default: {}", e);
+        }
+        default_port
+    } else {
+        settings_service_for_port.get_port()
+    };
+    log::info!("Configured web server port: {}", configured_port);
 
     // Check if config file exists, warn if not
     if !config_path.exists() {
@@ -527,13 +642,6 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
     // Start web server in background
     let macro_recorder = std::sync::Arc::new(keyrx_daemon::macro_recorder::MacroRecorder::new());
 
-    // Determine config directory (always use standard location for profile management)
-    let config_dir = {
-        let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-        path.push("keyrx");
-        path
-    };
-
     // Initialize ProfileManager and ProfileService
     let profile_manager = match keyrx_daemon::config::ProfileManager::new(config_dir.clone()) {
         Ok(mgr) => std::sync::Arc::new(mgr),
@@ -566,9 +674,30 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
         profile_service,
         device_service,
         config_service,
-        settings_service,
+        settings_service.clone(),
         subscription_manager,
     ));
+
+    // Find an available port, starting with configured port
+    let actual_port = find_available_port(configured_port);
+
+    // If we had to use a different port, save it to settings and notify user
+    let port_changed = actual_port != configured_port;
+    if port_changed {
+        log::warn!(
+            "Configured port {} is in use. Using port {} instead.",
+            configured_port,
+            actual_port
+        );
+        // Save the new port to settings
+        if let Err(e) = settings_service.set_port(actual_port) {
+            log::warn!("Failed to save new port to settings: {}", e);
+        }
+    }
+
+    let actual_port_for_thread = actual_port;
+    let port_changed_for_thread = port_changed;
+    let configured_port_for_thread = configured_port;
 
     std::thread::spawn(move || {
         let rt = match tokio::runtime::Runtime::new() {
@@ -587,8 +716,16 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                 Some(latency_recorder_for_broadcaster),
             ));
 
-            let addr: std::net::SocketAddr = ([127, 0, 0, 1], 9867).into();
-            log::info!("Starting web server on http://{}", addr);
+            let addr: std::net::SocketAddr = ([127, 0, 0, 1], actual_port_for_thread).into();
+            if port_changed_for_thread {
+                log::info!(
+                    "Port {} was in use. Starting web server on http://{} (saved to settings)",
+                    configured_port_for_thread,
+                    addr
+                );
+            } else {
+                log::info!("Starting web server on http://{}", addr);
+            }
             match keyrx_daemon::web::serve(addr, event_tx_clone, app_state).await {
                 Ok(()) => log::info!("Web server stopped"),
                 Err(e) => log::error!("Web server error: {}", e),
@@ -600,6 +737,16 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
     let tray = match TrayIconController::new() {
         Ok(tray) => {
             log::info!("System tray icon created successfully");
+            // Notify user about port if it changed
+            if port_changed {
+                tray.show_notification(
+                    "KeyRx Port Changed",
+                    &format!(
+                        "Port {} was in use. Now running on port {}.",
+                        configured_port, actual_port
+                    ),
+                );
+            }
             Some(tray)
         }
         Err(e) => {
@@ -607,7 +754,10 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                 "Failed to create system tray icon (this is normal in headless/WinRM sessions): {}",
                 e
             );
-            log::info!("Daemon will continue without system tray. Web UI is available at http://127.0.0.1:9867");
+            log::info!(
+                "Daemon will continue without system tray. Web UI is available at http://127.0.0.1:{}",
+                actual_port
+            );
             None
         }
     };
@@ -618,6 +768,9 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
     }
 
     log::info!("Daemon initialized. Running message loop...");
+
+    // Build web UI URL with actual port
+    let web_ui_url = format!("http://127.0.0.1:{}", actual_port);
 
     // Windows low-level hooks REQUIRE a message loop on the thread that installed them.
     // Our Daemon::new() calls grab() which installs the hook.
@@ -638,6 +791,28 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                 });
             }
 
+            // Process keyboard events from the daemon's event queue
+            // This reads events captured by the Windows hooks and:
+            // 1. Processes them through the remapping engine
+            // 2. Broadcasts them to WebSocket clients for metrics display
+            // Process multiple events per iteration to keep up with fast typing
+            for _ in 0..10 {
+                match daemon.process_one_event() {
+                    Ok(true) => {
+                        // Event processed, try to get more
+                        continue;
+                    }
+                    Ok(false) => {
+                        // No more events available
+                        break;
+                    }
+                    Err(e) => {
+                        log::warn!("Error processing event: {}", e);
+                        break;
+                    }
+                }
+            }
+
             // Check if daemon is still running
             if !daemon.is_running() {
                 log::info!("Daemon stopped");
@@ -653,8 +828,8 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                             let _ = daemon.reload();
                         }
                         TrayControlEvent::OpenWebUI => {
-                            log::info!("Opening web UI...");
-                            if let Err(e) = open_browser("http://127.0.0.1:9867") {
+                            log::info!("Opening web UI at {}...", web_ui_url);
+                            if let Err(e) = open_browser(&web_ui_url) {
                                 log::error!("Failed to open web UI: {}", e);
                             }
                         }

@@ -3,8 +3,10 @@
 // Edit this file or create a new profile to customize your keyboard.
 
 // Apply to all keyboards
-device("*", #{
-    // Add your key mappings here
-    // Example: map CapsLock to Escape
-    // "CapsLock": "Escape",
-});
+device_start("*");
+
+  // Add your key mappings here
+  // Example: map CapsLock to Escape
+  // map("VK_CapsLock", "VK_Escape");
+
+device_end();

@@ -6,12 +6,32 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Default web server port
+pub const DEFAULT_PORT: u16 = 9867;
+
 /// Global daemon settings
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonSettings {
     /// Default keyboard layout for newly detected devices
     #[serde(skip_serializing_if = "Option::is_none")]
     pub global_layout: Option<String>,
+
+    /// Web server port (default: 9867)
+    #[serde(default = "default_port")]
+    pub port: u16,
+}
+
+fn default_port() -> u16 {
+    DEFAULT_PORT
+}
+
+impl Default for DaemonSettings {
+    fn default() -> Self {
+        Self {
+            global_layout: None,
+            port: DEFAULT_PORT,
+        }
+    }
 }
 
 /// Settings management service
@@ -26,8 +46,8 @@ impl SettingsService {
         Self { settings_path }
     }
 
-    /// Load settings from disk
-    fn load_settings(&self) -> Result<DaemonSettings, String> {
+    /// Load settings from disk (public for startup use)
+    pub fn load_settings(&self) -> Result<DaemonSettings, String> {
         match std::fs::read_to_string(&self.settings_path) {
             Ok(contents) => serde_json::from_str(&contents)
                 .map_err(|e| format!("Failed to parse settings: {}", e)),
@@ -77,6 +97,30 @@ impl SettingsService {
 
         log::info!("Set global layout to: {:?}", layout_for_log);
         Ok(())
+    }
+
+    /// Get current port setting
+    pub fn get_port(&self) -> u16 {
+        self.load_settings().map(|s| s.port).unwrap_or(DEFAULT_PORT)
+    }
+
+    /// Set port setting (saves to disk)
+    pub fn set_port(&self, port: u16) -> Result<(), String> {
+        if port == 0 {
+            return Err("Port cannot be 0".to_string());
+        }
+
+        let mut settings = self.load_settings()?;
+        settings.port = port;
+        self.save_settings(&settings)?;
+
+        log::info!("Saved port {} to settings", port);
+        Ok(())
+    }
+
+    /// Get path to settings file
+    pub fn settings_path(&self) -> &PathBuf {
+        &self.settings_path
     }
 }
 

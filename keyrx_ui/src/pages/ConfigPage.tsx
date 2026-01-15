@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/Card';
-import { SimpleCodeEditor } from '@/components/SimpleCodeEditor';
+import { MonacoEditor } from '@/components/MonacoEditor';
 import { KeyPalette, type PaletteKey } from '@/components/KeyPalette';
 import { DeviceSelector, type Device } from '@/components/DeviceSelector';
 import { KeyConfigPanel } from '@/components/KeyConfigPanel';
@@ -225,30 +225,33 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     const addedPatterns = new Set<string>();
 
     // Add devices from Rhai (may be disconnected)
-    devicePatternsInRhai.forEach((pattern) => {
-      if (addedPatterns.has(pattern)) return;
-      addedPatterns.add(pattern);
+    // Skip "*" pattern - it represents "all devices" and is handled by Global checkbox
+    devicePatternsInRhai
+      .filter((pattern) => pattern !== '*')
+      .forEach((pattern) => {
+        if (addedPatterns.has(pattern)) return;
+        addedPatterns.add(pattern);
 
-      // Try to find matching connected device
-      const connectedDevice = connectedDeviceMap.get(pattern);
-      if (connectedDevice) {
-        // Device is both in Rhai and connected
-        merged.push({
-          id: connectedDevice.id,
-          name: connectedDevice.name,
-          serial: connectedDevice.serial || undefined,
-          connected: true,
-        });
-      } else {
-        // Device in Rhai but not connected (disconnected device)
-        merged.push({
-          id: `disconnected-${pattern}`,
-          name: pattern, // Use pattern as name for disconnected devices
-          serial: pattern,
-          connected: false,
-        });
-      }
-    });
+        // Try to find matching connected device
+        const connectedDevice = connectedDeviceMap.get(pattern);
+        if (connectedDevice) {
+          // Device is both in Rhai and connected
+          merged.push({
+            id: connectedDevice.id,
+            name: connectedDevice.name,
+            serial: connectedDevice.serial || undefined,
+            connected: true,
+          });
+        } else {
+          // Device in Rhai but not connected (disconnected device)
+          merged.push({
+            id: `disconnected-${pattern}`,
+            name: pattern, // Use pattern as name for disconnected devices
+            serial: pattern,
+            connected: false,
+          });
+        }
+      });
 
     // Add connected devices not in Rhai (filter out disabled devices)
     devicesData
@@ -272,17 +275,20 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     setMergedDevices(merged);
 
     // Auto-populate device selector based on Rhai content
-    // If Rhai has global mappings, select global
-    if (hasGlobalMappings(ast)) {
+    // If Rhai has global mappings OR device_start("*"), select global
+    // device_start("*") is equivalent to global - applies to all devices
+    const hasWildcardDevice = devicePatternsInRhai.includes('*');
+    if (hasGlobalMappings(ast) || hasWildcardDevice) {
       configStore.setGlobalSelected(true);
     }
 
-    // If Rhai has device blocks, auto-select those devices
-    if (devicePatternsInRhai.length > 0) {
+    // If Rhai has device blocks, auto-select those devices (excluding "*" which is handled by global)
+    const nonWildcardPatterns = devicePatternsInRhai.filter((p) => p !== '*');
+    if (nonWildcardPatterns.length > 0) {
       const devicesToSelect = merged
         .filter((device) => {
           const pattern = device.serial || device.name;
-          return devicePatternsInRhai.includes(pattern);
+          return nonWildcardPatterns.includes(pattern);
         })
         .map((device) => device.id);
 
@@ -350,12 +356,37 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     // Initialize base layer
     layerMappings.set('base', new Map());
 
-    // Process global mappings
+    // Process global mappings (including device_start("*") which is treated as global)
     if (globalSelected) {
       const baseMap = layerMappings.get('base')!;
+
+      // Process top-level global mappings
       ast.globalMappings.forEach((m) => {
         baseMap.set(normalizeKeyCode(m.sourceKey), convertToVisualMapping(m));
       });
+
+      // Also process device_start("*") block as global - "*" means all devices
+      const wildcardBlock = ast.deviceBlocks.find((block) => block.pattern === '*');
+      if (wildcardBlock) {
+        wildcardBlock.mappings.forEach((m) => {
+          baseMap.set(normalizeKeyCode(m.sourceKey), convertToVisualMapping(m));
+        });
+
+        // Also process layers from wildcard block
+        wildcardBlock.layers.forEach((layer) => {
+          const layerModifiers = Array.isArray(layer.modifiers) ? layer.modifiers : [layer.modifiers];
+          layerModifiers.forEach((mod: string) => {
+            const layerId = mod.toLowerCase().replace('_', '-');
+            if (!layerMappings.has(layerId)) {
+              layerMappings.set(layerId, new Map());
+            }
+            const layerMap = layerMappings.get(layerId)!;
+            layer.mappings.forEach((m: RhaiKeyMapping) => {
+              layerMap.set(normalizeKeyCode(m.sourceKey), convertToVisualMapping(m));
+            });
+          });
+        });
+      }
     }
 
     // Process device-specific mappings for selected devices
@@ -725,8 +756,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium text-slate-300">Devices:</span>
-                {devices.length > 0 ? (
-                  devices.map((device) => (
+                {/* Filter out "*" device - it's represented by the Global checkbox */}
+                {devices.filter((d) => d.name !== '*' && d.serial !== '*').length > 0 ? (
+                  devices.filter((d) => d.name !== '*' && d.serial !== '*').map((device) => (
                     <label
                       key={device.id}
                       className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-md hover:bg-slate-700 cursor-pointer transition-colors"
@@ -1093,13 +1125,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
               </div>
             )}
 
-            {/* Code Editor */}
+            {/* Code Editor with WASM validation */}
             <div className="flex-1 overflow-hidden" data-testid="code-editor">
-              <SimpleCodeEditor
+              <MonacoEditor
                 value={syncEngine.getCode()}
                 onChange={(value) => syncEngine.onCodeChange(value)}
                 height={`${codePanelHeight - (syncEngine.state !== 'idle' ? 120 : syncEngine.error ? 140 : 60)}px`}
-                language="javascript"
               />
             </div>
           </div>

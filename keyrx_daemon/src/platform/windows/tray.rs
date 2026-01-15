@@ -34,6 +34,18 @@ pub struct TrayIconController {
     exit_id: String,
 }
 
+impl TrayIconController {
+    /// Show a balloon notification on the tray icon
+    pub fn show_notification(&self, title: &str, message: &str) {
+        // tray-icon doesn't have built-in balloon support, so we use notify-rust
+        // For now, just log the notification (balloon support requires additional setup)
+        log::info!("Tray notification: {} - {}", title, message);
+
+        // On Windows, we could use winrt-notification crate for native toast notifications
+        // For now, we'll rely on the log message being visible to the user
+    }
+}
+
 impl SystemTray for TrayIconController {
     fn new() -> Result<Self, TrayError> {
         let tray_menu = Menu::new();

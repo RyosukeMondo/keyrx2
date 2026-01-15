@@ -373,18 +373,16 @@ async fn validate_profile(
     }
 }
 
-/// Get config directory path
+/// Get config directory path (cross-platform)
 fn get_config_dir() -> Result<std::path::PathBuf, DaemonError> {
     use crate::error::ConfigError;
 
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| ConfigError::ParseError {
-            path: std::path::PathBuf::from("~"),
-            reason: "Cannot determine home directory".to_string(),
-        })?;
+    let config_dir = dirs::config_dir().ok_or_else(|| ConfigError::ParseError {
+        path: std::path::PathBuf::from("~"),
+        reason: "Cannot determine config directory".to_string(),
+    })?;
 
-    Ok(std::path::PathBuf::from(home).join(".config/keyrx"))
+    Ok(config_dir.join("keyrx"))
 }
 
 #[cfg(test)]

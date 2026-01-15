@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card } from './Card';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';
 import { InlineEdit } from './InlineEdit';
-import { Check, AlertTriangle, CheckCircle2, FileCode } from 'lucide-react';
+import { Check, AlertTriangle, CheckCircle2, FileCode, Copy, CheckCheck } from 'lucide-react';
 import { useProfileValidation } from '../hooks/useProfileValidation';
 import { truncatePath } from '../utils/pathUtils';
 
@@ -55,6 +55,23 @@ export const ProfileCard = React.memo<ProfileCardProps>(
     const isValid = validationResult?.valid ?? true; // Default to valid if not yet loaded
     const validationErrors = validationResult?.errors ?? [];
     const firstError = validationErrors[0];
+
+    // State for copy-to-clipboard feedback
+    const [copied, setCopied] = useState(false);
+
+    // Handler to copy error to clipboard
+    const handleCopyError = useCallback(async () => {
+      if (!firstError) return;
+
+      const errorText = `Configuration Error - Line ${firstError.line}: ${firstError.message}`;
+      try {
+        await navigator.clipboard.writeText(errorText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy error:', err);
+      }
+    }, [firstError]);
 
     // Format Rhai path for display
     const displayPath = rhaiPath ? truncatePath(rhaiPath, 40) : null;
@@ -159,6 +176,9 @@ export const ProfileCard = React.memo<ProfileCardProps>(
                         <span className="text-yellow-400 font-semibold">Line {firstError.line}:</span>{' '}
                         {firstError.message}
                       </div>
+                      <div className="text-xs text-slate-400 mt-2">
+                        {copied ? '✓ Copied!' : 'Click to copy error'}
+                      </div>
                     </div>
                   ) : (
                     'Invalid configuration'
@@ -166,10 +186,19 @@ export const ProfileCard = React.memo<ProfileCardProps>(
                 }
                 position="top"
               >
-                <div className="inline-flex items-center gap-2 bg-yellow-500/20 text-yellow-200 border-2 border-yellow-500/60 px-3 py-1.5 rounded-md text-sm font-semibold cursor-help shadow-sm hover:bg-yellow-500/30 transition-colors">
+                <button
+                  onClick={handleCopyError}
+                  className="inline-flex items-center gap-2 bg-yellow-500/20 text-yellow-200 border-2 border-yellow-500/60 px-3 py-1.5 rounded-md text-sm font-semibold cursor-pointer shadow-sm hover:bg-yellow-500/30 transition-colors"
+                  aria-label={`Copy error: Line ${firstError?.line}: ${firstError?.message}`}
+                >
                   <AlertTriangle size={16} className="flex-shrink-0" aria-hidden="true" />
                   <span>Invalid Configuration</span>
-                </div>
+                  {copied ? (
+                    <CheckCheck size={14} className="text-green-400" aria-hidden="true" />
+                  ) : (
+                    <Copy size={14} className="opacity-50" aria-hidden="true" />
+                  )}
+                </button>
               </Tooltip>
             )}
           </div>
