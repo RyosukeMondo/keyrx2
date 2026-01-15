@@ -24,7 +24,7 @@
     </Feature>
 
     <!-- Custom icon for Add/Remove Programs -->
-    <Icon Id="ProductIcon" SourceFile="assets\icon.ico" />
+    <Icon Id="ProductIcon" SourceFile="keyrx_daemon\assets\icon.ico" />
     <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
 
     <!-- Add to PATH -->
