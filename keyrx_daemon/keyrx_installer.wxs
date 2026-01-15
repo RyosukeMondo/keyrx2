@@ -12,6 +12,7 @@
       InstallerVersion="200"
       Compressed="yes"
       InstallScope="perMachine"
+      Platform="x64"
       Description="KeyRx - Advanced Keyboard Remapping Software"
       Comments="Powerful keyboard remapping with multi-device support and web UI" />
 
