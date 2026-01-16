@@ -41,7 +41,7 @@
   - _Requirements: TR-2_
   - _Prompt: Role: QA Engineer specializing in hooks testing | Task: Implement the task for spec refactor-simulator-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Write unit tests for useSimulation hook. Test event addition, max events enforcement (FIFO), start/stop state transitions, WebSocket subscription lifecycle, statistics computation. Mock WebSocket. Use renderHook from @testing-library/react. Achieve >80% coverage. | Restrictions: Mock WebSocket completely, test in isolation, verify cleanup, test edge cases (max events, rapid state changes) | Success: All hook behaviors tested, >80% coverage, WebSocket lifecycle verified, statistics accurate, tests pass | After completion: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 6. Write tests for all components
+- [x] 6. Write tests for all components
   - Files: EventList.test.tsx, SimulationControls.test.tsx, EventInjectionForm.test.tsx
   - Unit tests for each component with >80% coverage
   - Purpose: Ensure component reliability
