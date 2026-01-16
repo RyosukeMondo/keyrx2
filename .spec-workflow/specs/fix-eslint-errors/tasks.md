@@ -30,7 +30,7 @@
   - Remove unused or prefix with `_`
   - _Prompt: Role: Code Quality Engineer | Task: Implement the task for spec fix-eslint-errors. First run spec-workflow-guide, then implement: Fix all unused variable/import violations. Remove genuinely unused. Prefix intentionally unused with `_`. | Restrictions: Don't break functionality | Success: No unused var violations, code clean | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [-] 7. Fix remaining ESLint errors
+- [x] 7. Fix remaining ESLint errors
   - Fix any other error types found
   - _Prompt: Role: Code Quality Engineer | Task: Implement the task for spec fix-eslint-errors. First run spec-workflow-guide, then implement: Fix all remaining ESLint errors (triple-slash references, etc). Run `npm run lint` until 0 errors. | Restrictions: Fix properly, don't disable rules | Success: ESLint 0 errors/warnings | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
