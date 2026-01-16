@@ -137,7 +137,7 @@
   - _Requirements: TR-2_
   - _Prompt: Role: QA Engineer specializing in layout testing | Task: Implement the task for spec refactor-config-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Write unit tests for ConfigurationLayout component. Test children rendering in correct positions, responsive breakpoints (mock window.matchMedia), grid structure, resizable behavior. Achieve >80% coverage. | Restrictions: Mock window.matchMedia for responsive tests, verify DOM structure, test resize handlers, no visual regression tests | Success: Test file created, >80% coverage, children placement verified, responsive behavior tested, tests pass | After completion: 1) Mark [-], 2) log-implementation with artifacts, 3) Mark [x]_
 
-- [ ] 4.3 Update ConfigPage to use ConfigurationLayout
+- [x] 4.3 Update ConfigPage to use ConfigurationLayout
   - File: src/pages/ConfigPage.tsx
   - Wrap components in ConfigurationLayout
   - Purpose: Final ConfigPage simplification

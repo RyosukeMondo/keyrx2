@@ -23,6 +23,7 @@ import { useConfigSync } from '@/hooks/useConfigSync';
 import { CodePanelContainer } from '@/components/config/CodePanelContainer';
 import { KeyboardVisualizerContainer } from '@/components/config/KeyboardVisualizerContainer';
 import { ProfileSelector } from '@/components/config/ProfileSelector';
+import { ConfigurationLayout } from '@/components/config/ConfigurationLayout';
 
 interface ConfigPageProps {
   profileName?: string;
@@ -628,7 +629,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
       )}
 
       {/* Visual Editor Content (Always visible) */}
-      <div className="flex flex-col gap-4">
+      <ConfigurationLayout profileName={selectedProfileName}>
           {/* Device Selection Panel (compact at top) */}
           <Card>
             <div className="flex items-center gap-4 flex-wrap" data-testid="device-selector">
@@ -913,7 +914,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             keyMappings={keyMappings}
             layoutKeys={layoutKeys}
           />
-      </div>
+      </ConfigurationLayout>
 
       {/* Collapsible Code Panel */}
       <CodePanelContainer
