@@ -45,7 +45,7 @@
   - _Requirements: TR-2_
   - _Prompt: Role: QA Engineer | Task: Implement the task for spec refactor-key-palette. First run spec-workflow-guide, then implement: Write unit tests for all three hooks. Mock localStorage. Test FIFO, favorites toggle, fuzzy search ranking. Achieve >80% coverage. | Restrictions: Mock localStorage, test in isolation, cover edge cases | Success: All hooks tested, >80% coverage, tests pass | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 8. Write tests for all components
+- [x] 8. Write tests for all components
   - Files: PaletteSearch.test.tsx, KeyCategorySection.test.tsx, PaletteViewModeTabs.test.tsx
   - _Requirements: TR-2_
   - _Prompt: Role: QA Engineer | Task: Implement the task for spec refactor-key-palette. First run spec-workflow-guide, then implement: Write unit tests for all three components. Test rendering, callbacks, user interactions, accessibility. Use userEvent. Achieve >80% coverage. | Restrictions: Test behavior, mock dependencies, verify callbacks | Success: All components tested, >80% coverage, tests pass | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
