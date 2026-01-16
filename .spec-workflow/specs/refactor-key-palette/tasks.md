@@ -1,6 +1,6 @@
 # Tasks: Refactor KeyPalette Component
 
-- [-] 1. Extract useRecentKeys hook
+- [x] 1. Extract useRecentKeys hook
   - File: src/hooks/useRecentKeys.ts
   - Manage recent keys with localStorage (max 10 keys, FIFO)
   - _Leverage: localStorage patterns_
