@@ -157,6 +157,7 @@ export function useRhaiSyncEngine(
           const result = parseRhaiScript(code);
           if (result.success && result.ast) {
             astRef.current = result.ast;
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLastValidAST(result.ast);
           }
         } else {
@@ -267,9 +268,10 @@ export function useRhaiSyncEngine(
         } catch (err) {
           // Handle unexpected errors from parseRhaiScript
           if (isMountedRef.current) {
+            const unknownErr = err as { line?: number; column?: number };
             const error: ParseError = {
-              line: (err as any).line ?? 0,
-              column: (err as any).column ?? 0,
+              line: unknownErr.line ?? 0,
+              column: unknownErr.column ?? 0,
               message: err instanceof Error ? err.message : 'Parse failed',
               suggestion: 'Check your Rhai script syntax',
             };

@@ -5,7 +5,7 @@
  * demonstrating various use cases and content patterns.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Card } from './Card';
 import { Button } from './Button';
 

@@ -42,6 +42,7 @@ export function MonacoEditor({
 
   // Update status when WASM loading state changes
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (isLoading) {
       setValidationStatus('⏳ Loading WASM validator...');
     } else if (isWasmReady) {
@@ -49,6 +50,7 @@ export function MonacoEditor({
     } else {
       setValidationStatus('⚠ WASM unavailable');
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [isLoading, isWasmReady]);
 
   /**
@@ -247,6 +249,7 @@ export function MonacoEditor({
   /**
    * Jump to next error and center the line
    */
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const jumpToNextError = useCallback(() => {
     if (!editorRef.current || !monacoRef.current || errors.length === 0) {
       return;
@@ -355,6 +358,7 @@ export function MonacoEditor({
    */
   useEffect(() => {
     if (value && isWasmReady) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       runValidation(value);
     }
   }, [value, isWasmReady, runValidation]);

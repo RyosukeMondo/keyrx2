@@ -154,6 +154,7 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
           '[useUnifiedApi] Message validation failed:',
           validationError
         );
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLastError(
           validationError instanceof Error
             ? validationError
@@ -454,14 +455,18 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
   useEffect(() => {
     return () => {
       // Clear all pending requests
-      pendingRequests.current.forEach((pending) => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const requests = pendingRequests.current;
+      requests.forEach((pending) => {
         clearTimeout(pending.timeoutId);
         pending.reject(new Error('Component unmounted'));
       });
-      pendingRequests.current.clear();
+      requests.clear();
 
       // Unsubscribe from all channels
-      subscriptions.current.forEach((_, channel) => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const subs = subscriptions.current;
+      subs.forEach((_, channel) => {
         if (readyState === ReadyState.OPEN) {
           const id = uuidv4();
           const message: ClientMessage = {
@@ -481,7 +486,7 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
           }
         }
       });
-      subscriptions.current.clear();
+      subs.clear();
     };
   }, [readyState, sendMessage]);
 

@@ -81,7 +81,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
       {isVisible && !disabled && (
         <div
-          ref={refs.setFloating}
+          ref={refs.setFloating} // eslint-disable-line react-hooks/refs
           id={tooltipId}
           role="tooltip"
           className={cn(

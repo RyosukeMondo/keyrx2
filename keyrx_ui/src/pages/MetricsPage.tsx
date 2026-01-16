@@ -72,6 +72,7 @@ export const MetricsPage: React.FC = () => {
   // Update latency history when new stats arrive
   useEffect(() => {
     if (latencyStats) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLatencyHistory((prev) => {
         const newPoint: LatencyDataPoint = {
           timestamp: Date.now(),

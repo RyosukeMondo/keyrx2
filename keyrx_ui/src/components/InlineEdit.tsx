@@ -99,6 +99,7 @@ export const InlineEdit = React.memo<InlineEditProps>(
     const showPlaceholder = !editValue;
 
     if (isEditing) {
+      const baseClassName = `${className} bg-slate-700 border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500`;
       const commonProps = {
         ref: inputRef,
         value: editValue,
@@ -108,7 +109,6 @@ export const InlineEdit = React.memo<InlineEditProps>(
         onBlur: handleBlur,
         onKeyDown: handleKeyDown,
         maxLength,
-        className: `${className} bg-slate-700 border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500`,
         'aria-label': ariaLabel,
       };
 
@@ -117,7 +117,7 @@ export const InlineEdit = React.memo<InlineEditProps>(
           <textarea
             {...commonProps}
             rows={3}
-            className={`${commonProps.className} resize-none w-full`}
+            className={`${baseClassName} resize-none w-full`}
           />
         );
       }
@@ -126,7 +126,7 @@ export const InlineEdit = React.memo<InlineEditProps>(
         <input
           type="text"
           {...commonProps}
-          className={`${commonProps.className} w-full`}
+          className={`${baseClassName} w-full`}
         />
       );
     }

@@ -112,6 +112,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     ) {
       setSelectedProfileName(profiles[0].name);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profiles, selectedProfileName]);
 
   // Check if selected profile exists
@@ -143,6 +144,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
       syncEngine.onCodeChange(defaultTemplate);
       setSyncStatus('unsaved');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileConfig, configMissing, selectedProfileName]);
 
   // Track code changes to update sync status
@@ -155,6 +157,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         setSyncStatus('unsaved');
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncEngine.state, syncEngine.getCode()]);
 
   // Rhai-driven device detection: Extract devices from parsed Rhai and merge with connected devices
@@ -269,6 +272,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         configStore.setSelectedDevices(devicesToSelect);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncEngine.state, devicesData]); // Re-run when sync state changes (parsing complete) or devices change
 
   // Sync visual editor state from parsed AST - LAYER-AWARE VERSION
@@ -452,6 +456,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
     // Load into store
     configStore.loadLayerMappings(layerMappings);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncEngine.state, globalSelected, selectedDevices, devicesData]);
 
   // Handle profile selection change

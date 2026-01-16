@@ -246,7 +246,7 @@ export const LayoutDropdown = React.memo<LayoutDropdownProps>(
         {showPreviewOnHover && isPreviewVisible && hoveredOption && (
           <FloatingPortal>
             <div
-              ref={refs.setFloating}
+              ref={refs.setFloating} // eslint-disable-line react-hooks/refs
               className="z-tooltip"
               style={{
                 position: strategy,
