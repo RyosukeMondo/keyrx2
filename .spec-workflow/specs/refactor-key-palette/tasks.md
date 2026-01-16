@@ -28,7 +28,7 @@
   - _Requirements: TR-1, TR-2_
   - _Prompt: Role: React Component Developer | Task: Implement the task for spec refactor-key-palette. First run spec-workflow-guide, then implement: Create PaletteSearch component. Props: { value, onChange, results, onSelect }. Render search input with dropdown showing fuzzy match results (highlighted matches). Extract from KeyPalette.tsx search section. | Restrictions: ≤300 lines, all functions ≤50 lines, accessible (ARIA) | Success: Search input works, results display, selection works, tests with user events | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 5. Create KeyCategorySection component
+- [x] 5. Create KeyCategorySection component
   - File: src/components/palette/KeyCategorySection.tsx
   - Reusable category renderer
   - _Requirements: TR-1, TR-2_
