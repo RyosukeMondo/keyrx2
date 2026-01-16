@@ -7,7 +7,7 @@
   - _Requirements: TR-1, TR-2_
   - _Prompt: Role: React Hooks Developer | Task: Implement the task for spec refactor-key-palette. First run spec-workflow-guide, then implement: Create useRecentKeys hook managing recent keys with localStorage. Extract from KeyPalette.tsx lines 259-289. Return { recentKeys: string[], addRecentKey(id), clearRecentKeys }. Store in 'keyrx_recent_keys', max 10 keys FIFO. | Restrictions: ≤200 lines, memoize callbacks, handle storage errors | Success: Hook manages recent keys, FIFO enforced, localStorage persists, unit tests >80% | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 2. Extract useFavoriteKeys hook
+- [x] 2. Extract useFavoriteKeys hook
   - File: src/hooks/useFavoriteKeys.ts
   - Manage favorite keys with localStorage
   - _Leverage: localStorage patterns_
