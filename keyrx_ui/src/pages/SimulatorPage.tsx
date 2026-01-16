@@ -11,15 +11,10 @@ import { useProfiles } from '../hooks/useProfiles';
 import { useGetProfileConfig } from '../hooks/useProfileConfig';
 import { useWasm, type SimulationInput } from '../hooks/useWasm';
 import { getErrorMessage } from '../utils/errorUtils';
-import type { DaemonState } from '../types/rpc';
+import type { DaemonState, KeyEvent } from '../types/rpc';
 import type { ValidationError } from '../hooks/useWasm';
-
-interface SimulatorEvent {
-  timestamp: string;
-  type: 'press' | 'release' | 'wait' | 'output';
-  key?: string;
-  message: string;
-}
+import { EventList } from '../components/simulator/EventList';
+import { EventInjectionForm } from '../components/simulator/EventInjectionForm';
 
 interface SimulatorState {
   activeLayer: string;
@@ -41,7 +36,7 @@ const AUTO_PAUSE_TIMEOUT = 60000; // 60 seconds
 
 export const SimulatorPage: React.FC = () => {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
-  const [events, setEvents] = useState<SimulatorEvent[]>([]);
+  const [events, setEvents] = useState<KeyEvent[]>([]);
   const [state, setState] = useState<SimulatorState>({
     activeLayer: 'MD_00 (Base)',
     modifiers: {
@@ -150,12 +145,24 @@ export const SimulatorPage: React.FC = () => {
     ],
   ]);
 
-  const addEvent = useCallback((event: Omit<SimulatorEvent, 'timestamp'>) => {
-    const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const addEvent = useCallback((keyCode: string, eventType: 'press' | 'release', input: string, output: string) => {
+    const timestamp = Date.now() * 1000; // Convert to microseconds
+    const event: KeyEvent = {
+      timestamp,
+      keyCode,
+      eventType,
+      input,
+      output,
+      latency: 0, // Simulated events have no real latency
+    };
     setEvents((prev) => {
-      const newEvents = [{ ...event, timestamp }, ...prev];
+      const newEvents = [event, ...prev];
       return newEvents.slice(0, MAX_EVENTS);
     });
+  }, []);
+
+  const clearEvents = useCallback(() => {
+    setEvents([]);
   }, []);
 
   const handleKeyPress = useCallback(
@@ -168,11 +175,7 @@ export const SimulatorPage: React.FC = () => {
       setPressedKeys((prev) => new Set(prev).add(keyCode));
 
       // Add press event
-      addEvent({
-        type: 'press',
-        key: keyCode,
-        message: `Press ${keyCode}`,
-      });
+      addEvent(keyCode, 'press', keyCode, keyCode);
 
       // If WASM is ready and we have a valid profile config, use WASM simulation
       if (
@@ -208,11 +211,12 @@ export const SimulatorPage: React.FC = () => {
 
             // Add output events to log
             result.outputs.forEach((output) => {
-              addEvent({
-                type: 'output',
-                key: output.keycode,
-                message: `Output ${output.keycode} (${output.event_type})`,
-              });
+              addEvent(
+                output.keycode,
+                output.event_type as 'press' | 'release',
+                keyCode,
+                output.keycode
+              );
             });
 
             // Update state display
@@ -233,10 +237,8 @@ export const SimulatorPage: React.FC = () => {
           }
         } catch (err) {
           console.error('WASM simulation error:', err);
-          addEvent({
-            type: 'output',
-            message: `WASM Error: ${getErrorMessage(err, 'Simulation failed')}`,
-          });
+          // For errors, create a synthetic event
+          addEvent('ERROR', 'press', keyCode, `Error: ${getErrorMessage(err, 'Simulation failed')}`);
         }
       } else {
         // Fallback to mock simulation
@@ -244,16 +246,9 @@ export const SimulatorPage: React.FC = () => {
         if (mapping?.type === 'tap_hold' && mapping.threshold) {
           // Start hold timer
           const timerId = window.setTimeout(() => {
-            addEvent({
-              type: 'wait',
-              key: keyCode,
-              message: `→Wait ${mapping.threshold}ms (hold)`,
-            });
-            addEvent({
-              type: 'output',
-              key: keyCode,
-              message: `Output ${mapping.holdAction} (hold)`,
-            });
+            // For hold actions, create output event
+            const holdAction = mapping.holdAction || keyCode;
+            addEvent(keyCode, 'press', keyCode, holdAction);
 
             // Update modifiers if applicable
             if (mapping.holdAction === 'Ctrl') {
@@ -267,11 +262,8 @@ export const SimulatorPage: React.FC = () => {
           setHoldTimers((prev) => new Map(prev).set(keyCode, timerId));
         } else {
           // Simple key press output
-          addEvent({
-            type: 'output',
-            key: keyCode,
-            message: `Output ${mapping?.tapAction || keyCode}`,
-          });
+          const output = mapping?.tapAction || keyCode;
+          addEvent(keyCode, 'press', keyCode, output);
         }
       }
     },
@@ -300,11 +292,7 @@ export const SimulatorPage: React.FC = () => {
       });
 
       // Add release event
-      addEvent({
-        type: 'release',
-        key: keyCode,
-        message: `Release ${keyCode}`,
-      });
+      addEvent(keyCode, 'release', keyCode, keyCode);
 
       // If WASM is ready and we have a valid profile config, use WASM simulation
       if (
@@ -340,11 +328,12 @@ export const SimulatorPage: React.FC = () => {
 
             // Add output events to log
             result.outputs.forEach((output) => {
-              addEvent({
-                type: 'output',
-                key: output.keycode,
-                message: `Output ${output.keycode} (${output.event_type})`,
-              });
+              addEvent(
+                output.keycode,
+                output.event_type as 'press' | 'release',
+                keyCode,
+                output.keycode
+              );
             });
 
             // Update state display
@@ -365,10 +354,8 @@ export const SimulatorPage: React.FC = () => {
           }
         } catch (err) {
           console.error('WASM simulation error:', err);
-          addEvent({
-            type: 'output',
-            message: `WASM Error: ${getErrorMessage(err, 'Simulation failed')}`,
-          });
+          // For errors, create a synthetic event
+          addEvent('ERROR', 'release', keyCode, `Error: ${getErrorMessage(err, 'Simulation failed')}`);
         }
       } else {
         // Fallback to mock simulation
@@ -385,11 +372,8 @@ export const SimulatorPage: React.FC = () => {
           // If timer was still running, it was a tap
           const mapping = keyMappings.get(keyCode);
           if (mapping?.type === 'tap_hold') {
-            addEvent({
-              type: 'output',
-              key: keyCode,
-              message: `Output ${mapping.tapAction} (tap)`,
-            });
+            const tapAction = mapping.tapAction || keyCode;
+            addEvent(keyCode, 'release', keyCode, tapAction);
           }
         }
 
@@ -448,15 +432,15 @@ export const SimulatorPage: React.FC = () => {
     holdTimers.forEach((timerId) => clearTimeout(timerId));
     setHoldTimers(new Map());
     lastActivityRef.current = Date.now();
-    addEvent({
-      type: 'output',
-      message: 'Simulator reset',
-    });
+    addEvent('RESET', 'press', 'RESET', 'Simulator reset');
   }, [holdTimers, addEvent]);
 
   const handleCopyLog = useCallback(() => {
     const logText = events
-      .map((e) => `${e.timestamp}  ${e.type.padEnd(8)}  ${e.message}`)
+      .map((e) => {
+        const time = new Date(e.timestamp / 1000).toLocaleTimeString('en-US', { hour12: false });
+        return `${time}  ${e.eventType.padEnd(8).toUpperCase()}  ${e.input} → ${e.output}`;
+      })
       .join('\n');
     navigator.clipboard.writeText(logText);
   }, [events]);
@@ -467,10 +451,7 @@ export const SimulatorPage: React.FC = () => {
       const now = Date.now();
       if (now - lastActivityRef.current > AUTO_PAUSE_TIMEOUT && !isPaused) {
         setIsPaused(true);
-        addEvent({
-          type: 'output',
-          message: 'Auto-paused after 60 seconds of inactivity',
-        });
+        addEvent('PAUSE', 'press', 'AUTO', 'Auto-paused after 60 seconds of inactivity');
       }
     }, 1000);
 
@@ -786,52 +767,15 @@ export const SimulatorPage: React.FC = () => {
 
         {/* Event Log */}
         <Card
-          className="lg:col-span-2"
+          className="lg:col-span-2 flex flex-col"
           aria-labelledby="simulator-event-log-heading"
         >
-          <h2
-            id="simulator-event-log-heading"
-            className="text-base md:text-lg font-semibold text-slate-100 mb-3"
-          >
-            Event Log
-            <span className="text-xs md:text-sm font-normal text-slate-400 ml-2">
-              (last {Math.min(events.length, MAX_EVENTS)} events)
-            </span>
-          </h2>
-          <div className="bg-slate-900 rounded-md p-3 md:p-4 h-48 md:h-64 overflow-y-auto font-mono text-xs">
-            {events.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-slate-500">
-                No events yet. Click a key to start.
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {events.map((event, index) => (
-                  <div
-                    key={`${event.timestamp}-${index}`}
-                    className="flex items-start gap-3"
-                  >
-                    <span className="text-slate-500 shrink-0">
-                      {event.timestamp}
-                    </span>
-                    <span
-                      className={`shrink-0 ${
-                        event.type === 'press'
-                          ? 'text-green-400'
-                          : event.type === 'release'
-                            ? 'text-red-400'
-                            : event.type === 'wait'
-                              ? 'text-yellow-400'
-                              : 'text-blue-400'
-                      }`}
-                    >
-                      {event.type.toUpperCase().padEnd(8)}
-                    </span>
-                    <span className="text-slate-300">{event.message}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <EventList
+            events={events}
+            maxEvents={MAX_EVENTS}
+            onClear={clearEvents}
+            virtualizeThreshold={100}
+          />
         </Card>
       </div>
 
