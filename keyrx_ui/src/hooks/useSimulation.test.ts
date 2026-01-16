@@ -53,25 +53,19 @@ describe('useSimulation', () => {
     });
 
     it('auto-starts when autoStart is true', () => {
-      const { result } = renderHook(() =>
-        useSimulation({ autoStart: true })
-      );
+      const { result } = renderHook(() => useSimulation({ autoStart: true }));
 
       expect(result.current.isRunning).toBe(true);
     });
 
     it('does not auto-start when autoStart is false', () => {
-      const { result } = renderHook(() =>
-        useSimulation({ autoStart: false })
-      );
+      const { result } = renderHook(() => useSimulation({ autoStart: false }));
 
       expect(result.current.isRunning).toBe(false);
     });
 
     it('respects maxEvents option', () => {
-      const { result } = renderHook(() =>
-        useSimulation({ maxEvents: 5 })
-      );
+      const { result } = renderHook(() => useSimulation({ maxEvents: 5 }));
 
       const mockEvent: KeyEvent = {
         timestamp: Date.now() * 1000,
@@ -116,9 +110,7 @@ describe('useSimulation', () => {
     });
 
     it('maintains FIFO order when max events exceeded', () => {
-      const { result } = renderHook(() =>
-        useSimulation({ maxEvents: 3 })
-      );
+      const { result } = renderHook(() => useSimulation({ maxEvents: 3 }));
 
       act(() => {
         result.current.addEvent({
@@ -208,9 +200,7 @@ describe('useSimulation', () => {
     });
 
     it('stops simulation', () => {
-      const { result } = renderHook(() =>
-        useSimulation({ autoStart: true })
-      );
+      const { result } = renderHook(() => useSimulation({ autoStart: true }));
 
       expect(result.current.isRunning).toBe(true);
 
@@ -326,9 +316,7 @@ describe('useSimulation', () => {
 
     it('ignores invalid WebSocket events', async () => {
       const { result } = renderHook(() => useSimulation());
-      const consoleSpy = vi
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       act(() => {
         result.current.start();

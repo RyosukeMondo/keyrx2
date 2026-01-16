@@ -13,9 +13,7 @@ import type { KeyEvent } from '@/types/rpc';
 /**
  * Create a mock KeyEvent for testing
  */
-function createMockEvent(
-  overrides?: Partial<KeyEvent>
-): KeyEvent {
+function createMockEvent(overrides?: Partial<KeyEvent>): KeyEvent {
   return {
     timestamp: Date.now() * 1000,
     keyCode: 'KEY_A',
@@ -52,9 +50,7 @@ describe('EventList', () => {
 
   describe('Rendering', () => {
     it('renders empty state when no events', () => {
-      render(
-        <EventList events={[]} maxEvents={1000} onClear={mockOnClear} />
-      );
+      render(<EventList events={[]} maxEvents={1000} onClear={mockOnClear} />);
 
       expect(
         screen.getByText('No events yet. Press a key to start.')
@@ -65,11 +61,7 @@ describe('EventList', () => {
     it('renders event count correctly', () => {
       const events = createMockEvents(5);
       render(
-        <EventList
-          events={events}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={events} maxEvents={1000} onClear={mockOnClear} />
       );
 
       expect(screen.getByText('(5 / 1000 events)')).toBeInTheDocument();
@@ -84,27 +76,17 @@ describe('EventList', () => {
       });
 
       render(
-        <EventList
-          events={[event]}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={[event]} maxEvents={1000} onClear={mockOnClear} />
       );
 
       expect(screen.getByText('PRESS')).toBeInTheDocument();
-      expect(
-        screen.getByText('KEY_A → KEY_B (250μs)')
-      ).toBeInTheDocument();
+      expect(screen.getByText('KEY_A → KEY_B (250μs)')).toBeInTheDocument();
     });
 
     it('renders multiple events', () => {
       const events = createMockEvents(10);
       render(
-        <EventList
-          events={events}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={events} maxEvents={1000} onClear={mockOnClear} />
       );
 
       // Check that multiple event types are rendered
@@ -114,11 +96,7 @@ describe('EventList', () => {
     it('applies correct color class for press events', () => {
       const event = createMockEvent({ eventType: 'press' });
       render(
-        <EventList
-          events={[event]}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={[event]} maxEvents={1000} onClear={mockOnClear} />
       );
 
       const eventType = screen.getByText('PRESS');
@@ -128,11 +106,7 @@ describe('EventList', () => {
     it('applies correct color class for release events', () => {
       const event = createMockEvent({ eventType: 'release' });
       render(
-        <EventList
-          events={[event]}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={[event]} maxEvents={1000} onClear={mockOnClear} />
       );
 
       const eventType = screen.getByText('RELEASE');
@@ -197,11 +171,7 @@ describe('EventList', () => {
       const events = createMockEvents(5);
 
       render(
-        <EventList
-          events={events}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={events} maxEvents={1000} onClear={mockOnClear} />
       );
 
       const clearButton = screen.getByRole('button', { name: /clear/i });
@@ -211,9 +181,7 @@ describe('EventList', () => {
     });
 
     it('disables clear button when no events', () => {
-      render(
-        <EventList events={[]} maxEvents={1000} onClear={mockOnClear} />
-      );
+      render(<EventList events={[]} maxEvents={1000} onClear={mockOnClear} />);
 
       const clearButton = screen.getByRole('button', { name: /clear/i });
       expect(clearButton).toBeDisabled();
@@ -222,11 +190,7 @@ describe('EventList', () => {
     it('enables clear button when events exist', () => {
       const events = createMockEvents(5);
       render(
-        <EventList
-          events={events}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={events} maxEvents={1000} onClear={mockOnClear} />
       );
 
       const clearButton = screen.getByRole('button', { name: /clear/i });
@@ -238,11 +202,7 @@ describe('EventList', () => {
     it('has proper ARIA labels for table structure', () => {
       const events = createMockEvents(5);
       render(
-        <EventList
-          events={events}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={events} maxEvents={1000} onClear={mockOnClear} />
       );
 
       const table = screen.getByRole('table', { name: /key event log/i });
@@ -253,11 +213,7 @@ describe('EventList', () => {
     it('has proper ARIA label for clear button', () => {
       const events = createMockEvents(5);
       render(
-        <EventList
-          events={events}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={events} maxEvents={1000} onClear={mockOnClear} />
       );
 
       const clearButton = screen.getByRole('button', {
@@ -267,9 +223,7 @@ describe('EventList', () => {
     });
 
     it('has status role for empty state', () => {
-      render(
-        <EventList events={[]} maxEvents={1000} onClear={mockOnClear} />
-      );
+      render(<EventList events={[]} maxEvents={1000} onClear={mockOnClear} />);
 
       const emptyState = screen.getByRole('status');
       expect(emptyState).toHaveTextContent(
@@ -286,11 +240,7 @@ describe('EventList', () => {
       });
 
       render(
-        <EventList
-          events={[event]}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={[event]} maxEvents={1000} onClear={mockOnClear} />
       );
 
       // Timestamp should be formatted as HH:MM:SS in user's locale
@@ -304,11 +254,7 @@ describe('EventList', () => {
     it('handles max events limit display', () => {
       const events = createMockEvents(1500);
       render(
-        <EventList
-          events={events}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={events} maxEvents={1000} onClear={mockOnClear} />
       );
 
       // Should show min(events.length, maxEvents)
@@ -321,11 +267,7 @@ describe('EventList', () => {
       });
 
       render(
-        <EventList
-          events={[event]}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={[event]} maxEvents={1000} onClear={mockOnClear} />
       );
 
       expect(screen.getByText(/999999μs/)).toBeInTheDocument();
@@ -340,11 +282,7 @@ describe('EventList', () => {
       ];
 
       render(
-        <EventList
-          events={events}
-          maxEvents={1000}
-          onClear={mockOnClear}
-        />
+        <EventList events={events} maxEvents={1000} onClear={mockOnClear} />
       );
 
       // All events should render despite identical timestamps

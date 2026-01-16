@@ -76,7 +76,9 @@ const EventRow: React.FC<EventRowProps> = ({ event, index }) => {
         {formatTimestamp(event.timestamp)}
       </span>
       <span
-        className={`shrink-0 w-16 font-medium ${getEventTypeColor(event.eventType)}`}
+        className={`shrink-0 w-16 font-medium ${getEventTypeColor(
+          event.eventType
+        )}`}
         role="cell"
       >
         {event.eventType.toUpperCase()}

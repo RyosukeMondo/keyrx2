@@ -185,18 +185,14 @@ export function useSimulation(
   const statistics = useMemo<SimulationStatistics>(() => {
     const total = events.length;
     const pressCount = events.filter((e) => e.eventType === 'press').length;
-    const releaseCount = events.filter(
-      (e) => e.eventType === 'release'
-    ).length;
+    const releaseCount = events.filter((e) => e.eventType === 'release').length;
 
     // Compute events per second from recent events (last 1 second)
     let eventsPerSecond = 0;
     if (events.length > 0) {
       const now = Date.now() * 1000; // Convert to microseconds
       const oneSecondAgo = now - 1_000_000; // 1 second in microseconds
-      const recentEvents = events.filter(
-        (e) => e.timestamp >= oneSecondAgo
-      );
+      const recentEvents = events.filter((e) => e.timestamp >= oneSecondAgo);
       eventsPerSecond = recentEvents.length;
     }
 

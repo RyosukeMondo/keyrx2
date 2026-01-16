@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
 import { KeyboardVisualizer } from '../components/KeyboardVisualizer';
 import type { KeyMapping } from '@/types';
 import { StateIndicatorPanel } from '../components/StateIndicatorPanel';
@@ -14,7 +20,6 @@ import { getErrorMessage } from '../utils/errorUtils';
 import type { DaemonState, KeyEvent } from '../types/rpc';
 import type { ValidationError } from '../hooks/useWasm';
 import { EventList } from '../components/simulator/EventList';
-import { EventInjectionForm } from '../components/simulator/EventInjectionForm';
 
 interface SimulatorState {
   activeLayer: string;
@@ -54,13 +59,30 @@ export const SimulatorPage: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [holdTimers, setHoldTimers] = useState<Map<string, number>>(new Map());
   const autoPauseTimerRef = useRef<NodeJS.Timeout>();
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
+
+  // Initialize lastActivityRef on mount
+  useEffect(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
 
   // Profile selection
-  const [selectedProfile, setSelectedProfile] = useState<string>('');
   const { data: profiles, isLoading: isLoadingProfiles } = useProfiles();
+  const [selectedProfile, setSelectedProfile] = useState<string>('');
+
+  // Compute effective profile (use selected or default to first profile)
+  const effectiveProfile = useMemo(() => {
+    if (selectedProfile) {
+      return selectedProfile;
+    }
+    if (profiles && profiles.length > 0) {
+      return profiles[0].name;
+    }
+    return '';
+  }, [selectedProfile, profiles]);
+
   const { data: profileConfig, isLoading: isLoadingConfig } =
-    useGetProfileConfig(selectedProfile);
+    useGetProfileConfig(effectiveProfile);
   const {
     isWasmReady,
     isLoading: isLoadingWasm,
@@ -80,13 +102,6 @@ export const SimulatorPage: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     []
   );
-
-  // Set the first profile as selected when profiles load
-  useEffect(() => {
-    if (profiles && profiles.length > 0 && !selectedProfile) {
-      setSelectedProfile(profiles[0].name);
-    }
-  }, [profiles, selectedProfile]);
 
   // Validate and load profile config when it changes
   useEffect(() => {
@@ -110,7 +125,6 @@ export const SimulatorPage: React.FC = () => {
         } else {
           setConfigLoadError(null);
           setIsUsingProfileConfig(true);
-          console.info(`Profile "${profileConfig.name}" loaded successfully`);
         }
       } catch (err) {
         const errorMsg = getErrorMessage(err, 'Failed to load profile config');
@@ -124,42 +138,54 @@ export const SimulatorPage: React.FC = () => {
   }, [profileConfig, isWasmReady, validateConfig]);
 
   // Mock key mappings for demonstration
-  const keyMappings = new Map<string, KeyMapping>([
-    [
-      'CAPS',
-      {
-        type: 'tap_hold',
-        tapAction: 'Escape',
-        holdAction: 'Ctrl',
-        threshold: 200,
-      },
-    ],
-    [
-      'SPACE',
-      {
-        type: 'tap_hold',
-        tapAction: 'Space',
-        holdAction: 'Layer_1',
-        threshold: 150,
-      },
-    ],
-  ]);
+  const keyMappings = useMemo(
+    () =>
+      new Map<string, KeyMapping>([
+        [
+          'CAPS',
+          {
+            type: 'tap_hold',
+            tapAction: 'Escape',
+            holdAction: 'Ctrl',
+            threshold: 200,
+          },
+        ],
+        [
+          'SPACE',
+          {
+            type: 'tap_hold',
+            tapAction: 'Space',
+            holdAction: 'Layer_1',
+            threshold: 150,
+          },
+        ],
+      ]),
+    []
+  );
 
-  const addEvent = useCallback((keyCode: string, eventType: 'press' | 'release', input: string, output: string) => {
-    const timestamp = Date.now() * 1000; // Convert to microseconds
-    const event: KeyEvent = {
-      timestamp,
-      keyCode,
-      eventType,
-      input,
-      output,
-      latency: 0, // Simulated events have no real latency
-    };
-    setEvents((prev) => {
-      const newEvents = [event, ...prev];
-      return newEvents.slice(0, MAX_EVENTS);
-    });
-  }, []);
+  const addEvent = useCallback(
+    (
+      keyCode: string,
+      eventType: 'press' | 'release',
+      input: string,
+      output: string
+    ) => {
+      const timestamp = Date.now() * 1000; // Convert to microseconds
+      const event: KeyEvent = {
+        timestamp,
+        keyCode,
+        eventType,
+        input,
+        output,
+        latency: 0, // Simulated events have no real latency
+      };
+      setEvents((prev) => {
+        const newEvents = [event, ...prev];
+        return newEvents.slice(0, MAX_EVENTS);
+      });
+    },
+    []
+  );
 
   const clearEvents = useCallback(() => {
     setEvents([]);
@@ -238,7 +264,12 @@ export const SimulatorPage: React.FC = () => {
         } catch (err) {
           console.error('WASM simulation error:', err);
           // For errors, create a synthetic event
-          addEvent('ERROR', 'press', keyCode, `Error: ${getErrorMessage(err, 'Simulation failed')}`);
+          addEvent(
+            'ERROR',
+            'press',
+            keyCode,
+            `Error: ${getErrorMessage(err, 'Simulation failed')}`
+          );
         }
       } else {
         // Fallback to mock simulation
@@ -355,7 +386,12 @@ export const SimulatorPage: React.FC = () => {
         } catch (err) {
           console.error('WASM simulation error:', err);
           // For errors, create a synthetic event
-          addEvent('ERROR', 'release', keyCode, `Error: ${getErrorMessage(err, 'Simulation failed')}`);
+          addEvent(
+            'ERROR',
+            'release',
+            keyCode,
+            `Error: ${getErrorMessage(err, 'Simulation failed')}`
+          );
         }
       } else {
         // Fallback to mock simulation
@@ -438,8 +474,12 @@ export const SimulatorPage: React.FC = () => {
   const handleCopyLog = useCallback(() => {
     const logText = events
       .map((e) => {
-        const time = new Date(e.timestamp / 1000).toLocaleTimeString('en-US', { hour12: false });
-        return `${time}  ${e.eventType.padEnd(8).toUpperCase()}  ${e.input} → ${e.output}`;
+        const time = new Date(e.timestamp / 1000).toLocaleTimeString('en-US', {
+          hour12: false,
+        });
+        return `${time}  ${e.eventType.padEnd(8).toUpperCase()}  ${e.input} → ${
+          e.output
+        }`;
       })
       .join('\n');
     navigator.clipboard.writeText(logText);
@@ -451,7 +491,12 @@ export const SimulatorPage: React.FC = () => {
       const now = Date.now();
       if (now - lastActivityRef.current > AUTO_PAUSE_TIMEOUT && !isPaused) {
         setIsPaused(true);
-        addEvent('PAUSE', 'press', 'AUTO', 'Auto-paused after 60 seconds of inactivity');
+        addEvent(
+          'PAUSE',
+          'press',
+          'AUTO',
+          'Auto-paused after 60 seconds of inactivity'
+        );
       }
     }, 1000);
 
@@ -555,7 +600,7 @@ export const SimulatorPage: React.FC = () => {
               <div className="flex-1">
                 <select
                   id="profile-selector"
-                  value={selectedProfile}
+                  value={effectiveProfile}
                   onChange={(e) => setSelectedProfile(e.target.value)}
                   disabled={
                     isLoadingProfiles || !profiles || profiles.length === 0

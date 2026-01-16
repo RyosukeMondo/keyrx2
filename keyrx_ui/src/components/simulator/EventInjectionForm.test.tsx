@@ -41,16 +41,12 @@ describe('EventInjectionForm', () => {
   describe('Rendering', () => {
     it('should render key code input field', () => {
       renderForm();
-      expect(
-        screen.getByLabelText(/key code/i)
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText(/key code/i)).toBeInTheDocument();
     });
 
     it('should render event type selector', () => {
       renderForm();
-      expect(
-        screen.getByLabelText(/event type/i)
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText(/event type/i)).toBeInTheDocument();
     });
 
     it('should render inject button', () => {
@@ -255,9 +251,9 @@ describe('EventInjectionForm', () => {
     it('should have both press and release options', () => {
       renderForm();
       const select = screen.getByLabelText(/event type/i);
-      const options = Array.from(
-        select.querySelectorAll('option')
-      ).map((opt) => (opt as HTMLOptionElement).value);
+      const options = Array.from(select.querySelectorAll('option')).map(
+        (opt) => (opt as HTMLOptionElement).value
+      );
 
       expect(options).toEqual(['press', 'release']);
     });

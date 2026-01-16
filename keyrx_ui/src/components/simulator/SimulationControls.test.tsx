@@ -45,7 +45,9 @@ describe('SimulationControls', () => {
   describe('Rendering', () => {
     it('should render Start button when not running', () => {
       renderControls({ isRunning: false });
-      expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /start/i })
+      ).toBeInTheDocument();
     });
 
     it('should render Stop button when running', () => {
