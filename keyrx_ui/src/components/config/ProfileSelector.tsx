@@ -111,8 +111,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           />
           <button
             onClick={handleCreateConfirm}
-            disabled={!newProfileName.trim()}
-            className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-500 transition-colors"
             aria-label="Confirm create profile"
           >
             ✓

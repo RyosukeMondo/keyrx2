@@ -103,7 +103,7 @@
   - _Requirements: 4.1, TR-1, TR-2_
   - _Prompt: Role: React Component Developer specializing in forms and selectors | Task: Implement the task for spec refactor-config-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Create ProfileSelector component with dropdown for profile selection and button for profile creation. Accept props: { value, onChange, profiles, isLoading, onCreateProfile }. Render select element with profile options, loading state, create button. Handle profile creation flow (modal or inline). Extract from ConfigPage.tsx profile selector section. | Restrictions: Must be ≤500 lines, all functions ≤50 lines, accessible (ARIA labels), loading state indicator, create button only enabled when valid name entered | Success: Component renders dropdown with profiles, selection changes call onChange, create button triggers onCreateProfile, loading state displays, unit tests with user events | After completion: 1) Mark [-], 2) log-implementation with artifacts, 3) Mark [x]_
 
-- [ ] 3.2 Write tests for ProfileSelector
+- [x] 3.2 Write tests for ProfileSelector
   - File: src/components/config/ProfileSelector.test.tsx
   - Test profile selection, creation, loading states
   - Purpose: Ensure ProfileSelector reliability
