@@ -7,15 +7,13 @@ import {
   Layers,
   Keyboard,
   ArrowRight,
-  Check,
   Lock,
   Command,
   X,
   Radio,
 } from 'lucide-react';
-import { cn } from '@/utils/cn';
 import type { KeyMapping } from '@/types';
-import { KeyPalette, type PaletteKey } from './KeyPalette';
+import { KeyPalette } from './KeyPalette';
 import { SVGKeyboard, type SVGKey } from './SVGKeyboard';
 import { CurrentMappingsSummary } from './CurrentMappingsSummary';
 

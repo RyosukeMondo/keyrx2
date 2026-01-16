@@ -43,12 +43,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     useProfileSelection(propProfileName);
   const {
     isOpen: isCodePanelOpen,
-    height: codePanelHeight,
+    height: _codePanelHeight,
     toggleOpen: toggleCodePanel,
   } = useCodePanel();
   const {
     layout: keyboardLayout,
-    setLayout,
+    setLayout: _setLayout,
     layoutKeys,
   } = useKeyboardLayout('ANSI_104');
   const {

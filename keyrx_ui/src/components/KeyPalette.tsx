@@ -12,21 +12,14 @@ import {
   Keyboard,
 } from 'lucide-react';
 import { Card } from './Card';
-import { KEY_DEFINITIONS, KeyDefinition } from '../data/keyDefinitions';
+import { KEY_DEFINITIONS } from '../data/keyDefinitions';
 import { KeyPaletteItem } from './KeyPaletteItem';
 import { useRecentKeys } from '../hooks/useRecentKeys';
 import { useFavoriteKeys } from '../hooks/useFavoriteKeys';
 import { usePaletteSearch } from '../hooks/usePaletteSearch';
-import { KeyCategorySection } from './palette/KeyCategorySection';
-import {
-  PaletteViewModeTabs,
-  PaletteView,
-} from './palette/PaletteViewModeTabs';
 import {
   BASIC_KEYS,
   MODIFIER_KEYS,
-  MEDIA_KEYS,
-  MACRO_KEYS,
   LAYER_KEYS,
   SPECIAL_KEYS,
 } from '../data/paletteKeys';

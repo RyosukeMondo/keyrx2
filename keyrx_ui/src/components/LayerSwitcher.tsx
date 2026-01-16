@@ -13,7 +13,7 @@ interface LayerSwitcherProps {
 
 export function LayerSwitcher({
   activeLayer,
-  availableLayers,
+  availableLayers: _availableLayers,
   onLayerChange,
 }: LayerSwitcherProps) {
   const [searchFilter, setSearchFilter] = useState('');

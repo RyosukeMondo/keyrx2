@@ -5,7 +5,6 @@ import * as metricsApi from '../api/metrics';
 import type {
   LatencyStats,
   EventRecord,
-  DaemonState,
   WSMessage,
   KeyEventPayload,
 } from '../types';

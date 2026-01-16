@@ -43,10 +43,6 @@ import type {
   ServerMessage,
   RpcMethod,
   SubscriptionChannel,
-  RpcError,
-  isResponse,
-  isEvent,
-  isConnected,
 } from '../types/rpc';
 
 // Import type guards
@@ -134,7 +130,7 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
       setIsConnected(false);
 
       // Reject all pending requests on disconnect
-      pendingRequests.current.forEach((pending, id) => {
+      pendingRequests.current.forEach((pending) => {
         clearTimeout(pending.timeoutId);
         pending.reject(new Error('WebSocket connection closed'));
       });

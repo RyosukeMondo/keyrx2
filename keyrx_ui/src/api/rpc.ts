@@ -40,8 +40,6 @@ import type {
 import {
   validateApiResponse,
   ProfileConfigRpcSchema,
-  ProfileRpcInfoSchema,
-  DeviceRpcInfoSchema,
 } from './schemas';
 import type { z } from 'zod';
 

@@ -5,7 +5,6 @@ import { Button } from './Button';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { ErrorState } from './ErrorState';
 import { useDevices } from '../hooks/useDevices';
-import type { DeviceEntry } from '../types';
 
 interface DeviceListCardProps {
   className?: string;

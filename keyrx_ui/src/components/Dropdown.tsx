@@ -2,7 +2,6 @@ import React, {
   useState,
   useMemo,
   useRef,
-  useEffect,
   useCallback,
 } from 'react';
 import { Listbox, Transition } from '@headlessui/react';

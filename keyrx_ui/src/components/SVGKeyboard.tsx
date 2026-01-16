@@ -11,7 +11,7 @@ import type { KeyMapping } from '@/types';
 // Constants for SVG rendering
 const UNIT_SIZE = 54; // pixels per key unit (1u)
 const KEY_GAP = 2; // gap between keys
-const KEY_PADDING = 2; // padding inside key
+const _KEY_PADDING = 2; // padding inside key
 const KEY_RADIUS = 6; // border radius
 const KEY_INSET = 3; // 3D effect inset
 

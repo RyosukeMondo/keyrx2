@@ -29,15 +29,6 @@ interface Device {
   lastSeen?: string;
 }
 
-interface ApiDevice {
-  id: string;
-  name: string;
-  path: string;
-  layout?: string;
-  active: boolean;
-  serial?: string;
-}
-
 interface DevicesPageProps {
   className?: string;
 }
@@ -362,7 +353,7 @@ export const DevicesPage: React.FC<DevicesPageProps> = ({ className = '' }) => {
     setNameError('');
   };
 
-  const handleRenameSave = (deviceId: string) => {
+  const handleRenameSave = (_deviceId: string) => {
     // Validate name
     if (!editingName.trim()) {
       setNameError('Device name cannot be empty');
@@ -377,7 +368,7 @@ export const DevicesPage: React.FC<DevicesPageProps> = ({ className = '' }) => {
     // TODO: Call API to rename device
     // For now, just update local state
     // setDevices((prev) =>
-    //   prev.map((d) => (d.id === deviceId ? { ...d, name: editingName } : d))
+    //   prev.map((d) => (d.id === _deviceId ? { ...d, name: editingName } : d))
     // );
 
     // Reset editing state

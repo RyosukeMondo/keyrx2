@@ -263,10 +263,9 @@ function generateModifierLayer(
  */
 export function generateKeyMapping(
   mapping: KeyMapping,
-  indentLevel: number = 0,
-  options?: FormatOptions
+  _indentLevel: number = 0,
+  _options?: FormatOptions
 ): string {
-  const opts = { ...DEFAULT_FORMAT_OPTIONS, ...options };
 
   switch (mapping.type) {
     case 'simple':
@@ -422,8 +421,8 @@ function getFirstDeviceLineOrEnd(ast: RhaiAST): number {
  * @returns Formatted script
  */
 export function formatRhaiScript(
-  script: string,
-  options?: FormatOptions
+  _script: string,
+  _options?: FormatOptions
 ): string {
   // This function is deprecated - use rhaiFormatter.formatRhaiScript instead
   throw new Error(
