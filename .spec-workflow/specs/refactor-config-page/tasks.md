@@ -95,7 +95,7 @@
 
 ## Phase 3: Extract ProfileSelector Component
 
-- [ ] 3.1 Create ProfileSelector component
+- [x] 3.1 Create ProfileSelector component
   - File: src/components/config/ProfileSelector.tsx
   - Extract profile selection dropdown and create profile button
   - Purpose: Centralize profile UI in dedicated component
