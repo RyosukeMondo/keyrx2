@@ -27,7 +27,7 @@
   - _Requirements: 2.3, TR-1, TR-2_
   - _Prompt: Role: React Hooks Developer with expertise in useMemo optimization | Task: Implement the task for spec refactor-config-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Create useKeyboardLayout custom hook that manages layout type selection and memoized layout keys. Extract from ConfigPage.tsx lines 224-231. Accept initialLayout parameter (default 'ANSI_104'). Return { layout, setLayout, layoutKeys } where layoutKeys is memoized and recalculates only when layout changes. Use parseKLEToSVG from kle-parser. | Restrictions: Do not modify ConfigPage.tsx yet, layoutKeys must be properly memoized with useMemo, include layoutData mapping, no unnecessary re-renders | Success: Hook provides layout state and memoized keys, keys only recompute on layout change, unit tests verify memoization, all layout types supported | After completion: 1) Mark task as in-progress [-] in tasks.md, 2) Use log-implementation tool with artifacts, 3) Mark [x]_
 
-- [-] 1.4 Create useConfigSync hook
+- [x] 1.4 Create useConfigSync hook
   - File: src/hooks/useConfigSync.ts
   - Encapsulate RhaiSyncEngine initialization and sync status management
   - Purpose: Centralize config synchronization logic
