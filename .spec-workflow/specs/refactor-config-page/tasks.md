@@ -129,7 +129,7 @@
   - _Requirements: 5.1, TR-1, TR-2_
   - _Prompt: Role: React Component Developer specializing in responsive layouts | Task: Implement the task for spec refactor-config-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Create ConfigurationLayout component that provides responsive grid layout for config page. Accept props: { profileName, children }. Implement CSS grid with areas for keyboard (left), config panel (right), code panel (bottom). Support resizable panels and responsive breakpoints. Extract layout structure from ConfigPage.tsx. | Restrictions: Must be ≤500 lines, all functions ≤50 lines, use CSS Grid or Flexbox, responsive (mobile/tablet/desktop), resizable panel boundaries | Success: Layout renders children in correct grid areas, responsive at all breakpoints, resizable panels work, unit tests verify rendering | After completion: 1) Mark [-], 2) log-implementation with artifacts, 3) Mark [x]_
 
-- [ ] 4.2 Write tests for ConfigurationLayout
+- [x] 4.2 Write tests for ConfigurationLayout
   - File: src/components/config/ConfigurationLayout.test.tsx
   - Test layout rendering and responsive behavior
   - Purpose: Ensure layout reliability
