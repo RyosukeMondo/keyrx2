@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/Card';
 import { MonacoEditor } from '@/components/MonacoEditor';
 import { KeyPalette, type PaletteKey } from '@/components/KeyPalette';
@@ -7,44 +7,21 @@ import { DeviceSelector, type Device } from '@/components/DeviceSelector';
 import { KeyConfigPanel } from '@/components/KeyConfigPanel';
 import { CurrentMappingsSummary } from '@/components/CurrentMappingsSummary';
 import { LayerSwitcher } from '@/components/LayerSwitcher';
-import { KeyboardVisualizer, type LayoutType } from '@/components/KeyboardVisualizer';
-import { parseKLEToSVG } from '@/utils/kle-parser';
+import { KeyboardVisualizer } from '@/components/KeyboardVisualizer';
 import { useGetProfileConfig, useSetProfileConfig } from '@/hooks/useProfileConfig';
-import { useProfiles, useCreateProfile, useActiveProfileQuery } from '@/hooks/useProfiles';
+import { useProfiles, useCreateProfile } from '@/hooks/useProfiles';
 import { useUnifiedApi } from '@/hooks/useUnifiedApi';
 import { useDevices } from '@/hooks/useDevices';
-import { useRhaiSyncEngine } from '@/components/RhaiSyncEngine';
 import { extractDevicePatterns, hasGlobalMappings } from '@/utils/rhaiParser';
 import { useConfigStore } from '@/stores/configStore';
 import type { KeyMapping } from '@/types';
 import type { KeyMapping as RhaiKeyMapping } from '@/utils/rhaiParser';
 
-// Import layout data
-import ANSI_104 from '@/data/layouts/ANSI_104.json';
-import ANSI_87 from '@/data/layouts/ANSI_87.json';
-import ISO_105 from '@/data/layouts/ISO_105.json';
-import ISO_88 from '@/data/layouts/ISO_88.json';
-import JIS_109 from '@/data/layouts/JIS_109.json';
-import COMPACT_60 from '@/data/layouts/COMPACT_60.json';
-import COMPACT_65 from '@/data/layouts/COMPACT_65.json';
-import COMPACT_75 from '@/data/layouts/COMPACT_75.json';
-import COMPACT_96 from '@/data/layouts/COMPACT_96.json';
-import HHKB from '@/data/layouts/HHKB.json';
-import NUMPAD from '@/data/layouts/NUMPAD.json';
-
-const layoutData: Record<LayoutType, { name: string; keys: any[] }> = {
-  ANSI_104,
-  ANSI_87,
-  ISO_105,
-  ISO_88,
-  JIS_109,
-  COMPACT_60,
-  COMPACT_65,
-  COMPACT_75,
-  COMPACT_96,
-  HHKB,
-  NUMPAD,
-};
+// Import custom hooks
+import { useProfileSelection } from '@/hooks/useProfileSelection';
+import { useCodePanel } from '@/hooks/useCodePanel';
+import { useKeyboardLayout } from '@/hooks/useKeyboardLayout';
+import { useConfigSync } from '@/hooks/useConfigSync';
 
 interface ConfigPageProps {
   profileName?: string;
@@ -53,47 +30,14 @@ interface ConfigPageProps {
 const ConfigPage: React.FC<ConfigPageProps> = ({
   profileName: propProfileName,
 }) => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { name: profileNameFromRoute } = useParams<{ name: string }>();
-  const profileNameFromQuery = searchParams.get('profile');
-
-  // Get active profile from daemon - used as fallback when no profile specified
-  const { data: activeProfileName } = useActiveProfileQuery();
-
-  // Track user's manual selection separately from the computed default
-  const [manualSelection, setManualSelection] = useState<string | null>(null);
-
-  // Effective profile: manual selection > explicit URL/prop > active profile > 'Default'
-  const selectedProfileName = manualSelection
-    ?? propProfileName
-    ?? profileNameFromRoute
-    ?? profileNameFromQuery
-    ?? activeProfileName
-    ?? 'Default';
-
-  // Wrapper to track manual selection changes
-  const setSelectedProfileName = (name: string) => {
-    setManualSelection(name);
-  };
-
   const api = useUnifiedApi();
 
-  // Code panel state
-  const [isCodePanelOpen, setIsCodePanelOpen] = useState(false);
-  const [codePanelHeight, setCodePanelHeight] = useState(300);
-
-  // Initialize RhaiSyncEngine for bidirectional sync
-  const syncEngine = useRhaiSyncEngine({
-    storageKey: `profile-${selectedProfileName}`,
-    debounceMs: 500,
-    onStateChange: (state) => {
-      console.debug('Sync state changed:', state);
-    },
-    onError: (error, direction) => {
-      console.error('Sync error:', { error, direction });
-    },
-  });
+  // Custom hooks for state management
+  const { selectedProfileName, setSelectedProfileName } = useProfileSelection(propProfileName);
+  const { isOpen: isCodePanelOpen, height: codePanelHeight, toggleOpen: toggleCodePanel, setHeight: setCodePanelHeight } = useCodePanel();
+  const { layout: keyboardLayout, setLayout: setKeyboardLayout, layoutKeys } = useKeyboardLayout('ANSI_104');
+  const { syncEngine, syncStatus, lastSaveTime, setSyncStatus, setLastSaveTime } = useConfigSync(selectedProfileName);
 
   // Fetch available profiles
   const { data: profiles, isLoading: isLoadingProfiles } = useProfiles();
@@ -115,19 +59,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
   // Responsive layout state: 'global' or 'device' for mobile/tablet views
   const [activePane, setActivePane] = useState<'global' | 'device'>('global');
-
-  // Keyboard layout selector
-  const [keyboardLayout, setKeyboardLayout] = useState<LayoutType>('ANSI_104');
-
-  // Parse layout data to SVG format for KeyConfigModal
-  const layoutKeys = useMemo(() => {
-    const kleData = layoutData[keyboardLayout];
-    return parseKLEToSVG(kleData);
-  }, [keyboardLayout]);
-
-  // Sync status tracking
-  const [syncStatus, setSyncStatus] = useState<'saved' | 'unsaved' | 'saving'>('saved');
-  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
 
   // Query for profile config - doesn't block rendering
   const { data: profileConfig, isLoading, error } = useGetProfileConfig(selectedProfileName);
@@ -685,7 +616,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
           {/* Code Panel Toggle and Save Button */}
           <button
-            onClick={() => setIsCodePanelOpen(!isCodePanelOpen)}
+            onClick={toggleCodePanel}
             className="px-4 py-2 bg-slate-700 text-slate-200 text-sm font-medium rounded-md hover:bg-slate-600 transition-colors whitespace-nowrap border border-slate-600"
             title={isCodePanelOpen ? 'Hide Code' : 'Show Code'}
           >
@@ -1041,7 +972,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
           <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-b border-slate-600">
             <h3 className="text-sm font-semibold text-slate-300">Code</h3>
             <button
-              onClick={() => setIsCodePanelOpen(false)}
+              onClick={toggleCodePanel}
               className="px-3 py-1 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded transition-colors"
               title="Hide code editor"
             >
