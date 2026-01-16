@@ -2,7 +2,7 @@
 
 ## Phase 1: Extract Custom Hooks
 
-- [-] 1.1 Create useProfileSelection hook
+- [x] 1.1 Create useProfileSelection hook
   - File: src/hooks/useProfileSelection.ts
   - Extract profile selection logic with fallback priority: manual > prop > route > query > active > 'Default'
   - Return selectedProfileName and setSelectedProfileName
