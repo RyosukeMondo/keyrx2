@@ -1,8 +1,9 @@
 # Tasks: Fix Accessibility Landmark Violation
 
-- [ ] 1. Identify all regions in ConfigPage
+- [x] 1. Identify all regions in ConfigPage
   - Find all elements with role="region"
   - _Prompt: Role: Accessibility Engineer | Task: Implement the task for spec fix-a11y-landmark. First run spec-workflow-guide, then implement: Search ConfigPage and related components for all elements with role="region". List each region and its purpose. Determine appropriate unique aria-label for each. | Restrictions: Analysis only | Success: All regions identified with proposed labels | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
+  - **COMPLETED**: Found 4 Card components in ConfigPage.tsx (lines 749, 923, 1010, 1034) that use role="region" by default. Proposed labels: "Device Selection", "Global Keyboard Configuration", "Device-Specific Keyboard Configuration", "Configuration Warning"
 
 - [ ] 2. Add unique aria-labels to regions
   - Add aria-label attribute to each region
