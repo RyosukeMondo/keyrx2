@@ -5,16 +5,36 @@ import { MetricsChart } from './MetricsChart';
 import type { LatencyMetrics } from '../types/rpc';
 
 // Mock Recharts components
+interface ResponsiveContainerProps {
+  children: React.ReactNode;
+}
+
+interface LineChartProps {
+  children: React.ReactNode;
+  data: unknown;
+}
+
+interface LineProps {
+  dataKey: string;
+  stroke: string;
+  name: string;
+}
+
+interface ReferenceLineProps {
+  y: number;
+  label?: { value: string };
+}
+
 vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => (
+  ResponsiveContainer: ({ children }: ResponsiveContainerProps) => (
     <div data-testid="responsive-container">{children}</div>
   ),
-  LineChart: ({ children, data }: any) => (
+  LineChart: ({ children, data }: LineChartProps) => (
     <div data-testid="line-chart" data-chart-data={JSON.stringify(data)}>
       {children}
     </div>
   ),
-  Line: ({ dataKey, stroke, name }: any) => (
+  Line: ({ dataKey, stroke, name }: LineProps) => (
     <div
       data-testid={`line-${dataKey}`}
       data-stroke={stroke}
@@ -26,7 +46,7 @@ vi.mock('recharts', () => ({
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
   Legend: () => <div data-testid="legend" />,
-  ReferenceLine: ({ y, label }: any) => (
+  ReferenceLine: ({ y, label }: ReferenceLineProps) => (
     <div data-testid="reference-line" data-y={y} data-label={label?.value} />
   ),
 }));

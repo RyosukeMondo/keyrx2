@@ -12,13 +12,20 @@ import type { PaletteKey } from '@/components/KeyPalette';
 import type { Device } from '@/components/DeviceSelector';
 
 // Mock all child components
+interface MockDeviceSelectorProps {
+  devices: Device[];
+  selectedDevices: string[];
+  globalSelected: boolean;
+  onSelectionChange: (devices: string[], global: boolean) => void;
+}
+
 vi.mock('@/components/DeviceSelector', () => ({
   DeviceSelector: ({
     devices,
     selectedDevices,
     globalSelected,
     onSelectionChange,
-  }: any) => (
+  }: MockDeviceSelectorProps) => (
     <div data-testid="device-selector">
       <div data-testid="devices-count">{devices.length}</div>
       <div data-testid="selected-count">{selectedDevices.length}</div>
@@ -30,8 +37,14 @@ vi.mock('@/components/DeviceSelector', () => ({
   ),
 }));
 
+interface MockLayerSwitcherProps {
+  activeLayer: string;
+  availableLayers: string[];
+  onLayerChange: (layer: string) => void;
+}
+
 vi.mock('@/components/LayerSwitcher', () => ({
-  LayerSwitcher: ({ activeLayer, availableLayers, onLayerChange }: any) => (
+  LayerSwitcher: ({ activeLayer, availableLayers, onLayerChange }: MockLayerSwitcherProps) => (
     <div data-testid="layer-switcher">
       <div data-testid="active-layer">{activeLayer}</div>
       <div data-testid="layers-count">{availableLayers.length}</div>
@@ -40,8 +53,14 @@ vi.mock('@/components/LayerSwitcher', () => ({
   ),
 }));
 
+interface MockKeyPaletteProps {
+  onKeySelect: (key: PaletteKey) => void;
+  selectedKey: PaletteKey | null;
+  compact: boolean;
+}
+
 vi.mock('@/components/KeyPalette', () => ({
-  KeyPalette: ({ onKeySelect, selectedKey, compact }: any) => (
+  KeyPalette: ({ onKeySelect, selectedKey, compact }: MockKeyPaletteProps) => (
     <div data-testid="key-palette">
       <div data-testid="selected-key">
         {selectedKey ? selectedKey.code : 'none'}
@@ -58,13 +77,20 @@ vi.mock('@/components/KeyPalette', () => ({
   ),
 }));
 
+interface MockKeyConfigPanelProps {
+  physicalKey: string | null;
+  onSave: (mapping: KeyMapping) => void;
+  onClearMapping: (key: string) => void;
+  activeLayer: string;
+}
+
 vi.mock('@/components/KeyConfigPanel', () => ({
   KeyConfigPanel: ({
     physicalKey,
     onSave,
     onClearMapping,
     activeLayer,
-  }: any) => (
+  }: MockKeyConfigPanelProps) => (
     <div data-testid="key-config-panel">
       <div data-testid="physical-key">{physicalKey || 'none'}</div>
       <div data-testid="active-layer-in-config">{activeLayer}</div>
@@ -84,12 +110,18 @@ vi.mock('@/components/KeyConfigPanel', () => ({
   ),
 }));
 
+interface MockCurrentMappingsSummaryProps {
+  keyMappings: Map<string, KeyMapping>;
+  onEditMapping: (key: string) => void;
+  onClearMapping: (key: string) => void;
+}
+
 vi.mock('@/components/CurrentMappingsSummary', () => ({
   CurrentMappingsSummary: ({
     keyMappings,
     onEditMapping,
     onClearMapping,
-  }: any) => (
+  }: MockCurrentMappingsSummaryProps) => (
     <div data-testid="mappings-summary">
       <div data-testid="mappings-count">{keyMappings.size}</div>
       <button onClick={() => onEditMapping('VK_A')}>Edit Mapping</button>

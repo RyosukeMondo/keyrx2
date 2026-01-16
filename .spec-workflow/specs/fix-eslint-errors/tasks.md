@@ -5,13 +5,13 @@
   - Analyze error distribution by file and rule
   - _Prompt: Role: Code Quality Analyst | Task: Implement the task for spec fix-eslint-errors. First run spec-workflow-guide, then implement: Generate ESLint report (npm run lint -- --format json). Analyze errors by file and rule. Identify top 10 files with most errors. Create prioritized fixing plan. | Restrictions: Just analysis, no code changes | Success: Report generated, errors categorized, top files identified | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 2. Fix `any` types in API/types files
+- [x] 2. Fix `any` types in API/types files
   - Files: src/api/*.ts, src/types/*.ts
   - Replace `any` with proper types using Zod or interfaces
   - _Leverage: existing type definitions_
   - _Prompt: Role: TypeScript Developer | Task: Implement the task for spec fix-eslint-errors. First run spec-workflow-guide, then implement: Fix all `any` types in src/api/ and src/types/ files. Replace with proper interfaces, Zod schemas, or `unknown` + type guards. Run tests after each file. | Restrictions: Maintain type safety, don't break APIs, tests must pass | Success: All `any` in api/types files replaced, tests pass, TypeScript compiles | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 3. Fix `any` types in components
+- [x] 3. Fix `any` types in components
   - Files: src/components/*.tsx
   - Replace with React event types, prop interfaces
   - _Leverage: React type definitions_

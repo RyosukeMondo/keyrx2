@@ -11,8 +11,14 @@ import { useCodePanel } from '@/hooks/useCodePanel';
 import type { RhaiSyncEngineResult } from '../RhaiSyncEngine';
 
 // Mock the MonacoEditor component
+interface MockMonacoEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  height: string;
+}
+
 vi.mock('../MonacoEditor', () => ({
-  MonacoEditor: ({ value, onChange, height }: any) => (
+  MonacoEditor: ({ value, onChange, height }: MockMonacoEditorProps) => (
     <div data-testid="monaco-editor" data-height={height}>
       <textarea
         data-testid="editor-textarea"

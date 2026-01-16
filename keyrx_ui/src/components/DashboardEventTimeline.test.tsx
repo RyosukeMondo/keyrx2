@@ -5,6 +5,14 @@ import { DashboardEventTimeline } from './DashboardEventTimeline';
 import type { KeyEvent } from '../types/rpc';
 
 // Mock react-window
+interface FixedSizeListProps {
+  children: (props: { index: number; style: Record<string, unknown> }) => React.ReactNode;
+  itemCount: number;
+  height: number;
+  itemSize: number;
+  className?: string;
+}
+
 vi.mock('react-window', () => ({
   FixedSizeList: ({
     children,
@@ -12,7 +20,7 @@ vi.mock('react-window', () => ({
     height,
     itemSize,
     className,
-  }: any) => (
+  }: FixedSizeListProps) => (
     <div
       data-testid="virtualized-list"
       data-item-count={itemCount}

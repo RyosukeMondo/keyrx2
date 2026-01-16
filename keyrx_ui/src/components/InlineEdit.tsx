@@ -100,7 +100,7 @@ export const InlineEdit = React.memo<InlineEditProps>(
 
     if (isEditing) {
       const commonProps = {
-        ref: inputRef as any,
+        ref: inputRef,
         value: editValue,
         onChange: (
           e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>

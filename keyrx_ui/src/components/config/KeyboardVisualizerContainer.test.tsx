@@ -11,8 +11,14 @@ import type { KeyMapping } from '@/types';
 import { useKeyboardLayout } from '@/hooks/useKeyboardLayout';
 
 // Mock the KeyboardVisualizer component
+interface MockKeyboardVisualizerProps {
+  layout: string;
+  keyMappings: Map<string, KeyMapping>;
+  onKeyClick: (key: string) => void;
+}
+
 vi.mock('@/components/KeyboardVisualizer', () => ({
-  KeyboardVisualizer: ({ layout, keyMappings, onKeyClick }: any) => (
+  KeyboardVisualizer: ({ layout, keyMappings, onKeyClick }: MockKeyboardVisualizerProps) => (
     <div data-testid="keyboard-visualizer" data-layout={layout}>
       <button onClick={() => onKeyClick('VK_A')}>Mock Key A</button>
       <div data-testid="key-mappings-count">{keyMappings.size}</div>
