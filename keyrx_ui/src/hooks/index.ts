@@ -43,3 +43,4 @@ export { useUnifiedApi, type UseUnifiedApiReturn } from './useUnifiedApi';
 
 // Utility hooks
 export { useAutoSave, type UseAutoSaveOptions, type UseAutoSaveResult } from './useAutoSave';
+export { useProfileSelection } from './useProfileSelection';
