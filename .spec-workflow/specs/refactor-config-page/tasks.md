@@ -77,7 +77,7 @@
   - _Requirements: 3.3, TR-1, TR-2_
   - _Prompt: Role: React Component Developer specializing in component composition | Task: Implement the task for spec refactor-config-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Create ConfigurationPanel component that composes existing UI components into right sidebar. Accept props: { profileName, selectedPhysicalKey, selectedPaletteKey, onPaletteKeySelect, onSaveMapping, onClearMapping, activeLayer, onLayerChange, devices, selectedDevices, onDeviceToggle }. Render vertical layout: DeviceSelector → LayerSwitcher → KeyPalette → KeyConfigPanel → CurrentMappingsSummary. Extract from ConfigPage.tsx right panel section. | Restrictions: Must be ≤500 lines, all functions ≤50 lines, reuse all existing components unchanged, maintain visual layout, props drilling acceptable for clarity | Success: Panel renders all sub-components in correct order, props passed correctly, callbacks work, visual layout matches original, unit tests with mocked children | After completion: 1) Mark [-], 2) log-implementation with artifacts, 3) Mark [x]_
 
-- [ ] 2.4 Write tests for container components
+- [x] 2.4 Write tests for container components
   - Files: src/components/config/KeyboardVisualizerContainer.test.tsx, CodePanelContainer.test.tsx, ConfigurationPanel.test.tsx
   - Comprehensive unit tests with >80% coverage
   - Purpose: Ensure container reliability before integrating
