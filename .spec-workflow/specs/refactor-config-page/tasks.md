@@ -69,7 +69,7 @@
   - _Requirements: 3.2, TR-1, TR-2_
   - _Prompt: Role: React Component Developer specializing in collapsible panels and editors | Task: Implement the task for spec refactor-config-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Create CodePanelContainer component for collapsible code editor. Use useCodePanel hook. Accept props: { profileName, rhaiCode, onChange, syncEngine }. Implement toggle button, resizable panel (drag handle), MonacoEditor integration. Panel height controlled by useCodePanel. Show/hide based on isOpen state. Extract from ConfigPage.tsx code panel section. | Restrictions: Must be ≤500 lines, all functions ≤50 lines, reuse MonacoEditor component, implement resize handle with mouse events, persist height via useCodePanel | Success: Panel toggles open/closed, resizable with drag handle, MonacoEditor displays code, onChange callback works, height persists, unit tests with mocked MonacoEditor | After completion: 1) Mark [-], 2) log-implementation with artifacts, 3) Mark [x]_
 
-- [ ] 2.3 Create ConfigurationPanel component
+- [x] 2.3 Create ConfigurationPanel component
   - File: src/components/config/ConfigurationPanel.tsx
   - Extract right sidebar with device selector, layer switcher, mappings summary, key config panel, key palette
   - Purpose: Group all configuration controls in one component
