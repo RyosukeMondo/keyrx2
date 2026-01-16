@@ -19,7 +19,7 @@
   - _Requirements: 2.2, TR-1, TR-2_
   - _Prompt: Role: React Hooks Developer specializing in custom hooks and browser storage | Task: Implement the task for spec refactor-config-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Create useCodePanel custom hook that manages code panel state (isOpen, height) with localStorage persistence. Extract from ConfigPage.tsx lines 83-84. Implement toggleOpen callback and setHeight with persistence to 'codePanel.height' key. Default height: 300px. | Restrictions: Do not modify ConfigPage.tsx yet, use localStorage for persistence only (not sessionStorage), memoize callbacks with useCallback, provide cleanup for storage listeners | Success: Hook manages open/closed state, height persists across sessions, callbacks are stable references, unit tests cover open/close toggle and height persistence | After completion: 1) Mark task as in-progress [-] in tasks.md before starting, 2) Use log-implementation tool with detailed artifacts, 3) Mark task as complete [x]_
 
-- [-] 1.3 Create useKeyboardLayout hook
+- [x] 1.3 Create useKeyboardLayout hook
   - File: src/hooks/useKeyboardLayout.ts
   - Extract keyboard layout state and memoized layout keys parsing
   - Purpose: Manage keyboard layout selection and parsed keys
