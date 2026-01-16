@@ -40,7 +40,7 @@
   - _Requirements: TR-1, TR-2_
   - _Prompt: Role: React Component Developer | Task: Implement the task for spec refactor-key-palette. First run spec-workflow-guide, then implement: Create PaletteViewModeTabs component. Props: { activeView, onChange }. Render tab buttons for Basic/Recent/Favorites/All views. Extract from KeyPalette.tsx tabs section. | Restrictions: ≤150 lines, accessible tabs (ARIA), visual active state | Success: Tabs render, onClick changes view, active state displays, tests | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 7. Write tests for all hooks
+- [x] 7. Write tests for all hooks
   - Files: useRecentKeys.test.ts, useFavoriteKeys.test.ts, usePaletteSearch.test.ts
   - _Requirements: TR-2_
   - _Prompt: Role: QA Engineer | Task: Implement the task for spec refactor-key-palette. First run spec-workflow-guide, then implement: Write unit tests for all three hooks. Mock localStorage. Test FIFO, favorites toggle, fuzzy search ranking. Achieve >80% coverage. | Restrictions: Mock localStorage, test in isolation, cover edge cases | Success: All hooks tested, >80% coverage, tests pass | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
