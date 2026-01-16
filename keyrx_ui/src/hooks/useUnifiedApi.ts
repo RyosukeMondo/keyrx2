@@ -127,7 +127,10 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
       setIsConnected(false);
     },
     onClose: () => {
-      console.log('[useUnifiedApi] WebSocket closed');
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[useUnifiedApi] WebSocket closed');
+      }
       setIsConnected(false);
 
       // Reject all pending requests on disconnect
@@ -165,7 +168,10 @@ export function useUnifiedApi(url?: string): UseUnifiedApiReturn {
 
       // Handle Connected handshake
       if (checkIsConnected(message)) {
-        console.log('[useUnifiedApi] Connected:', message);
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('[useUnifiedApi] Connected:', message);
+        }
         setIsConnected(true);
         setLastError(null);
         return;

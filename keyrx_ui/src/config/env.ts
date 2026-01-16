@@ -80,6 +80,7 @@ export const env = {
 
 // Log configuration in debug mode
 if (import.meta.env.DEV && isDebugMode()) {
+  // eslint-disable-next-line no-console
   console.log('[ENV] Configuration:', {
     apiUrl: env.apiUrl,
     wsUrl: env.wsUrl,

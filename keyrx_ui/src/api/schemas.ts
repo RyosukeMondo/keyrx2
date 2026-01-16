@@ -327,6 +327,7 @@ export function validateApiResponse<T>(
     // Just log that we received data for tracking purposes.
     if (receivedKeys.length > 0) {
       if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
         console.debug(
           JSON.stringify({
             timestamp: new Date().toISOString(),

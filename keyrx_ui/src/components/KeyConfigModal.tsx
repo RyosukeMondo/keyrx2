@@ -730,13 +730,13 @@ export function KeyConfigModal({
           <div className="border-t border-slate-700 pt-4">
             <CurrentMappingsSummary
               keyMappings={keyMappings}
-              onEditMapping={(keyCode) => {
+              onEditMapping={(_keyCode) => {
                 // This will be handled by parent component
-                console.log('Edit mapping for:', keyCode);
+                // TODO: Implement mapping editing
               }}
-              onClearMapping={(keyCode) => {
+              onClearMapping={(_keyCode) => {
                 // This will be handled by parent component
-                console.log('Clear mapping for:', keyCode);
+                // TODO: Implement mapping clearing
               }}
             />
           </div>

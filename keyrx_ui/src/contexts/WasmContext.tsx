@@ -46,12 +46,14 @@ export function WasmProvider({ children }: { children: React.ReactNode }) {
     async function initWasm() {
       const startTime = performance.now();
       if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
         console.info('[WASM] Starting global initialization...');
       }
       setIsLoading(true);
 
       try {
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.info('[WASM] Fetching module...');
         }
         const module = await import('@/wasm/pkg/keyrx_core.js').catch(() => {
@@ -61,6 +63,7 @@ export function WasmProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.info('[WASM] Module loaded, initializing...');
         }
         module.wasm_init();
@@ -70,6 +73,7 @@ export function WasmProvider({ children }: { children: React.ReactNode }) {
         setIsWasmReady(true);
         setIsLoading(false);
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.info(
             `[WASM] ✓ Global initialization complete in ${loadTime.toFixed(0)}ms`
           );
@@ -94,6 +98,7 @@ export function WasmProvider({ children }: { children: React.ReactNode }) {
     async (code: string): Promise<ValidationError[]> => {
       if (!isWasmReady || !wasmModule) {
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug('WASM not ready, skipping validation');
         }
         return [];
@@ -105,6 +110,7 @@ export function WasmProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug('Validation error:', errorMessage);
         }
 
@@ -134,6 +140,7 @@ export function WasmProvider({ children }: { children: React.ReactNode }) {
     ): Promise<SimulationResult | null> => {
       if (!isWasmReady || !wasmModule) {
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug('WASM not ready, skipping simulation');
         }
         return null;

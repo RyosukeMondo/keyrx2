@@ -69,6 +69,7 @@ export function useWebSocketMetrics() {
 
     websocket.onopen = () => {
       if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
         console.log('WebSocket connected');
       }
     };
@@ -125,6 +126,7 @@ export function useWebSocketMetrics() {
 
     websocket.onclose = () => {
       if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
         console.log('WebSocket disconnected');
       }
     };

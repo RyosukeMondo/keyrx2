@@ -174,15 +174,18 @@ export class RpcClient {
     // For commands, the response is typically empty on success or contains error info
     // Validation already happened at the WebSocket layer, so we just need to check for errors
     if (response && typeof response === 'object') {
-      console.debug(
-        JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: 'debug',
-          service: 'RPC Client',
-          event: 'set_profile_config_success',
-          context: { profileName: name },
-        })
-      );
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug(
+          JSON.stringify({
+            timestamp: new Date().toISOString(),
+            level: 'debug',
+            service: 'RPC Client',
+            event: 'set_profile_config_success',
+            context: { profileName: name },
+          })
+        );
+      }
     }
   }
 

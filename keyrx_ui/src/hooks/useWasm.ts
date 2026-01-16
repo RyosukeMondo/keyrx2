@@ -81,6 +81,7 @@ export function useWasm() {
     async function initWasm() {
       const startTime = performance.now();
       if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
         console.info('[WASM] Starting initialization...');
       }
       setIsLoading(true);
@@ -91,6 +92,7 @@ export function useWasm() {
         try {
           if (attempt > 1) {
             if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
               console.info(
                 `[WASM] Retry attempt ${attempt}/${RETRY_CONFIG.maxAttempts}...`
               );
@@ -100,6 +102,7 @@ export function useWasm() {
 
           // Try to dynamically import the WASM module
           if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
             console.info('[WASM] Fetching module...');
           }
           const module = await import('@/wasm/pkg/keyrx_core.js').catch(
@@ -117,12 +120,14 @@ export function useWasm() {
           );
 
           if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
             console.info('[WASM] Module loaded, initializing WASM binary...');
           }
           // For wasm-pack web target, must call default init() first to load WASM binary
           if (module.default && typeof module.default === 'function') {
             await module.default();
             if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
               console.info('[WASM] Binary loaded, setting up panic hook...');
             }
           }
@@ -135,6 +140,7 @@ export function useWasm() {
           setIsLoading(false);
           setError(null);
           if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
             console.info(
               `[WASM] Initialized successfully in ${loadTime.toFixed(0)}ms` +
                 (attempt > 1 ? ` (succeeded on attempt ${attempt})` : '')
@@ -189,6 +195,7 @@ export function useWasm() {
       if (!isWasmReady || !wasmModule) {
         // Return empty array if WASM not ready - graceful degradation
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug(
             '[WASM] Validation skipped: WASM not ready.',
             isLoading
@@ -206,6 +213,7 @@ export function useWasm() {
         wasmModule.load_config(code);
         // If we get here, the config is valid
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug('[WASM] Validation passed');
         }
         return [];
@@ -213,6 +221,7 @@ export function useWasm() {
         // Parse error message to extract line/column information
         const errorMessage = err instanceof Error ? err.message : String(err);
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug('[WASM] Validation error:', errorMessage);
         }
 
@@ -252,6 +261,7 @@ export function useWasm() {
       if (!isWasmReady || !wasmModule) {
         // Return null if WASM not ready - graceful degradation
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug(
             '[WASM] Simulation skipped: WASM not ready.',
             isLoading
@@ -267,12 +277,14 @@ export function useWasm() {
       try {
         // Load the configuration
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug('[WASM] Loading config for simulation...');
         }
         const configHandle = wasmModule.load_config(code);
 
         // Run simulation
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug(
             '[WASM] Running simulation with',
             input.events.length,
@@ -283,6 +295,7 @@ export function useWasm() {
         const result = wasmModule.simulate(configHandle, inputJson);
 
         if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
           console.debug('[WASM] Simulation completed successfully');
         }
         // Parse and return the result

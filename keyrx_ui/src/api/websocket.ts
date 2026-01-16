@@ -200,6 +200,7 @@ export class WebSocketManager {
    */
   private handleOpen(): void {
     if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
       console.log('WebSocketManager: Connected');
     }
     this.reconnectAttempts = 0;
@@ -267,6 +268,7 @@ export class WebSocketManager {
    */
   private handleClose(): void {
     if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
       console.log('WebSocketManager: Connection closed');
     }
     this.setConnectionState('disconnected');
@@ -301,6 +303,7 @@ export class WebSocketManager {
     const delay = this.currentReconnectInterval;
 
     if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
       console.log(
         `WebSocketManager: Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`
       );
