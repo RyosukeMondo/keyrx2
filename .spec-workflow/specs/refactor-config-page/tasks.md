@@ -85,7 +85,7 @@
   - _Requirements: TR-2_
   - _Prompt: Role: QA Engineer specializing in React component testing | Task: Implement the task for spec refactor-config-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Write unit tests for KeyboardVisualizerContainer, CodePanelContainer, and ConfigurationPanel. Mock all child components and hooks. Test prop passing, callback invocation, conditional rendering, state management. Use @testing-library/react. Achieve >80% coverage. | Restrictions: Mock all child components with jest.mock, test component behavior not implementation, verify callbacks called with correct arguments, no snapshot tests | Success: All containers have test files, >80% coverage, all props and callbacks tested, conditional rendering verified, tests pass reliably | After completion: 1) Mark [-], 2) log-implementation with artifacts, 3) Mark [x]_
 
-- [ ] 2.5 Update ConfigPage to use container components
+- [-] 2.5 Update ConfigPage to use container components
   - File: src/pages/ConfigPage.tsx
   - Replace inline JSX with container components
   - Purpose: Simplify ConfigPage structure

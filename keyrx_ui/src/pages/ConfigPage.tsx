@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/Card';
-import { MonacoEditor } from '@/components/MonacoEditor';
-import { KeyPalette, type PaletteKey } from '@/components/KeyPalette';
-import { DeviceSelector, type Device } from '@/components/DeviceSelector';
+import { type Device } from '@/components/DeviceSelector';
 import { KeyConfigPanel } from '@/components/KeyConfigPanel';
-import { CurrentMappingsSummary } from '@/components/CurrentMappingsSummary';
 import { LayerSwitcher } from '@/components/LayerSwitcher';
-import { KeyboardVisualizer } from '@/components/KeyboardVisualizer';
 import { useGetProfileConfig, useSetProfileConfig } from '@/hooks/useProfileConfig';
 import { useProfiles, useCreateProfile } from '@/hooks/useProfiles';
 import { useUnifiedApi } from '@/hooks/useUnifiedApi';
@@ -22,6 +18,10 @@ import { useProfileSelection } from '@/hooks/useProfileSelection';
 import { useCodePanel } from '@/hooks/useCodePanel';
 import { useKeyboardLayout } from '@/hooks/useKeyboardLayout';
 import { useConfigSync } from '@/hooks/useConfigSync';
+
+// Import container components
+import { CodePanelContainer } from '@/components/config/CodePanelContainer';
+import { KeyboardVisualizerContainer } from '@/components/config/KeyboardVisualizerContainer';
 
 interface ConfigPageProps {
   profileName?: string;
@@ -45,7 +45,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
   // Visual editor state - now using Zustand store for layer-aware mappings
   const configStore = useConfigStore();
-  const [selectedPaletteKey, setSelectedPaletteKey] = useState<PaletteKey | null>(null);
   const [selectedPhysicalKey, setSelectedPhysicalKey] = useState<string | null>(null);
 
   // Computed: Get current layer's mappings for display
@@ -551,32 +550,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
           </select>
         </div>
 
-        {/* Center: Keyboard Layout Selector */}
-        <div className="flex items-center gap-3">
-          <label htmlFor="layout-selector" className="text-sm font-medium text-slate-300 whitespace-nowrap">
-            Layout:
-          </label>
-          <select
-            id="layout-selector"
-            value={keyboardLayout}
-            onChange={(e) => setKeyboardLayout(e.target.value as LayoutType)}
-            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-label="Select keyboard layout"
-          >
-            <option value="ANSI_104">ANSI Full (104)</option>
-            <option value="ANSI_87">ANSI TKL (87)</option>
-            <option value="ISO_105">ISO Full (105)</option>
-            <option value="ISO_88">ISO TKL (88)</option>
-            <option value="JIS_109">JIS (109)</option>
-            <option value="COMPACT_60">60% Compact</option>
-            <option value="COMPACT_65">65% Compact</option>
-            <option value="COMPACT_75">75% Compact</option>
-            <option value="COMPACT_96">96% Compact</option>
-            <option value="HHKB">HHKB</option>
-            <option value="NUMPAD">Numpad</option>
-          </select>
-        </div>
-
         {/* Right: Sync Status and Save Button */}
         <div className="flex items-center gap-3">
           {/* Sync Status Indicator */}
@@ -809,19 +782,14 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                     <h3 className="text-xl font-bold text-primary-400 mb-4">
                       Global Keyboard (All Devices)
                     </h3>
-                    <div className="overflow-x-auto p-4">
-                      <div className="flex justify-center min-w-fit">
-                        <KeyboardVisualizer
-                          layout={keyboardLayout}
-                          keyMappings={keyMappings}
-                          onKeyClick={handlePhysicalKeyClick}
-                          simulatorMode={false}
-                        />
-                      </div>
-                    </div>
-                    <p className="text-center text-sm text-slate-400 mt-4">
-                      Click any key to configure global mappings
-                    </p>
+                    <KeyboardVisualizerContainer
+                      profileName={selectedProfileName}
+                      activeLayer={activeLayer}
+                      mappings={keyMappings}
+                      onKeyClick={handlePhysicalKeyClick}
+                      selectedKeyCode={selectedPhysicalKey}
+                      initialLayout={keyboardLayout}
+                    />
                   </Card>
                 </div>
               </div>
@@ -893,19 +861,14 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
                           </span>
                         )}
                       </h3>
-                      <div className="overflow-x-auto p-4">
-                        <div className="flex justify-center min-w-fit">
-                          <KeyboardVisualizer
-                            layout={keyboardLayout}
-                            keyMappings={keyMappings}
-                            onKeyClick={handlePhysicalKeyClick}
-                            simulatorMode={false}
-                          />
-                        </div>
-                      </div>
-                      <p className="text-center text-sm text-slate-400 mt-4">
-                        Click any key to configure device-specific mappings for {device.name}
-                      </p>
+                      <KeyboardVisualizerContainer
+                        profileName={selectedProfileName}
+                        activeLayer={activeLayer}
+                        mappings={keyMappings}
+                        onKeyClick={handlePhysicalKeyClick}
+                        selectedKeyCode={selectedPhysicalKey}
+                        initialLayout={keyboardLayout}
+                      />
                     </Card>
                   </div>
                 </div>
@@ -963,110 +926,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
       </div>
 
       {/* Collapsible Code Panel */}
-      {isCodePanelOpen && (
-        <div
-          className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-600 shadow-2xl z-50 transition-all duration-300 ease-in-out"
-          style={{ height: `${codePanelHeight}px` }}
-        >
-          {/* Header with collapse button */}
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-b border-slate-600">
-            <h3 className="text-sm font-semibold text-slate-300">Code</h3>
-            <button
-              onClick={toggleCodePanel}
-              className="px-3 py-1 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded transition-colors"
-              title="Hide code editor"
-            >
-              ▼ Hide
-            </button>
-          </div>
-
-          {/* Resize Handle */}
-          <div
-            className="h-1 bg-slate-600 hover:bg-primary-500 cursor-ns-resize transition-colors"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              const startY = e.clientY;
-              const startHeight = codePanelHeight;
-
-              const handleMouseMove = (moveEvent: MouseEvent) => {
-                const deltaY = startY - moveEvent.clientY;
-                const newHeight = Math.max(200, Math.min(600, startHeight + deltaY));
-                setCodePanelHeight(newHeight);
-              };
-
-              const handleMouseUp = () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-              };
-
-              document.addEventListener('mousemove', handleMouseMove);
-              document.addEventListener('mouseup', handleMouseUp);
-            }}
-          />
-
-          {/* Code Panel Content */}
-          <div className="h-full flex flex-col p-4 overflow-hidden">
-            {/* Sync status and error indicators */}
-            {syncEngine.state !== 'idle' && (
-              <div className="flex items-center gap-2 px-4 py-2 mb-2 bg-slate-700 border border-slate-600 rounded-md">
-                {syncEngine.state === 'parsing' && (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
-                    <span className="text-sm text-slate-300">Parsing Rhai script...</span>
-                  </>
-                )}
-                {syncEngine.state === 'generating' && (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
-                    <span className="text-sm text-slate-300">Generating code...</span>
-                  </>
-                )}
-                {syncEngine.state === 'syncing' && (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-400"></div>
-                    <span className="text-sm text-slate-300">Syncing...</span>
-                  </>
-                )}
-              </div>
-            )}
-
-            {syncEngine.error && (
-              <div className="p-3 mb-2 bg-red-900/20 border border-red-500 rounded-md">
-                <div className="flex items-start gap-3">
-                  <span className="text-red-400 text-lg">⚠️</span>
-                  <div className="flex-1">
-                    <h4 className="text-red-400 font-semibold text-sm mb-1">Parse Error</h4>
-                    <p className="text-xs text-red-300 mb-1">
-                      Line {syncEngine.error.line}, Column {syncEngine.error.column}: {syncEngine.error.message}
-                    </p>
-                    {syncEngine.error.suggestion && (
-                      <p className="text-xs text-slate-300 italic">
-                        💡 {syncEngine.error.suggestion}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => syncEngine.clearError()}
-                    className="text-slate-400 hover:text-slate-300 transition-colors"
-                    aria-label="Clear error"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Code Editor with WASM validation */}
-            <div className="flex-1 overflow-hidden" data-testid="code-editor">
-              <MonacoEditor
-                value={syncEngine.getCode()}
-                onChange={(value) => syncEngine.onCodeChange(value)}
-                height={`${codePanelHeight - (syncEngine.state !== 'idle' ? 120 : syncEngine.error ? 140 : 60)}px`}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <CodePanelContainer
+        profileName={selectedProfileName}
+        rhaiCode={syncEngine.getCode()}
+        onChange={(value) => syncEngine.onCodeChange(value)}
+        syncEngine={syncEngine}
+      />
     </div>
   );
 };
