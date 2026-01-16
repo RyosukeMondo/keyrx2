@@ -26,7 +26,7 @@
   - Remove debug console.log, guard necessary logs
   - _Prompt: Role: Code Quality Engineer | Task: Implement the task for spec fix-eslint-errors. First run spec-workflow-guide, then implement: Fix all `no-console` violations. Remove debug logs. Wrap dev-only logs in `if (import.meta.env.DEV)`. Keep error/warn in error handlers. | Restrictions: Don't remove useful error logging | Success: No console violations, appropriate logging preserved | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [-] 6. Fix unused variables and imports
+- [x] 6. Fix unused variables and imports
   - Remove unused or prefix with `_`
   - _Prompt: Role: Code Quality Engineer | Task: Implement the task for spec fix-eslint-errors. First run spec-workflow-guide, then implement: Fix all unused variable/import violations. Remove genuinely unused. Prefix intentionally unused with `_`. | Restrictions: Don't break functionality | Success: No unused var violations, code clean | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
