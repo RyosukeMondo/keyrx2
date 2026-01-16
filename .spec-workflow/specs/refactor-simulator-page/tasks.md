@@ -58,7 +58,7 @@
   - _Note: Partially completed. Migrated to KeyEvent format and integrated EventList component. useSimulation hook, SimulationControls, and EventInjectionForm were not used as they expect WebSocket-based simulation pattern which differs from the current WASM-based local simulation architecture. Line count remains above target due to complex configuration UI that was not part of extraction tasks._
   - _Prompt: Role: React Refactoring Specialist | Task: Implement the task for spec refactor-simulator-page. First run spec-workflow-guide to get the workflow guide, then implement the task: Refactor SimulatorPage.tsx to use useSimulation hook and extracted components. Replace event management with useSimulation. Replace controls JSX with SimulationControls. Replace event list JSX with EventList. Replace injection form with EventInjectionForm. Remove replaced code. Pass props and callbacks. | Restrictions: No behavior changes, maintain all functionality, existing tests must pass, verify WebSocket connection unchanged | Success: SimulatorPage uses all new components, behavior unchanged, tests pass, line count reduced to <300 lines, ESLint passes | After completion: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [-] 8. Update SimulatorPage tests
+- [x] 8. Update SimulatorPage tests
   - File: src/pages/SimulatorPage.test.tsx
   - Update tests to match new component structure
   - Purpose: Ensure integration tests pass
