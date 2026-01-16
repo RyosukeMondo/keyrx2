@@ -18,7 +18,10 @@ import { useRecentKeys } from '../hooks/useRecentKeys';
 import { useFavoriteKeys } from '../hooks/useFavoriteKeys';
 import { usePaletteSearch } from '../hooks/usePaletteSearch';
 import { KeyCategorySection } from './palette/KeyCategorySection';
-import { PaletteViewModeTabs, PaletteView } from './palette/PaletteViewModeTabs';
+import {
+  PaletteViewModeTabs,
+  PaletteView,
+} from './palette/PaletteViewModeTabs';
 import {
   BASIC_KEYS,
   MODIFIER_KEYS,
@@ -58,14 +61,12 @@ export interface PaletteKey {
   description?: string;
 }
 
-
 interface KeyPaletteProps {
   onKeySelect: (key: PaletteKey) => void;
   selectedKey?: PaletteKey | null;
   /** Compact mode for embedding in modals - reduced height, no header/recent/favorites */
   compact?: boolean;
 }
-
 
 export function KeyPalette({
   onKeySelect,
@@ -87,10 +88,16 @@ export function KeyPalette({
 
   // Use extracted hooks
   const { recentKeys: recentKeyIds, addRecentKey } = useRecentKeys();
-  const { favoriteKeys: favoriteKeyIds, toggleFavorite, isFavorite } =
-    useFavoriteKeys();
-  const { query: searchQuery, setQuery: setSearchQuery, results: searchResults } =
-    usePaletteSearch(KEY_DEFINITIONS);
+  const {
+    favoriteKeys: favoriteKeyIds,
+    toggleFavorite,
+    isFavorite,
+  } = useFavoriteKeys();
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    results: searchResults,
+  } = usePaletteSearch(KEY_DEFINITIONS);
 
   // Custom keycode input state (for "Any" category)
   const [customKeycode, setCustomKeycode] = React.useState('');
@@ -100,7 +107,6 @@ export function KeyPalette({
   // Physical key capture state
   const [isCapturingKey, setIsCapturingKey] = React.useState(false);
   const [capturedKey, setCapturedKey] = React.useState<PaletteKey | null>(null);
-
 
   // Toggle view mode
   const toggleViewMode = React.useCallback(() => {
@@ -228,7 +234,6 @@ export function KeyPalette({
     },
     { id: 'any' as const, label: 'Any', keys: [], icon: '✏️' },
   ];
-
 
   // Reset selected index when search changes
   React.useEffect(() => {

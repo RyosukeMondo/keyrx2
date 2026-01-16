@@ -16,7 +16,10 @@ describe('useFavoriteKeys', () => {
   });
 
   it('loads favorites from localStorage on initialization', () => {
-    localStorage.setItem('keyrx_favorite_keys', JSON.stringify(['KeyA', 'KeyB']));
+    localStorage.setItem(
+      'keyrx_favorite_keys',
+      JSON.stringify(['KeyA', 'KeyB'])
+    );
     const { result } = renderHook(() => useFavoriteKeys());
     expect(result.current.favoriteKeys).toEqual(['KeyA', 'KeyB']);
   });
@@ -33,7 +36,10 @@ describe('useFavoriteKeys', () => {
   });
 
   it('removes a key from favorites', () => {
-    localStorage.setItem('keyrx_favorite_keys', JSON.stringify(['KeyA', 'KeyB']));
+    localStorage.setItem(
+      'keyrx_favorite_keys',
+      JSON.stringify(['KeyA', 'KeyB'])
+    );
     const { result } = renderHook(() => useFavoriteKeys());
 
     act(() => {
@@ -105,16 +111,23 @@ describe('useFavoriteKeys', () => {
   });
 
   it('handles non-array data in localStorage', () => {
-    localStorage.setItem('keyrx_favorite_keys', JSON.stringify({ not: 'array' }));
+    localStorage.setItem(
+      'keyrx_favorite_keys',
+      JSON.stringify({ not: 'array' })
+    );
     const { result } = renderHook(() => useFavoriteKeys());
     expect(result.current.favoriteKeys).toEqual([]);
   });
 
   it('handles localStorage errors during save', () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('Storage quota exceeded');
-    });
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('Storage quota exceeded');
+      });
 
     const { result } = renderHook(() => useFavoriteKeys());
 
@@ -132,10 +145,14 @@ describe('useFavoriteKeys', () => {
   });
 
   it('handles localStorage errors during load', () => {
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new Error('Storage unavailable');
-    });
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    const getItemSpy = vi
+      .spyOn(Storage.prototype, 'getItem')
+      .mockImplementation(() => {
+        throw new Error('Storage unavailable');
+      });
 
     const { result } = renderHook(() => useFavoriteKeys());
 

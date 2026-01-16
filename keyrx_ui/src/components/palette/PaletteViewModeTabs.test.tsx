@@ -1,32 +1,31 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {
-  PaletteViewModeTabs,
-  PaletteView,
-} from './PaletteViewModeTabs';
+import { PaletteViewModeTabs, PaletteView } from './PaletteViewModeTabs';
 
 describe('PaletteViewModeTabs', () => {
   describe('Rendering', () => {
     it('renders all four tabs', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
-      expect(screen.getByRole('tab', { name: /basic category view/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /recent keys view/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('tab', { name: /basic category view/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('tab', { name: /recent keys view/i })
+      ).toBeInTheDocument();
       expect(
         screen.getByRole('tab', { name: /favorite keys view/i })
       ).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /all keys view/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('tab', { name: /all keys view/i })
+      ).toBeInTheDocument();
     });
 
     it('renders tab labels correctly', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       expect(screen.getByText('Basic')).toBeInTheDocument();
       expect(screen.getByText('Recent')).toBeInTheDocument();
@@ -52,11 +51,11 @@ describe('PaletteViewModeTabs', () => {
   describe('Active State', () => {
     it('marks basic tab as active when activeView is basic', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
-      const basicTab = screen.getByRole('tab', { name: /basic category view/i });
+      const basicTab = screen.getByRole('tab', {
+        name: /basic category view/i,
+      });
       expect(basicTab).toHaveAttribute('aria-selected', 'true');
       expect(basicTab).toHaveClass('text-primary-400');
       expect(basicTab).toHaveClass('border-primary-400');
@@ -64,9 +63,7 @@ describe('PaletteViewModeTabs', () => {
 
     it('marks recent tab as active when activeView is recent', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="recent" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="recent" onChange={onChange} />);
 
       const recentTab = screen.getByRole('tab', { name: /recent keys view/i });
       expect(recentTab).toHaveAttribute('aria-selected', 'true');
@@ -79,15 +76,15 @@ describe('PaletteViewModeTabs', () => {
         <PaletteViewModeTabs activeView="favorites" onChange={onChange} />
       );
 
-      const favoritesTab = screen.getByRole('tab', { name: /favorite keys view/i });
+      const favoritesTab = screen.getByRole('tab', {
+        name: /favorite keys view/i,
+      });
       expect(favoritesTab).toHaveAttribute('aria-selected', 'true');
     });
 
     it('marks all tab as active when activeView is all', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="all" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="all" onChange={onChange} />);
 
       const allTab = screen.getByRole('tab', { name: /all keys view/i });
       expect(allTab).toHaveAttribute('aria-selected', 'true');
@@ -95,9 +92,7 @@ describe('PaletteViewModeTabs', () => {
 
     it('only one tab is active at a time', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="recent" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="recent" onChange={onChange} />);
 
       const tabs = screen.getAllByRole('tab');
       const activeTabs = tabs.filter(
@@ -109,9 +104,7 @@ describe('PaletteViewModeTabs', () => {
 
     it('inactive tabs have different styling', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const recentTab = screen.getByRole('tab', { name: /recent keys view/i });
       expect(recentTab).toHaveAttribute('aria-selected', 'false');
@@ -124,11 +117,11 @@ describe('PaletteViewModeTabs', () => {
     it('calls onChange when basic tab is clicked', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="recent" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="recent" onChange={onChange} />);
 
-      const basicTab = screen.getByRole('tab', { name: /basic category view/i });
+      const basicTab = screen.getByRole('tab', {
+        name: /basic category view/i,
+      });
       await user.click(basicTab);
 
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -138,9 +131,7 @@ describe('PaletteViewModeTabs', () => {
     it('calls onChange when recent tab is clicked', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const recentTab = screen.getByRole('tab', { name: /recent keys view/i });
       await user.click(recentTab);
@@ -152,11 +143,11 @@ describe('PaletteViewModeTabs', () => {
     it('calls onChange when favorites tab is clicked', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
-      const favoritesTab = screen.getByRole('tab', { name: /favorite keys view/i });
+      const favoritesTab = screen.getByRole('tab', {
+        name: /favorite keys view/i,
+      });
       await user.click(favoritesTab);
 
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -166,9 +157,7 @@ describe('PaletteViewModeTabs', () => {
     it('calls onChange when all tab is clicked', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const allTab = screen.getByRole('tab', { name: /all keys view/i });
       await user.click(allTab);
@@ -180,12 +169,12 @@ describe('PaletteViewModeTabs', () => {
     it('handles multiple clicks correctly', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const recentTab = screen.getByRole('tab', { name: /recent keys view/i });
-      const favoritesTab = screen.getByRole('tab', { name: /favorite keys view/i });
+      const favoritesTab = screen.getByRole('tab', {
+        name: /favorite keys view/i,
+      });
 
       await user.click(recentTab);
       await user.click(favoritesTab);
@@ -198,11 +187,11 @@ describe('PaletteViewModeTabs', () => {
     it('does not call onChange when clicking already active tab', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
-      const basicTab = screen.getByRole('tab', { name: /basic category view/i });
+      const basicTab = screen.getByRole('tab', {
+        name: /basic category view/i,
+      });
       await user.click(basicTab);
 
       // onChange is still called (component doesn't prevent this)
@@ -215,9 +204,7 @@ describe('PaletteViewModeTabs', () => {
     it('activates tab with Enter key', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const recentTab = screen.getByRole('tab', { name: /recent keys view/i });
       recentTab.focus();
@@ -230,11 +217,11 @@ describe('PaletteViewModeTabs', () => {
     it('activates tab with Space key', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
-      const favoritesTab = screen.getByRole('tab', { name: /favorite keys view/i });
+      const favoritesTab = screen.getByRole('tab', {
+        name: /favorite keys view/i,
+      });
       favoritesTab.focus();
       await user.keyboard(' ');
 
@@ -247,9 +234,7 @@ describe('PaletteViewModeTabs', () => {
       const onChange = vi.fn();
       const preventDefault = vi.fn();
 
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const recentTab = screen.getByRole('tab', { name: /recent keys view/i });
       recentTab.focus();
@@ -267,13 +252,15 @@ describe('PaletteViewModeTabs', () => {
 
     it('only active tab is in tab sequence (tabIndex)', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="recent" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="recent" onChange={onChange} />);
 
-      const basicTab = screen.getByRole('tab', { name: /basic category view/i });
+      const basicTab = screen.getByRole('tab', {
+        name: /basic category view/i,
+      });
       const recentTab = screen.getByRole('tab', { name: /recent keys view/i });
-      const favoritesTab = screen.getByRole('tab', { name: /favorite keys view/i });
+      const favoritesTab = screen.getByRole('tab', {
+        name: /favorite keys view/i,
+      });
       const allTab = screen.getByRole('tab', { name: /all keys view/i });
 
       expect(basicTab).toHaveAttribute('tabIndex', '-1');
@@ -295,9 +282,7 @@ describe('PaletteViewModeTabs', () => {
       expect(recentTab).toHaveAttribute('tabIndex', '-1');
 
       // Rerender with different activeView
-      rerender(
-        <PaletteViewModeTabs activeView="recent" onChange={onChange} />
-      );
+      rerender(<PaletteViewModeTabs activeView="recent" onChange={onChange} />);
 
       basicTab = screen.getByRole('tab', { name: /basic category view/i });
       recentTab = screen.getByRole('tab', { name: /recent keys view/i });
@@ -330,9 +315,7 @@ describe('PaletteViewModeTabs', () => {
 
     it('all tabs have role="tab"', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const tabs = screen.getAllByRole('tab');
       expect(tabs).toHaveLength(4);
@@ -340,9 +323,7 @@ describe('PaletteViewModeTabs', () => {
 
     it('all tabs have aria-label', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const tabs = screen.getAllByRole('tab');
       tabs.forEach((tab) => {
@@ -353,9 +334,7 @@ describe('PaletteViewModeTabs', () => {
 
     it('all tabs have aria-selected attribute', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const tabs = screen.getAllByRole('tab');
       tabs.forEach((tab) => {
@@ -367,9 +346,7 @@ describe('PaletteViewModeTabs', () => {
 
     it('provides distinct aria-labels for each tab', () => {
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       expect(
         screen.getByRole('tab', { name: /basic category view/i })
@@ -403,14 +380,16 @@ describe('PaletteViewModeTabs', () => {
     it('handles rapid view changes', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(
-        <PaletteViewModeTabs activeView="basic" onChange={onChange} />
-      );
+      render(<PaletteViewModeTabs activeView="basic" onChange={onChange} />);
 
       const recentTab = screen.getByRole('tab', { name: /recent keys view/i });
-      const favoritesTab = screen.getByRole('tab', { name: /favorite keys view/i });
+      const favoritesTab = screen.getByRole('tab', {
+        name: /favorite keys view/i,
+      });
       const allTab = screen.getByRole('tab', { name: /all keys view/i });
-      const basicTab = screen.getByRole('tab', { name: /basic category view/i });
+      const basicTab = screen.getByRole('tab', {
+        name: /basic category view/i,
+      });
 
       await user.click(recentTab);
       await user.click(favoritesTab);
@@ -454,7 +433,9 @@ describe('PaletteViewModeTabs', () => {
         <PaletteViewModeTabs activeView={currentView} onChange={onChange} />
       );
 
-      const updatedRecentTab = screen.getByRole('tab', { name: /recent keys view/i });
+      const updatedRecentTab = screen.getByRole('tab', {
+        name: /recent keys view/i,
+      });
       expect(updatedRecentTab).toHaveAttribute('aria-selected', 'true');
     });
   });

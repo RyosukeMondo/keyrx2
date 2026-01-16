@@ -91,7 +91,9 @@ export function KeyCategorySection({
             onClick={toggleCollapsed}
             className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-slate-100 transition-colors"
             aria-expanded={!isCollapsed}
-            aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${title} section`}
+            aria-label={`${
+              isCollapsed ? 'Expand' : 'Collapse'
+            } ${title} section`}
           >
             {isCollapsed ? (
               <ChevronRight className="w-4 h-4" />

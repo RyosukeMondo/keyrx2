@@ -26,10 +26,7 @@ export interface SearchMatch {
  * Calculate fuzzy match score and find matching character indices
  * Returns { score, indices } where score is higher for better matches
  */
-function fuzzyMatch(
-  text: string,
-  query: string
-): FuzzyMatchResult | null {
+function fuzzyMatch(text: string, query: string): FuzzyMatchResult | null {
   const textLower = text.toLowerCase();
   const queryLower = query.toLowerCase();
 

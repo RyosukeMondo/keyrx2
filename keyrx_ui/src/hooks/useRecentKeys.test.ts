@@ -35,10 +35,7 @@ describe('useRecentKeys', () => {
 
   it('should load existing recent keys from localStorage', () => {
     const existingKeys = ['KEY_A', 'KEY_B', 'KEY_C'];
-    localStorageMock.setItem(
-      'keyrx_recent_keys',
-      JSON.stringify(existingKeys)
-    );
+    localStorageMock.setItem('keyrx_recent_keys', JSON.stringify(existingKeys));
 
     const { result } = renderHook(() => useRecentKeys());
     expect(result.current.recentKeys).toEqual(existingKeys);
@@ -170,7 +167,10 @@ describe('useRecentKeys', () => {
   });
 
   it('should handle non-array data in localStorage', () => {
-    localStorageMock.setItem('keyrx_recent_keys', JSON.stringify({ key: 'value' }));
+    localStorageMock.setItem(
+      'keyrx_recent_keys',
+      JSON.stringify({ key: 'value' })
+    );
 
     const { result } = renderHook(() => useRecentKeys());
     expect(result.current.recentKeys).toEqual([]);

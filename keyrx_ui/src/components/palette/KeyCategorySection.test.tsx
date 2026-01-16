@@ -402,7 +402,9 @@ describe('KeyCategorySection', () => {
 
   describe('Edge Cases', () => {
     it('handles single key correctly', () => {
-      const singleKey: PaletteKey[] = [{ id: 'A', label: 'A', category: 'basic' }];
+      const singleKey: PaletteKey[] = [
+        { id: 'A', label: 'A', category: 'basic' },
+      ];
 
       render(
         <KeyCategorySection
