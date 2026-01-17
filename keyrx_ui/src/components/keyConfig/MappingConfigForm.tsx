@@ -48,8 +48,6 @@ export interface MappingConfigFormProps {
   enableKeyboardView?: boolean;
 }
 
-type KeySelectionTab = 'keyboard' | 'modifier' | 'lock' | 'layer';
-
 export function MappingConfigForm({
   mappingType,
   currentConfig = {},
@@ -72,7 +70,6 @@ export function MappingConfigForm({
 
   // UI state
   const [useKeyboard, setUseKeyboard] = useState(false);
-  const [activeTab, setActiveTab] = useState<KeySelectionTab>('keyboard');
   const [isListening, setIsListening] = useState(false);
   const [listeningFor, setListeningFor] = useState<'tap' | 'hold' | null>(
     null
@@ -80,12 +77,19 @@ export function MappingConfigForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Update form when currentConfig changes
+  // This is needed to sync form state when parent changes the config (e.g., editing existing mapping)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTapAction(currentConfig.tapAction || '');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHoldAction(currentConfig.holdAction || '');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThreshold(currentConfig.threshold || 200);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setModifierKey(currentConfig.modifierKey || '');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLockKey(currentConfig.lockKey || '');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTargetLayer(currentConfig.targetLayer || '');
   }, [currentConfig]);
 

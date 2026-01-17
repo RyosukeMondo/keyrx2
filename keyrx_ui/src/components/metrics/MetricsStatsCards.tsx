@@ -35,8 +35,8 @@ export interface MetricsStatsCardsProps {
  */
 export const MetricsStatsCards: React.FC<MetricsStatsCardsProps> = ({
   latencyStats,
-  eventCount,
-  connected,
+  eventCount: _eventCount,
+  connected: _connected,
 }) => {
   // Calculate statistics from latency stats (convert microseconds to milliseconds)
   const stats = React.useMemo(() => {

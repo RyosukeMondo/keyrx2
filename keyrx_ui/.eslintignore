@@ -16,3 +16,4 @@ vitest-reporters
 **/test-*.js
 **/test_*.js
 vitest-slow-test-reporter.ts
+src/wasm/pkg
