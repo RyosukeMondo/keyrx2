@@ -36,7 +36,7 @@
 
 ## Phase 2: Refactor KeyConfigModal
 
-- [ ] 2.1 Refactor KeyConfigModal to use shared components
+- [x] 2.1 Refactor KeyConfigModal to use shared components
   - File: src/components/KeyConfigModal.tsx
   - Replace inline UI with MappingTypeSelector, KeySelectionTabs, MappingConfigForm
   - Purpose: Reduce KeyConfigModal from 641 to <500 lines
