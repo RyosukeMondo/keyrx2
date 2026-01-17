@@ -44,7 +44,7 @@
   - _Requirements: 1.1, TR-1, TR-3_
   - _Prompt: Role: React Refactoring Specialist | Task: Implement the task for spec remaining-quality-fixes. First run spec-workflow-guide, then implement: Refactor KeyConfigModal.tsx to use shared components. Import MappingTypeSelector, KeySelectionTabs, MappingConfigForm. Replace mapping type selection UI with <MappingTypeSelector>. Replace key selection tabs with <KeySelectionTabs>. Replace configuration forms with <MappingConfigForm>. Keep Modal wrapper, orchestration logic, save/cancel handlers. Remove replaced code. Target <500 lines. | Restrictions: No behavior changes, maintain all functionality, existing tests must pass, preserve modal UX, all props interfaces unchanged | Success: KeyConfigModal uses shared components, behavior unchanged, <500 lines, all functions ≤50 lines, tests pass, ESLint passes | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 2.2 Update KeyConfigModal tests
+- [x] 2.2 Update KeyConfigModal tests
   - File: src/components/KeyConfigModal.test.tsx
   - Update tests to match new component structure
   - Purpose: Ensure KeyConfigModal integration tests pass
