@@ -114,7 +114,7 @@
 
 ## Phase 5: Refactor MetricsPage
 
-- [ ] 5.1 Refactor MetricsPage to use extracted components
+- [x] 5.1 Refactor MetricsPage to use extracted components
   - File: src/pages/MetricsPage.tsx
   - Replace inline JSX with MetricsStatsCards, LatencyChart, EventLogList, StateSnapshot
   - Purpose: Reduce MetricsPage from 532 to <500 lines
