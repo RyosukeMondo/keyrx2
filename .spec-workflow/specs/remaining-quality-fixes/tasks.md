@@ -104,7 +104,7 @@
   - _Requirements: 2.4, TR-1_
   - _Prompt: Role: React Component Developer | Task: Implement the task for spec remaining-quality-fixes. First run spec-workflow-guide, then implement: Create StateSnapshot component displaying current state. Extract from MetricsPage.tsx state section. Accept props: { state: StateSnapshot }. Render Card with sections: Active Layer, Active Modifiers (badges), Locks (badges), Tap/Hold Timers (count), Queued Events (count). Use badge/pill UI for modifiers/locks. Show counts for timers/queue. | Restrictions: Must be ≤200 lines, all functions ≤50 lines, handle empty state (no modifiers/locks), clear visual hierarchy | Success: State displays correctly, badges render for modifiers/locks, counts shown, empty state handled, unit tests >80% coverage | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 4.5 Write tests for metrics components
+- [x] 4.5 Write tests for metrics components
   - Files: MetricsStatsCards.test.tsx, LatencyChart.test.tsx, EventLogList.test.tsx, StateSnapshot.test.tsx
   - Comprehensive unit tests with >80% coverage
   - Purpose: Ensure metrics components work before integration
