@@ -162,7 +162,7 @@
   - _Requirements: TR-1_
   - _Prompt: Role: Technical Writer | Task: Implement the task for spec remaining-quality-fixes. First run spec-workflow-guide, then implement: Add JSDoc comments to all new components: MappingTypeSelector, KeySelectionTabs, MappingConfigForm (keyConfig/), MetricsStatsCards, LatencyChart, EventLogList, StateSnapshot (metrics/). Document props, purpose, usage examples. Update keyrx_ui/README.md with new component sections: "Shared KeyConfig Components" and "Metrics Components". Include component hierarchy and usage patterns. | Restrictions: Use JSDoc format with @param, @returns, @example tags, document all public APIs, keep docs concise | Success: All new components have JSDoc, README updated with new sections, docs clear and helpful, usage examples provided | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 6.6 Final verification and cleanup
+- [x] 6.6 Final verification and cleanup
   - Final check: all requirements met, no dead code, ready for review
   - Purpose: Complete refactoring verification
   - _Requirements: All_
