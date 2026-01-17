@@ -150,7 +150,7 @@
   - _Requirements: TR-2, TR-3_
   - _Prompt: Role: QA Engineer | Task: Implement the task for spec remaining-quality-fixes. First run spec-workflow-guide, then implement: Run full test suite (npm test). Verify all tests pass. Run coverage report (npm run test:coverage:unit). Verify >80% coverage maintained for all modified files. Fix any failing tests. Debug any coverage gaps. | Restrictions: All tests must pass, coverage must be >80%, no tests skipped, fix root causes not symptoms | Success: All tests pass (0 failures), coverage >80% maintained, no skipped tests, coverage report shows compliance | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 6.4 Verify code metrics compliance
+- [x] 6.4 Verify code metrics compliance
   - Check all files ≤500 lines, all functions ≤50 lines
   - Purpose: Confirm quality standards met
   - _Requirements: TR-1_
