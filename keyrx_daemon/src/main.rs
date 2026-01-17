@@ -780,6 +780,7 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
             // Process ALL available messages
             while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
                 if msg.message == WM_QUIT {
+                    cleanup_pid_file(&config_dir);
                     return Ok(());
                 }
 
@@ -816,6 +817,7 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
             // Check if daemon is still running
             if !daemon.is_running() {
                 log::info!("Daemon stopped");
+                cleanup_pid_file(&config_dir);
                 return Ok(());
             }
 
@@ -835,6 +837,7 @@ fn handle_run(config_path: &std::path::Path, debug: bool) -> Result<(), (i32, St
                         }
                         TrayControlEvent::Exit => {
                             log::info!("Exiting...");
+                            cleanup_pid_file(&config_dir);
                             return Ok(());
                         }
                     }

@@ -1,12 +1,19 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+#[cfg(unix)]
 use keyrx_daemon::ipc::unix_socket::UnixSocketIpc;
+#[cfg(unix)]
 use keyrx_daemon::ipc::{DaemonIpc, IpcRequest, IpcResponse};
+#[cfg(unix)]
 use std::path::PathBuf;
+#[cfg(unix)]
 use std::thread;
+#[cfg(unix)]
 use std::time::Duration;
+#[cfg(unix)]
 use tempfile::TempDir;
 
 // Mock IPC server for benchmarking
+#[cfg(unix)]
 fn start_mock_ipc_server(socket_path: PathBuf) -> thread::JoinHandle<()> {
     thread::spawn(move || {
         use std::os::unix::net::UnixListener;
