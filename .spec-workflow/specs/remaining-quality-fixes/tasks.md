@@ -80,7 +80,7 @@
   - _Requirements: 2.1, TR-1_
   - _Prompt: Role: React Component Developer | Task: Implement the task for spec remaining-quality-fixes. First run spec-workflow-guide, then implement: Create MetricsStatsCards component that renders 4 stat cards. Extract from MetricsPage.tsx metrics cards section. Accept props: { latencyStats: LatencyStats, eventCount: number, connected: boolean }. Render grid of 4 cards: Avg Latency (Activity icon), Throughput (Zap icon), CPU Usage (Cpu icon), Memory Usage (FileCode icon). Display values with units. Show connection status. | Restrictions: Must be ≤300 lines, all functions ≤50 lines, responsive grid (2x2 on desktop, stacked on mobile), loading states | Success: Cards render with correct data, responsive layout, icons display, connection indicator works, unit tests >80% coverage | After: 1) Mark [-], 2) log-implementation, 3) Mark [x]_
 
-- [ ] 4.2 Create LatencyChart component
+- [x] 4.2 Create LatencyChart component
   - File: src/components/metrics/LatencyChart.tsx
   - Recharts line chart for latency over time
   - Purpose: Extract chart rendering from MetricsPage
