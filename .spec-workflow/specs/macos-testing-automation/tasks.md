@@ -174,7 +174,7 @@
   - _Requirements: All requirements (documentation)_
   - _Prompt: Implement the task for spec macos-testing-automation, first run mcp__spec-workflow__spec-workflow-guide to get the workflow guide then implement the task: Role: Technical Writer specializing in developer documentation and testing guides | Task: Create comprehensive macOS testing guide in docs/development/MACOS_TESTING_GUIDE.md documenting three-layer strategy, permission requirements, setup instructions, and troubleshooting, supporting all requirements | Restrictions: Keep documentation concise (<500 lines), use clear examples, include copy-pasteable commands, update .claude/CLAUDE.md with reference to new guide, follow existing docs style | Success: Documentation is clear and actionable, covers all three layers, includes troubleshooting for common issues, has examples for each test type, developers can follow guide without external help. After completion: (1) Edit tasks.md to mark this task [-] as in-progress, (2) Use log-implementation tool with documentation structure and sections created, (3) Edit tasks.md to mark [x] as completed_
 
-- [ ] 4.3 Verify test coverage parity with Linux/Windows
+- [x] 4.3 Verify test coverage parity with Linux/Windows
   - Files: Compare test coverage across platforms
   - Run coverage reports for Linux, Windows, macOS
   - Verify macOS has ≥ equivalent coverage
