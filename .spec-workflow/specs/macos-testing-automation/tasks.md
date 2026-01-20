@@ -44,7 +44,7 @@
 
 ## Layer 2: E2E Tests with Permission Checks
 
-- [ ] 2.1 Create MacosE2EHarness infrastructure
+- [x] 2.1 Create MacosE2EHarness infrastructure
   - File: keyrx_daemon/tests/e2e_macos_harness.rs (new file)
   - Implement harness for spawning daemon subprocess
   - Add config compilation integration (reuse from e2e_harness.rs)
