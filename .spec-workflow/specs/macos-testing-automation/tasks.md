@@ -140,7 +140,7 @@
   - _Requirements: 3.7_
   - _Prompt: Implement the task for spec macos-testing-automation, first run mcp__spec-workflow__spec-workflow-guide to get the workflow guide then implement the task: Role: Test Reporting Engineer specializing in output formatting and result aggregation | Task: Add comprehensive test summary reporting to test_macos_full.sh showing tests run, coverage, benchmarks, and recommendations per requirement 3.7, using clear formatting and visual indicators | Restrictions: Must parse cargo output correctly, handle missing data gracefully (e.g., no benchmarks), keep summary concise (<20 lines), use color codes only if terminal supports them (tput check) | Success: Summary is clear and actionable, includes all required metrics, formatting is professional, works in both color and non-color terminals, summary helps developer understand test status. After completion: (1) Edit tasks.md to mark this task [-] as in-progress, (2) Use log-implementation tool with summary format and metrics documented, (3) Edit tasks.md to mark [x] as completed_
 
-- [ ] 3.5 Test script in both interactive and CI modes
+- [x] 3.5 Test script in both interactive and CI modes
   - Files: scripts/test_macos_full.sh (testing)
   - Test in interactive terminal (manual run)
   - Test in CI mode (GitHub Actions)
