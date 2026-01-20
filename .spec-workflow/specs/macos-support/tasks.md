@@ -64,7 +64,7 @@
   - _Requirements: REQ-3_
   - _Prompt: Role: Low-level Systems Programmer | Task: Implement list_keyboard_devices() with IOKit APIs and RAII IOObjectGuard wrapper for automatic resource cleanup | Restrictions: Minimal unsafe code (<5%), document safety invariants, test for leaks | Success: Enumeration works, no leaks, VID/PID/serial extracted_
 
-- [ ] 9. Implement system tray
+- [x] 9. Implement system tray
   - File: keyrx_daemon/src/platform/macos/tray.rs
   - Create MacosSystemTray using tray-icon crate
   - Purpose: Provide menu bar integration
