@@ -207,7 +207,7 @@
   - _Requirements: 2.1, 2.2, 3.1_
   - _Prompt: Implement the task for spec macos-testing-automation, first run mcp__spec-workflow__spec-workflow-guide to get the workflow guide then implement the task: Role: CI/CD Validation Engineer specializing in automated testing and GitHub Actions | Task: Trigger and validate GitHub Actions CI workflow for macOS per requirements 2.1, 2.2, 3.1, ensuring E2E tests skip gracefully, mock tests pass, and job completes successfully without Accessibility permissions | Restrictions: Do not modify permission settings in CI, verify exit code 0 (success), check logs for skip messages, ensure job performance acceptable, validate test result reporting | Success: CI job passes with exit code 0, E2E tests skip with informative messages, mock tests execute and pass, benchmarks complete, job logs are clear, no timeouts or hangs. After completion: (1) Edit tasks.md to mark this task [-] as in-progress, (2) Use log-implementation tool with CI validation results and logs analyzed, (3) Edit tasks.md to mark [x] as completed_
 
-- [ ] 5.3 Update project documentation
+- [x] 5.3 Update project documentation
   - Files: .claude/CLAUDE.md, README.md (if applicable)
   - Add reference to MACOS_TESTING_GUIDE.md
   - Document test_macos_full.sh usage in quick start
