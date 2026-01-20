@@ -24,7 +24,7 @@
   - _Requirements: REQ-1, REQ-2, REQ-3, REQ-4_
   - _Prompt: Role: Platform Engineer | Task: Implement Platform trait methods (initialize with permission check, capture_input, inject_output, list_devices, shutdown) delegating to MacosInputCapture, MacosOutputInjector, device_discovery | Restrictions: Do not modify trait definition, use PlatformError enum | Success: Platform trait fully implemented, compiles without errors_
 
-- [ ] 4. Implement Accessibility permission checker
+- [x] 4. Implement Accessibility permission checker
   - File: keyrx_daemon/src/platform/macos/permissions.rs
   - Add check_accessibility_permission() and get_permission_error_message()
   - Purpose: Detect and report Accessibility permission status
