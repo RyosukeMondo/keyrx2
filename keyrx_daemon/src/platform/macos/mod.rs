@@ -28,7 +28,7 @@ pub mod tray;
 
 use std::sync::{Arc, Mutex};
 
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::unbounded;
 use keyrx_core::runtime::KeyEvent;
 
 use crate::platform::{DeviceInfo, InputDevice, OutputDevice, Platform, PlatformError, PlatformResult};
@@ -44,10 +44,6 @@ pub use output_injection::MacosOutputInjector;
 pub struct MacosPlatform {
     input: MacosInputCapture,
     output: MacosOutputInjector,
-    #[allow(dead_code)] // Will be used for rdev::listen in task 6
-    sender: Sender<KeyEvent>,
-    #[allow(dead_code)] // Will be used for rdev::listen in task 6
-    receiver: Receiver<KeyEvent>,
     initialized: Arc<Mutex<bool>>,
 }
 
@@ -57,10 +53,8 @@ impl MacosPlatform {
     pub fn new() -> Self {
         let (sender, receiver) = unbounded();
         Self {
-            input: MacosInputCapture::new(receiver.clone()),
+            input: MacosInputCapture::new(receiver, sender),
             output: MacosOutputInjector::new(),
-            sender,
-            receiver,
             initialized: Arc::new(Mutex::new(false)),
         }
     }
