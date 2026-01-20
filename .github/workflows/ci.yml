@@ -274,12 +274,11 @@ jobs:
       - name: Run Verification (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          # Run verification for macOS
-          # Note: E2E tests auto-skip gracefully if Accessibility permission not granted
+          # Run basic verification for macOS
           cargo fmt --check
           cargo clippy --workspace -- -D warnings
-          # Run all tests (E2E tests will auto-skip without Accessibility permission)
-          cargo test --workspace
+          # Note: Comprehensive macOS tests run in separate macos-tests job
+          cargo test --workspace --exclude keyrx_daemon
 
       - name: Upload Backend Quality Reports (Ubuntu)
         if: matrix.os == 'ubuntu-latest' && always()
@@ -885,3 +884,58 @@ jobs:
           path: |
             keyrx_ui/contract-validation.log
           retention-days: 7
+
+  macos-tests:
+    name: macOS Comprehensive Tests
+    runs-on: macos-latest
+    timeout-minutes: 20
+    needs: [type-check, build-and-verify]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-macos-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-macos-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-cargo-macos-
+            ${{ runner.os }}-cargo-
+
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/test_macos_full.sh
+          chmod +x scripts/check_macos_permission.sh
+
+      - name: Run comprehensive macOS test suite
+        id: macos-tests
+        run: |
+          # Run the comprehensive test suite
+          # E2E tests will auto-skip gracefully without Accessibility permission
+          scripts/test_macos_full.sh 2>&1 | tee macos-test-output.log
+        continue-on-error: false
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-test-results
+          path: |
+            macos-test-output.log
+          retention-days: 7
+
+      - name: Check test results
+        if: steps.macos-tests.outcome == 'failure'
+        run: |
+          echo "macOS comprehensive tests failed. See uploaded logs for details."
+          exit 1
