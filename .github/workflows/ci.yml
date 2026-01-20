@@ -274,13 +274,12 @@ jobs:
       - name: Run Verification (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          # Run basic verification for macOS (skip E2E tests requiring Accessibility)
+          # Run verification for macOS
+          # Note: E2E tests auto-skip gracefully if Accessibility permission not granted
           cargo fmt --check
           cargo clippy --workspace -- -D warnings
-          # Run unit and integration tests, but skip any that require Accessibility permissions
-          cargo test --workspace --lib
-          cargo test --workspace --bins
-          cargo test --workspace --tests
+          # Run all tests (E2E tests will auto-skip without Accessibility permission)
+          cargo test --workspace
 
       - name: Upload Backend Quality Reports (Ubuntu)
         if: matrix.os == 'ubuntu-latest' && always()
