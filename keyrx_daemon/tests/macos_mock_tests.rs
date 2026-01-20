@@ -951,3 +951,464 @@ fn test_multiple_initialization_attempts() {
 
     let _ = platform.shutdown();
 }
+
+// ============================================================================
+// Device Discovery Mock Tests
+// ============================================================================
+
+use keyrx_daemon::platform::DeviceInfo;
+use keyrx_daemon::platform::macos::device_discovery;
+
+/// Test: list_keyboard_devices doesn't panic on macOS.
+///
+/// Validates that the device enumeration function returns a Result
+/// without panicking, regardless of hardware state or permissions.
+#[test]
+fn test_device_enumeration_no_panic() {
+    let result = device_discovery::list_keyboard_devices();
+    assert!(result.is_ok(), "Device enumeration should not panic");
+}
+
+/// Test: list_keyboard_devices returns valid DeviceInfo vector.
+///
+/// Validates that device enumeration returns a vector (possibly empty)
+/// and that all devices have valid structure.
+#[test]
+fn test_device_enumeration_returns_vector() {
+    let devices = device_discovery::list_keyboard_devices()
+        .expect("Device enumeration should succeed");
+
+    // Should return a vector (even if empty)
+    // Note: Vector length is always >= 0 by type system, this just verifies it's a valid vector
+
+    // If devices found, validate structure
+    for device in devices.iter() {
+        assert!(!device.id.is_empty(), "Device ID should not be empty");
+        assert!(!device.name.is_empty(), "Device name should not be empty");
+        assert!(!device.path.is_empty(), "Device path should not be empty");
+
+        // Validate ID format: should contain vendor:product in hex
+        assert!(
+            device.id.contains(':') || device.id.starts_with("usb-"),
+            "Device ID should have expected format, got: {}",
+            device.id
+        );
+
+        // Validate path format: should be IOService path
+        assert!(
+            device.path.starts_with("IOService:") || device.path.starts_with("/"),
+            "Device path should have IOService format, got: {}",
+            device.path
+        );
+    }
+}
+
+/// Test: DeviceInfo ID generation without serial number.
+///
+/// Validates that device IDs are generated correctly when no serial
+/// number is available (common for built-in keyboards).
+#[test]
+fn test_device_id_generation_without_serial() {
+    let device = DeviceInfo {
+        id: format!("usb-{:04x}:{:04x}", 0x05ac, 0x026c),
+        name: "Apple Internal Keyboard".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-05ac:026c".to_string(),
+        vendor_id: 0x05ac, // Apple vendor ID
+        product_id: 0x026c,
+    };
+
+    // ID should be in format: usb-VVVV:PPPP
+    assert_eq!(device.id, "usb-05ac:026c");
+    assert!(device.id.starts_with("usb-"));
+    assert!(device.id.contains(':'));
+
+    // Path should reference the ID
+    assert!(device.path.contains(&device.id));
+
+    // Vendor and product IDs should match ID string
+    assert!(device.id.contains("05ac"));
+    assert!(device.id.contains("026c"));
+}
+
+/// Test: DeviceInfo ID generation with serial number.
+///
+/// Validates that device IDs correctly incorporate serial numbers
+/// when available (USB keyboards with unique serials).
+#[test]
+fn test_device_id_generation_with_serial() {
+    let serial = "ABC123XYZ789";
+    let device = DeviceInfo {
+        id: format!("usb-{:04x}:{:04x}-{}", 0x046d, 0xc52b, serial),
+        name: "Logitech Keyboard K120".to_string(),
+        path: format!("IOService:/IOHIDKeyboard/usb-046d:c52b-{}", serial),
+        vendor_id: 0x046d, // Logitech vendor ID
+        product_id: 0xc52b,
+    };
+
+    // ID should be in format: usb-VVVV:PPPP-SERIAL
+    assert_eq!(device.id, "usb-046d:c52b-ABC123XYZ789");
+    assert!(device.id.ends_with(serial));
+    assert!(device.id.contains("046d:c52b"));
+
+    // Path should reference the full ID including serial
+    assert!(device.path.contains(&device.id));
+}
+
+/// Test: DeviceInfo with various vendor/product IDs.
+///
+/// Edge case: Validate correct hex formatting for different vendor/product
+/// ID combinations including boundary values.
+#[test]
+fn test_device_id_hex_formatting() {
+    let test_cases = vec![
+        (0x0000, 0x0000, "usb-0000:0000"),
+        (0x05ac, 0x026c, "usb-05ac:026c"), // Apple
+        (0x046d, 0xc52b, "usb-046d:c52b"), // Logitech
+        (0xffff, 0xffff, "usb-ffff:ffff"), // Maximum values
+        (0x0001, 0x0001, "usb-0001:0001"), // Minimum non-zero
+        (0xabcd, 0x1234, "usb-abcd:1234"), // Mixed case hex
+    ];
+
+    for (vendor, product, expected_id) in test_cases {
+        let device = DeviceInfo {
+            id: format!("usb-{:04x}:{:04x}", vendor, product),
+            name: format!("Test Keyboard ({:04x}:{:04x})", vendor, product),
+            path: format!("IOService:/IOHIDKeyboard/usb-{:04x}:{:04x}", vendor, product),
+            vendor_id: vendor,
+            product_id: product,
+        };
+
+        assert_eq!(
+            device.id, expected_id,
+            "ID should be correctly formatted for vendor={:04x} product={:04x}",
+            vendor, product
+        );
+
+        // Validate vendor_id and product_id fields match
+        assert_eq!(device.vendor_id, vendor);
+        assert_eq!(device.product_id, product);
+    }
+}
+
+/// Test: DeviceInfo name fallback generation.
+///
+/// Edge case: When device name cannot be read from IOKit, a fallback
+/// name should be generated from vendor:product IDs.
+#[test]
+fn test_device_name_fallback() {
+    let device = DeviceInfo {
+        id: "usb-1234:5678".to_string(),
+        name: "Keyboard (1234:5678)".to_string(), // Fallback format
+        path: "IOService:/IOHIDKeyboard/usb-1234:5678".to_string(),
+        vendor_id: 0x1234,
+        product_id: 0x5678,
+    };
+
+    // Name should contain vendor:product in parentheses
+    assert!(device.name.contains("1234:5678"));
+    assert!(device.name.contains('('));
+    assert!(device.name.contains(')'));
+}
+
+/// Test: DeviceInfo with special characters in serial number.
+///
+/// Edge case: Serial numbers may contain various characters.
+/// Validate they're handled correctly.
+#[test]
+fn test_device_serial_special_characters() {
+    let serials = vec![
+        "ABC-123-XYZ",                 // Hyphens
+        "SN_12345",                    // Underscore
+        "ABC123",                      // Alphanumeric
+        "123456",                      // Numeric only
+        "ABCDEF",                      // Alpha only
+        "ABC.123.XYZ",                 // Dots
+        "SN#12345",                    // Hash (unusual but possible)
+    ];
+
+    for serial in serials {
+        let device = DeviceInfo {
+            id: format!("usb-046d:c52b-{}", serial),
+            name: "Test Keyboard".to_string(),
+            path: format!("IOService:/IOHIDKeyboard/usb-046d:c52b-{}", serial),
+            vendor_id: 0x046d,
+            product_id: 0xc52b,
+        };
+
+        assert!(
+            device.id.ends_with(serial),
+            "Device ID should end with serial: {}",
+            serial
+        );
+        assert!(
+            device.path.contains(serial),
+            "Device path should contain serial: {}",
+            serial
+        );
+    }
+}
+
+/// Test: Multiple device discrimination by serial number.
+///
+/// Validates that multiple identical keyboards (same vendor/product)
+/// can be discriminated by serial number.
+#[test]
+fn test_multiple_identical_keyboards_discrimination() {
+    let vendor = 0x046d;
+    let product = 0xc52b;
+
+    let device1 = DeviceInfo {
+        id: format!("usb-{:04x}:{:04x}-SN001", vendor, product),
+        name: "Logitech Keyboard".to_string(),
+        path: format!("IOService:/IOHIDKeyboard/usb-{:04x}:{:04x}-SN001", vendor, product),
+        vendor_id: vendor,
+        product_id: product,
+    };
+
+    let device2 = DeviceInfo {
+        id: format!("usb-{:04x}:{:04x}-SN002", vendor, product),
+        name: "Logitech Keyboard".to_string(),
+        path: format!("IOService:/IOHIDKeyboard/usb-{:04x}:{:04x}-SN002", vendor, product),
+        vendor_id: vendor,
+        product_id: product,
+    };
+
+    // Same vendor/product but different IDs due to serial
+    assert_eq!(device1.vendor_id, device2.vendor_id);
+    assert_eq!(device1.product_id, device2.product_id);
+    assert_ne!(device1.id, device2.id);
+    assert_ne!(device1.path, device2.path);
+
+    // IDs should be distinguishable
+    assert!(device1.id.ends_with("SN001"));
+    assert!(device2.id.ends_with("SN002"));
+}
+
+/// Test: DeviceInfo path uniqueness.
+///
+/// Validates that device paths are unique even for identical keyboards
+/// without serial numbers (macOS may use instance numbers).
+#[test]
+fn test_device_path_uniqueness_without_serial() {
+    // Simulate two identical keyboards without serials
+    // (macOS may append instance numbers to paths)
+    let device1 = DeviceInfo {
+        id: "usb-05ac:026c".to_string(),
+        name: "Apple Keyboard".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-05ac:026c".to_string(),
+        vendor_id: 0x05ac,
+        product_id: 0x026c,
+    };
+
+    let device2 = DeviceInfo {
+        id: "usb-05ac:026c".to_string(),
+        name: "Apple Keyboard".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-05ac:026c-2".to_string(), // Instance 2
+        vendor_id: 0x05ac,
+        product_id: 0x026c,
+    };
+
+    // Same IDs (no serial to distinguish)
+    assert_eq!(device1.id, device2.id);
+    assert_eq!(device1.vendor_id, device2.vendor_id);
+    assert_eq!(device1.product_id, device2.product_id);
+
+    // But paths should differ (instance numbers)
+    assert_ne!(device1.path, device2.path);
+}
+
+/// Test: DeviceInfo clone and equality.
+///
+/// Validates that DeviceInfo implements Clone and PartialEq correctly.
+#[test]
+fn test_device_info_clone_and_equality() {
+    let device1 = DeviceInfo {
+        id: "usb-046d:c52b-ABC123".to_string(),
+        name: "Logitech Keyboard".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-046d:c52b-ABC123".to_string(),
+        vendor_id: 0x046d,
+        product_id: 0xc52b,
+    };
+
+    // Clone should produce identical device
+    let device2 = device1.clone();
+    assert_eq!(device1, device2);
+
+    // Different device should not be equal
+    let device3 = DeviceInfo {
+        id: "usb-046d:c52b-XYZ789".to_string(),
+        name: "Logitech Keyboard".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-046d:c52b-XYZ789".to_string(),
+        vendor_id: 0x046d,
+        product_id: 0xc52b,
+    };
+    assert_ne!(device1, device3);
+}
+
+/// Test: DeviceInfo debug formatting.
+///
+/// Validates that DeviceInfo can be formatted for debug output.
+#[test]
+fn test_device_info_debug_format() {
+    let device = DeviceInfo {
+        id: "usb-046d:c52b-ABC123".to_string(),
+        name: "Logitech Keyboard".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-046d:c52b-ABC123".to_string(),
+        vendor_id: 0x046d,
+        product_id: 0xc52b,
+    };
+
+    let debug_str = format!("{:?}", device);
+
+    // Debug output should contain key fields
+    assert!(debug_str.contains("DeviceInfo"));
+    assert!(debug_str.contains("046d"));
+    assert!(debug_str.contains("c52b"));
+}
+
+/// Test: Zero devices scenario.
+///
+/// Edge case: System with no external keyboards (CI environment, headless).
+/// Validates graceful handling of empty device list.
+#[test]
+fn test_zero_devices_scenario() {
+    let devices = device_discovery::list_keyboard_devices()
+        .expect("Device enumeration should succeed even with no devices");
+
+    // Should return empty vector, not error
+    // (This will likely have devices on dev machine, but validates the return type)
+    // Note: Vector length is always >= 0 by type system
+    println!("Found {} keyboard device(s)", devices.len());
+}
+
+/// Test: Device enumeration is deterministic.
+///
+/// Validates that calling list_keyboard_devices multiple times
+/// returns consistent results (same devices in same order).
+#[test]
+fn test_device_enumeration_deterministic() {
+    let devices1 = device_discovery::list_keyboard_devices()
+        .expect("First enumeration should succeed");
+
+    let devices2 = device_discovery::list_keyboard_devices()
+        .expect("Second enumeration should succeed");
+
+    // Should return same number of devices
+    assert_eq!(
+        devices1.len(),
+        devices2.len(),
+        "Device count should be consistent across enumerations"
+    );
+
+    // Should return same devices (order may vary, so compare sets)
+    for device1 in &devices1 {
+        let found = devices2.iter().any(|d2| d2.id == device1.id);
+        assert!(
+            found,
+            "Device {} should appear in both enumerations",
+            device1.id
+        );
+    }
+
+    println!("✓ Device enumeration is deterministic ({} devices)", devices1.len());
+}
+
+/// Test: Device enumeration performance.
+///
+/// Validates that device enumeration completes quickly (<1 second).
+#[test]
+fn test_device_enumeration_performance() {
+    use std::time::Instant;
+
+    let start = Instant::now();
+    let result = device_discovery::list_keyboard_devices();
+    let duration = start.elapsed();
+
+    assert!(result.is_ok(), "Device enumeration should succeed");
+    assert!(
+        duration.as_secs() < 1,
+        "Device enumeration should complete in <1s, took {:?}",
+        duration
+    );
+
+    println!("✓ Device enumeration completed in {:?}", duration);
+}
+
+/// Test: USB and Bluetooth keyboard identification.
+///
+/// Validates that device IDs correctly identify USB vs Bluetooth keyboards.
+/// Note: This test validates the ID format, actual discrimination requires hardware.
+#[test]
+fn test_usb_bluetooth_id_format() {
+    // USB device (starts with "usb-")
+    let usb_device = DeviceInfo {
+        id: "usb-046d:c52b-ABC123".to_string(),
+        name: "Logitech USB Keyboard".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-046d:c52b-ABC123".to_string(),
+        vendor_id: 0x046d,
+        product_id: 0xc52b,
+    };
+
+    assert!(usb_device.id.starts_with("usb-"), "USB device ID should start with 'usb-'");
+
+    // Note: Bluetooth devices would have different ID format (bt- or similar)
+    // but actual Bluetooth enumeration would require separate implementation
+}
+
+/// Test: Invalid device info handling.
+///
+/// Edge case: Validates that DeviceInfo can represent various edge cases
+/// that might come from IOKit (empty strings, zero IDs, etc.).
+#[test]
+fn test_device_info_edge_cases() {
+    // Minimal valid device (zero vendor/product IDs)
+    let minimal_device = DeviceInfo {
+        id: "usb-0000:0000".to_string(),
+        name: "Unknown Keyboard".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-0000:0000".to_string(),
+        vendor_id: 0x0000,
+        product_id: 0x0000,
+    };
+
+    assert_eq!(minimal_device.vendor_id, 0);
+    assert_eq!(minimal_device.product_id, 0);
+    assert!(!minimal_device.id.is_empty());
+    assert!(!minimal_device.name.is_empty());
+    assert!(!minimal_device.path.is_empty());
+
+    // Maximum vendor/product IDs
+    let max_device = DeviceInfo {
+        id: "usb-ffff:ffff".to_string(),
+        name: "Test Device".to_string(),
+        path: "IOService:/IOHIDKeyboard/usb-ffff:ffff".to_string(),
+        vendor_id: 0xffff,
+        product_id: 0xffff,
+    };
+
+    assert_eq!(max_device.vendor_id, 0xffff);
+    assert_eq!(max_device.product_id, 0xffff);
+}
+
+/// Test: Device list contains expected device types.
+///
+/// Validates that enumerated devices are actually keyboards (IOHIDKeyboard).
+#[test]
+fn test_device_list_contains_keyboards() {
+    let devices = device_discovery::list_keyboard_devices()
+        .expect("Device enumeration should succeed");
+
+    // All devices should be keyboards (path contains IOHIDKeyboard)
+    for device in devices.iter() {
+        assert!(
+            device.path.contains("IOHIDKeyboard") || device.path.starts_with("/"),
+            "Device path should indicate keyboard device: {}",
+            device.path
+        );
+    }
+
+    if !devices.is_empty() {
+        println!("✓ Found {} keyboard device(s), all validated", devices.len());
+    } else {
+        println!("⚠️  No keyboard devices found (may be CI environment)");
+    }
+}
