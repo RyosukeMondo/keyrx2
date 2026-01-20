@@ -12,6 +12,7 @@ MOCK_TESTS_PASSED=false
 E2E_TESTS_PASSED=false
 E2E_TESTS_SKIPPED=false
 BENCHMARKS_PASSED=false
+MANUAL_TESTS_RUN=false
 OVERALL_EXIT_CODE=0
 
 # Color codes
@@ -143,6 +144,55 @@ else
 fi
 
 #
+# Phase 5: Manual Test Prompt (Interactive Only)
+#
+# Only prompt if:
+# - stdin is a terminal (interactive mode)
+# - Accessibility permission is granted
+if [ -t 0 ] && [ "$HAS_PERMISSION" = true ]; then
+    print_section "Phase 5: Manual Testing (Optional)"
+
+    echo "Automated tests complete. Would you like to run manual tests?"
+    echo "Manual tests require physical keyboard interaction to verify:"
+    echo "  • Key remapping accuracy"
+    echo "  • Tap-hold timing behavior"
+    echo "  • Multi-device discrimination"
+    echo ""
+
+    # Prompt with default to No (safety)
+    read -r -p "Run manual tests? [y/N] " response || {
+        # Handle EOF gracefully (e.g., Ctrl+D)
+        echo ""
+        print_warning "Manual tests skipped (EOF received)"
+        response="n"
+    }
+
+    echo ""
+
+    case "$response" in
+        [yY][eE][sS]|[yY])
+            print_step "Manual testing instructions:"
+            echo ""
+            echo "1. Ensure keyrx daemon is running with a test config"
+            echo "2. Test basic remapping (e.g., A → B)"
+            echo "3. Test tap-hold behavior with timing variations"
+            echo "4. If multi-device, test device-specific configs"
+            echo "5. Verify latency is imperceptible (<1ms)"
+            echo ""
+            echo "Refer to docs/development/MACOS_TESTING_GUIDE.md for detailed procedures"
+            echo ""
+            read -r -p "Press Enter when manual testing is complete..." || true
+            echo ""
+            print_success "Manual tests completed"
+            MANUAL_TESTS_RUN=true
+            ;;
+        *)
+            print_warning "Manual tests skipped by user"
+            ;;
+    esac
+fi
+
+#
 # Summary
 #
 print_section "Test Summary"
@@ -168,6 +218,14 @@ if [ "$BENCHMARKS_PASSED" = true ]; then
     print_success "Benchmarks: COMPLETED"
 else
     print_warning "Benchmarks: FAILED/UNAVAILABLE"
+fi
+
+if [ "$MANUAL_TESTS_RUN" = true ]; then
+    print_success "Manual tests: COMPLETED"
+elif [ -t 0 ] && [ "$HAS_PERMISSION" = true ]; then
+    print_warning "Manual tests: SKIPPED BY USER"
+else
+    echo -e "${COLOR_BLUE}ℹ️  Manual tests: NOT PROMPTED (non-interactive or no permission)${COLOR_RESET}"
 fi
 
 echo ""
