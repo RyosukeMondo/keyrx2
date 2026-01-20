@@ -96,7 +96,7 @@
   - _Requirements: REQ-8_
   - _Prompt: Role: QA Engineer | Task: Add tests module with test_all_cgkeycodes_mapped, test_bidirectional_mapping (proptest), test_special_keys | Restrictions: ≥80% coverage, test success and failure cases | Success: All tests pass, bidirectional property verified_
 
-- [ ] 13. Create integration tests
+- [x] 13. Create integration tests
   - File: keyrx_daemon/tests/macos_integration.rs
   - Test capture → inject flow with mocked components
   - Purpose: Ensure components work together
