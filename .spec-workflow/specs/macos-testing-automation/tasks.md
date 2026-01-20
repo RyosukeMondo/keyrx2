@@ -87,7 +87,7 @@
   - _Requirements: 2.6_
   - _Prompt: Implement the task for spec macos-testing-automation, first run mcp__spec-workflow__spec-workflow-guide to get the workflow guide then implement the task: Role: Timing Test Engineer specializing in real-time behavior validation and state machine testing | Task: Add tap-hold timing E2E test to e2e_macos_basic.rs validating DFA timing accuracy and QMK-style permissive hold per requirement 2.6, using MacosE2EHarness with real time delays and documenting timing verification requirements | Restrictions: Must account for system timer accuracy limitations, document expected vs actual timing, consider test flakiness due to system load, may require manual verification step | Success: Timing test demonstrates <1ms processing latency, permissive hold behavior documented, test includes timing constraints documentation, flakiness minimized or test marked as manual-only. After completion: (1) Edit tasks.md to mark this task [-] as in-progress, (2) Use log-implementation tool with timing measurements and accuracy validation, (3) Edit tasks.md to mark [x] as completed_
 
-- [ ] 2.5 Verify E2E tests auto-skip in CI
+- [x] 2.5 Verify E2E tests auto-skip in CI
   - Files: Test CI behavior of E2E tests
   - Run tests in GitHub Actions macOS runner (no Accessibility permission)
   - Verify exit code 0 (success) when tests skip
