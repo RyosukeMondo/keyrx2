@@ -77,7 +77,7 @@
   - _Requirements: 2.2, 2.5_
   - _Prompt: Implement the task for spec macos-testing-automation, first run mcp__spec-workflow__spec-workflow-guide to get the workflow guide then implement the task: Role: Multi-device Test Engineer specializing in device discrimination and hardware testing | Task: Create multi-device E2E tests in e2e_macos_multidevice.rs validating device-specific configurations and serial number identification per requirements 2.2, 2.5, using MacosE2EHarness and following e2e_linux_multidevice.rs patterns | Restrictions: Must gracefully handle single-device scenario (most developers), use #[serial] attribute, skip if no permission, test only device identification not full remapping, document multi-device setup requirements | Success: Device enumeration works correctly, serial number extraction validated, device-specific configs load for correct devices, tests skip gracefully on single-device systems, documentation includes multi-device setup guide. After completion: (1) Edit tasks.md to mark this task [-] as in-progress, (2) Use log-implementation tool with device scenarios tested and configuration patterns validated, (3) Edit tasks.md to mark [x] as completed_
 
-- [ ] 2.4 Add tap-hold timing E2E test (if feasible)
+- [x] 2.4 Add tap-hold timing E2E test (if feasible)
   - File: keyrx_daemon/tests/e2e_macos_basic.rs (continue from 2.2)
   - Test timing-sensitive tap-hold behavior with real delays
   - Verify QMK-style permissive hold timing
