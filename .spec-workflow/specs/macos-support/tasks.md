@@ -72,7 +72,7 @@
   - _Requirements: REQ-4_
   - _Prompt: Role: macOS UI Developer | Task: Implement MacosSystemTray with menu items (Open Web UI, Reload Config, Exit) following Windows tray.rs pattern | Restrictions: Use existing tray-icon crate, follow macOS HIG | Success: Menu bar icon works, menu items functional_
 
-- [ ] 10. Update platform factory
+- [x] 10. Update platform factory
   - File: keyrx_daemon/src/platform/mod.rs
   - Add macOS arm to create_platform() function
   - Purpose: Enable macOS platform selection

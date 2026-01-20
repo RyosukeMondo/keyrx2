@@ -107,6 +107,7 @@ pub use mock::{MockInput, MockOutput};
 ///
 /// - **Linux**: Uses evdev for input capture, uinput for output injection
 /// - **Windows**: Uses Low-Level Keyboard Hook for input, SendInput API for output
+/// - **macOS**: Uses rdev for input capture, enigo for output injection
 ///
 /// # Lifecycle
 ///
@@ -282,6 +283,7 @@ pub trait Platform: Send + Sync {
 ///
 /// - **Linux**: Returns `LinuxPlatform`
 /// - **Windows**: Returns `WindowsPlatform`
+/// - **macOS**: Returns `MacosPlatform`
 /// - **Other**: Returns `PlatformError::Unsupported`
 ///
 /// # Examples
@@ -334,7 +336,12 @@ pub fn create_platform() -> PlatformResult<Box<dyn Platform>> {
         Ok(Box::new(windows::WindowsPlatform::new()))
     }
 
-    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    #[cfg(target_os = "macos")]
+    {
+        Ok(Box::new(macos::MacosPlatform::new()))
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
     {
         Err(PlatformError::Unsupported {
             operation: format!("Platform creation on {}", std::env::consts::OS),
