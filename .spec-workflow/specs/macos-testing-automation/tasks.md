@@ -67,7 +67,7 @@
   - _Requirements: 2.1, 2.2, 2.4, 2.7_
   - _Prompt: Implement the task for spec macos-testing-automation, first run mcp__spec-workflow__spec-workflow-guide to get the workflow guide then implement the task: Role: E2E Test Engineer specializing in integration testing and subprocess validation | Task: Create basic E2E tests in e2e_macos_basic.rs validating daemon startup, config loading, and graceful shutdown per requirements 2.1, 2.2, 2.4, 2.7, using MacosE2EHarness and implementing permission checks that skip tests when Accessibility permission absent | Restrictions: Must auto-skip in CI (no permission failures), print informative messages when skipping, use #[serial] attribute for test isolation, test only daemon lifecycle not full input/output pipeline, ensure tests are idempotent | Success: Daemon spawns successfully, config loads without errors, graceful shutdown works, tests skip gracefully without permissions, tests pass with permissions enabled, harness cleanup verified. After completion: (1) Edit tasks.md to mark this task [-] as in-progress, (2) Use log-implementation tool with test functions created and lifecycle stages validated, (3) Edit tasks.md to mark [x] as completed_
 
-- [ ] 2.3 Create multi-device E2E tests
+- [x] 2.3 Create multi-device E2E tests
   - File: keyrx_daemon/tests/e2e_macos_multidevice.rs (new file)
   - Test device-specific configuration loading
   - Test serial number-based device identification
