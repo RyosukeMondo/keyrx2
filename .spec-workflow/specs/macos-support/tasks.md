@@ -40,7 +40,7 @@
   - _Requirements: REQ-1, REQ-2_
   - _Prompt: Role: Systems Developer | Task: Implement cgkeycode_to_keyrx(), keyrx_to_cgkeycode(), rdev_key_to_keyrx(), keyrx_to_enigo_key() covering 100+ keys with comprehensive tests | Restrictions: Maintain bidirectional consistency, handle unmapped keys gracefully | Success: All keycodes mapped, bidirectional property verified, tests pass_
 
-- [ ] 6. Implement input capture
+- [x] 6. Implement input capture
   - File: keyrx_daemon/src/platform/macos/input_capture.rs
   - Create MacosInputCapture using rdev::listen with channel architecture
   - Purpose: Capture keyboard events using safe Rust wrapper
