@@ -515,20 +515,21 @@ Before marking spec complete:
     - ✅ Layouts: 3/3 (100%) - COMPLETE
     - ✅ Macros: 8/8 (100%) - COMPLETE
     - ✅ Metrics: 4/4 (100%) - COMPLETE
-    - ✅ Profiles: 20/20 (100%) - COMPLETE
+    - ⚠️  Profiles: 19/20 (95.0%) - 1 failure (IPC-dependent)
     - ✅ Simulator: 7/7 (100%) - COMPLETE
-    - ✅ Workflows: 2/6 (33.3%) - 4 failures (IPC-dependent + architectural limitations)
+    - ⚠️  Workflows: 2/6 (33.3%) - 4 failures (IPC-dependent + architectural limitations)
     - ⚠️  Websocket: 3/5 (60.0%) - 2 failures (event notification timeouts)
     - ❌ Status: 0/1 (0.0%) - 1 failure (IPC-dependent daemon_running field)
   - **Remaining Issues** (8 failures):
-    - **IPC-Dependent Tests (4 failures)**: Tests require full daemon with IPC socket for profile activation, daemon status queries
+    - **IPC-Dependent Tests (5 failures)**: Tests require full daemon with IPC socket for profile activation, daemon status queries
       - Status: GET /api/status (daemon_running field requires IPC)
-      - Workflows: Profile lifecycle, duplicate→rename→activate, validation→fix→activate (2 tests - all require profile activation via IPC)
+      - Profiles: integration-001 "Profile lifecycle" (requires profile activation via IPC)
+      - Workflows: duplicate→rename→activate, validation→fix→activate (2 tests - all require profile activation via IPC)
       - Workflows: Simulator event → mapping → output (1 test - requires profile activation)
     - **WebSocket Events (2 failures)**: Event notification timeouts - WebSocket may not be properly connected to daemon event stream
     - **Architectural Limitations (1 failure)**:
       - Workflows: Macro record → simulate → playback (1 test - simulator doesn't integrate with macro recorder)
-  - **Architecture Note**: Many failures are due to IPC socket communication requirements. Tests run daemon in 'run' mode but some operations (profile activation, daemon status queries) need full IPC infrastructure. REST API endpoints themselves work correctly - issues are with test environment setup.
+  - **Architecture Note**: IPC-dependent failures (5 tests) are due to the test environment running daemon in 'run' mode without full IPC infrastructure. Profile activation and daemon status queries require IPC socket communication. REST API endpoints themselves work correctly - the failures are environmental, not bugs. WebSocket event notification issues (2 tests) may be timing-related or require different connection setup.
 - [ ] Run tests 10 consecutive times - 0 flaky failures
 - [ ] Check execution time - < 3 minutes
 - [ ] Verify all 40+ endpoints covered - generate coverage report
