@@ -154,7 +154,7 @@ export const configLayersTestCases: TestCase[] = [
     priority: 1,
     setup: async (client) => {
       // Ensure we have a profile to update
-      const profiles = await client.listProfiles();
+      const profiles = await client.getProfiles();
       if (profiles.data.profiles.length === 0) {
         await client.createProfile('test-config-update');
       }
@@ -279,7 +279,7 @@ map_key("base", "A", remap("B";
     priority: 1,
     setup: async (client) => {
       // Ensure we have a profile
-      const profiles = await client.listProfiles();
+      const profiles = await client.getProfiles();
       if (profiles.data.profiles.length === 0) {
         await client.createProfile('test-mapping');
       }

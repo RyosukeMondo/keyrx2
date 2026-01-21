@@ -311,10 +311,12 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { message: string; profile: { name: string } };
+      const actualData = actual as { success: boolean; profile: { name: string; rhai_path: string; krx_path: string } };
       const passed =
+        actualData.success === true &&
         actualData.profile?.name === 'test-profile-create' &&
-        typeof actualData.message === 'string';
+        typeof actualData.profile?.rhai_path === 'string' &&
+        typeof actualData.profile?.krx_path === 'string';
 
       return {
         passed,

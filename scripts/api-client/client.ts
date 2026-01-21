@@ -320,11 +320,13 @@ export class ApiClient {
   async createProfile(
     name: string,
     template?: string
-  ): Promise<ApiResponse<{ message: string; profile: { name: string } }>> {
+  ): Promise<ApiResponse<{ success: boolean; profile: { name: string; rhai_path: string; krx_path: string } }>> {
     const schema = z.object({
-      message: z.string(),
+      success: z.boolean(),
       profile: z.object({
         name: z.string(),
+        rhai_path: z.string(),
+        krx_path: z.string(),
       }),
     });
 
@@ -332,7 +334,7 @@ export class ApiClient {
       {
         method: 'POST',
         path: '/api/profiles',
-        body: { name, template },
+        body: { name, template: template || 'blank' },
       },
       schema,
       'POST /api/profiles'
