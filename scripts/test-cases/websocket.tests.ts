@@ -436,7 +436,7 @@ export const websocketTestCases: TestCase[] = [
 
         // Activate profile via REST API
         await client.customRequest(
-          'PUT',
+          'POST',
           `/api/profiles/${testProfileName}/activate`,
           z.object({ success: z.boolean() })
         );
