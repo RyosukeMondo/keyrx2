@@ -283,7 +283,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
 ## Phase 4: Add WebSocket Testing
 
 ### Task 4.1: WebSocket Client Implementation
-- [ ] 4.1.1 Create WebSocket client utility
+- [x] 4.1.1 Create WebSocket client utility
   - File: `scripts/api-client/websocket-client.ts` (new file)
   - Class: `WebSocketClient`
   - Methods: `connect()`, `subscribe(channel)`, `waitForEvent(predicate, timeout)`, `disconnect()`
