@@ -290,13 +290,13 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Purpose: WebSocket connection management for tests
   - Lines: ~250
 
-- [ ] 4.1.2 Add WebSocket connection test
+- [x] 4.1.2 Add WebSocket connection test
   - File: `scripts/test-cases/websocket.tests.ts` (new file)
   - Test ID: `websocket-001`
   - Scenario: Connect → Verify open → Disconnect → Verify closed
   - Purpose: Test basic WebSocket connectivity
 
-- [ ] 4.1.3 Add WebSocket subscription test
+- [x] 4.1.3 Add WebSocket subscription test
   - File: `scripts/test-cases/websocket.tests.ts`
   - Test ID: `websocket-002`
   - Scenario: Connect → Subscribe to channel → Verify subscription acknowledged

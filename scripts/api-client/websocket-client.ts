@@ -144,6 +144,13 @@ export class WebSocketClient {
   }
 
   /**
+   * Get active subscriptions
+   */
+  getSubscriptions(): Set<string> {
+    return new Set(this.subscriptions);
+  }
+
+  /**
    * Connect to WebSocket server
    */
   async connect(timeoutMs = 5000): Promise<void> {
