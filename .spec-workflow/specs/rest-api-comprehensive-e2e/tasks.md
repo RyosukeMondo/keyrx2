@@ -337,7 +337,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
     - Comment test summary on PR
   - Purpose: Automate testing in CI
 
-- [ ] 5.1.2 Add test failure notifications
+- [x] 5.1.2 Add test failure notifications
   - File: `.github/workflows/e2e-auto.yml`
   - Add: GitHub Actions step to post comment on PR with failure details
   - Purpose: Immediate visibility of test failures

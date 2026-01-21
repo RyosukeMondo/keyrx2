@@ -194,7 +194,14 @@ jobs:
               const emoji = failed === 0 ? '✅' : '❌';
 
               summary += `${emoji} **Results**: ${passed}/${total} tests passed (${passRate}%)\n`;
-              summary += `⏱️ **Duration**: ${duration}s\n\n`;
+              summary += `⏱️ **Duration**: ${duration}s\n`;
+
+              if (failed === 0) {
+                summary += `\n🎉 **All tests passed!** Your changes maintain API compatibility.\n`;
+              } else {
+                summary += `\n⚠️ **Action Required**: ${failed} test(s) failed and need attention.\n`;
+              }
+              summary += `\n`;
 
               // Add category breakdown if available
               if (results.categories && Object.keys(results.categories).length > 0) {
@@ -223,6 +230,14 @@ jobs:
                 if (failedTests.length > 10) {
                   summary += `\n... and ${failedTests.length - 10} more failures\n`;
                 }
+
+                // Add troubleshooting guidance
+                summary += `\n### 🔍 Troubleshooting\n\n`;
+                summary += `To investigate failures:\n`;
+                summary += `1. Check [daemon logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) in artifacts\n`;
+                summary += `2. Download [test results JSON](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed error info\n`;
+                summary += `3. View [HTML report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for comprehensive analysis\n`;
+                summary += `4. Run locally: \`cd keyrx_ui && npm run test:e2e:auto\`\n`;
               }
 
               if (results.fixAttempts && results.fixAttempts.length > 0) {
