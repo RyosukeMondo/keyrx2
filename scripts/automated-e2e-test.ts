@@ -28,6 +28,7 @@ import { TestExecutor } from './test-executor/executor.js';
 import { ValidationReporter } from './comparator/validation-reporter.js';
 import { FixOrchestrator } from './auto-fix/fix-orchestrator.js';
 import { getAllTestCases } from './test-cases/api-tests.js';
+import { TestMetrics } from './metrics/test-metrics.js';
 import type { ExpectedResults } from './test-cases/types.js';
 import type { TestSuiteResult as ExecutorTestSuiteResult } from './test-cases/types.js';
 
@@ -41,6 +42,7 @@ interface CliOptions {
   maxIterations: number;
   fix: boolean;
   reportJson?: string;
+  metricsFile?: string;
 }
 
 // Test result types
@@ -52,6 +54,8 @@ interface TestResult {
   error?: string;
   actual?: unknown;
   expected?: unknown;
+  fixAttempts?: number;
+  fixSuccesses?: number;
 }
 
 interface TestSuiteResult {
@@ -201,22 +205,38 @@ async function applyAutoFixes(
   console.log('\n🔄 Running final test suite...');
   const finalExecutorResult = await testExecutor.runAll(apiClient, testCases);
 
-  // Convert back to our format
+  // Track fix attempts and successes per test
+  const fixAttemptsByTest = new Map<string, { attempts: number; successes: number }>();
+  for (const fix of fixResult.fixAttempts) {
+    const existing = fixAttemptsByTest.get(fix.testId) || { attempts: 0, successes: 0 };
+    existing.attempts++;
+    if (fix.success) {
+      existing.successes++;
+    }
+    fixAttemptsByTest.set(fix.testId, existing);
+  }
+
+  // Convert back to our format with fix metrics
   return {
     total: finalExecutorResult.total,
     passed: finalExecutorResult.passed,
     failed: finalExecutorResult.failed,
     skipped: finalExecutorResult.skipped,
     duration: finalExecutorResult.duration,
-    results: finalExecutorResult.results.map((r) => ({
-      id: r.id,
-      name: r.name,
-      status: r.status === 'passed' ? 'pass' : r.status === 'skipped' ? 'skip' : 'fail',
-      duration: r.duration,
-      error: r.error,
-      actual: r.actual,
-      expected: r.expected,
-    })),
+    results: finalExecutorResult.results.map((r) => {
+      const fixMetrics = fixAttemptsByTest.get(r.id);
+      return {
+        id: r.id,
+        name: r.name,
+        status: r.status === 'passed' ? 'pass' : r.status === 'skipped' ? 'skip' : 'fail',
+        duration: r.duration,
+        error: r.error,
+        actual: r.actual,
+        expected: r.expected,
+        fixAttempts: fixMetrics?.attempts,
+        fixSuccesses: fixMetrics?.successes,
+      };
+    }),
   };
 }
 
@@ -308,6 +328,7 @@ Options:
   --max-iterations <number> Max auto-fix iterations (default: 3)
   --fix                     Enable auto-fix mode
   --report-json <path>      Output JSON report to file
+  --metrics-file <path>     Path to metrics JSONL file (default: metrics.jsonl)
   --help                    Show this help message
       `);
       process.exit(0);
@@ -321,6 +342,8 @@ Options:
       options.fix = true;
     } else if (arg === '--report-json') {
       options.reportJson = args[++i];
+    } else if (arg === '--metrics-file') {
+      options.metricsFile = args[++i];
     }
   }
 
@@ -404,6 +427,18 @@ async function main(): Promise<void> {
     if (options.reportJson) {
       generateReport(results, options.reportJson);
     }
+
+    // Record metrics
+    const metricsFile = options.metricsFile || 'metrics.jsonl';
+    const metrics = new TestMetrics(metricsFile);
+    await metrics.record({
+      total: results.total,
+      passed: results.passed,
+      failed: results.failed,
+      duration: results.duration,
+      results: results.results,
+    });
+    console.log(`\n📊 Metrics recorded to: ${metricsFile}`);
 
     // Exit with appropriate code
     const exitCode = results.failed > 0 ? 1 : 0;
