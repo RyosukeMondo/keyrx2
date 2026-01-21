@@ -462,12 +462,15 @@ Before marking spec complete:
 
 - [x] Run `npm install` - succeeds without errors
 - [ ] Run `npx tsx automated-e2e-test.ts --daemon-path ../target/release/keyrx_daemon` - all 83 tests pass
-  - **Current Status**: 28/83 passing (33.7%)
-  - **Issues Found**:
-    - WebSocket subscriptions timeout (devices, profiles channels)
+  - **Current Status**: 36/83 passing (43.4%)
+  - **Recent Progress**: Fixed 4 tests with incorrect error assertion logic (macros-001b, macros-002b, simulator-001d, simulator-001e)
+  - **Remaining Issues**:
+    - Error assertion pattern mismatch: Tests check result.status but executor only passes response.data to assert function
+    - Profile API requires 'template' field not reflected in some tests
     - Many endpoints require active device configuration
     - Schema validation mismatches in several endpoints
-    - Error handling not matching expected codes
+    - WebSocket subscriptions timeout (devices, profiles channels)
+    - Config/layer tests fail with GENERATOR_ERROR (Device block not found)
 - [ ] Run tests 10 consecutive times - 0 flaky failures
 - [ ] Check execution time - < 3 minutes
 - [ ] Verify all 40+ endpoints covered - generate coverage report
