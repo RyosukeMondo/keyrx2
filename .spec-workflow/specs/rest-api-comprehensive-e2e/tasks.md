@@ -244,7 +244,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Flow: Create profile → Duplicate → Rename copy → Activate copy → Delete both
   - Purpose: Validate complex profile management workflow
 
-- [ ] 3.1.2 Test profile validation → fix → activate workflow
+- [x] 3.1.2 Test profile validation → fix → activate workflow
   - File: `scripts/test-cases/workflows.tests.ts`
   - Test ID: `workflow-003`
   - Flow: Create profile with invalid syntax → Validate (fail) → Fix syntax → Validate (pass) → Activate

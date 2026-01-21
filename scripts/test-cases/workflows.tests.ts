@@ -182,8 +182,149 @@ base_layer = "base";
 };
 
 /**
+ * Test: Profile validation → fix → activate workflow
+ * Test ID: workflow-003
+ * Flow:
+ * 1. Create a profile with invalid syntax
+ * 2. Validate the profile (should fail)
+ * 3. Fix the syntax error
+ * 4. Validate again (should pass)
+ * 5. Activate the fixed profile
+ * 6. Verify the profile is active
+ * 7. Delete the profile (cleanup)
+ */
+export const workflow_003: TestCase = {
+  id: 'workflow-003',
+  category: 'workflows',
+  description: 'Profile validation → fix → activate workflow',
+  setup: noOpSetup,
+  execute: async (client: ApiClient) => {
+    // Step 1: Create a profile with invalid syntax (missing closing quote)
+    const invalidConfig = `
+// Test profile with syntax error
+base_layer = "base;
+
+[keymap.base]
+"a" = "b"
+`;
+    await client.post('/profiles/workflow-validation-test', { config: invalidConfig });
+
+    // Step 2: Validate the profile (should fail)
+    const validateFailResponse = await client.post(
+      '/profiles/workflow-validation-test/validate',
+      {}
+    );
+
+    const validateFailData = z.object({
+      success: z.boolean(),
+      valid: z.boolean().optional(),
+      errors: z.array(z.string()).optional(),
+    }).parse(validateFailResponse);
+
+    if (validateFailData.success && validateFailData.valid) {
+      throw new Error('Expected validation to fail for invalid syntax, but it passed');
+    }
+
+    if (!validateFailData.errors || validateFailData.errors.length === 0) {
+      throw new Error('Expected validation errors for invalid syntax');
+    }
+
+    // Step 3: Fix the syntax error (add closing quote)
+    const validConfig = `
+// Test profile with syntax fixed
+base_layer = "base";
+
+[keymap.base]
+"a" = "b"
+`;
+    const updateResponse = await client.put('/profiles/workflow-validation-test/config', {
+      config: validConfig,
+    });
+
+    const updateData = z.object({
+      success: z.boolean(),
+    }).parse(updateResponse);
+
+    if (!updateData.success) {
+      throw new Error('Profile config update failed');
+    }
+
+    // Step 4: Validate again (should pass)
+    const validatePassResponse = await client.post(
+      '/profiles/workflow-validation-test/validate',
+      {}
+    );
+
+    const validatePassData = z.object({
+      success: z.boolean(),
+      valid: z.boolean(),
+      errors: z.array(z.string()).optional(),
+    }).parse(validatePassResponse);
+
+    if (!validatePassData.success || !validatePassData.valid) {
+      throw new Error(
+        `Expected validation to pass for valid syntax, errors: ${validatePassData.errors?.join(', ')}`
+      );
+    }
+
+    // Step 5: Activate the fixed profile
+    const activateResponse = await client.post('/active-profile', {
+      profile_name: 'workflow-validation-test',
+    });
+
+    const activateData = ActivateProfileResponseSchema.parse(activateResponse);
+    if (!activateData.success) {
+      throw new Error('Profile activation failed');
+    }
+    if (activateData.profile_name !== 'workflow-validation-test') {
+      throw new Error(
+        `Expected active profile 'workflow-validation-test', got '${activateData.profile_name}'`
+      );
+    }
+
+    // Step 6: Verify the profile is active
+    const statusResponse = await client.get('/daemon/state');
+    const statusData = z.object({
+      success: z.boolean(),
+      active_profile: z.string().nullable(),
+    }).parse(statusResponse);
+
+    if (statusData.active_profile !== 'workflow-validation-test') {
+      throw new Error(
+        `Expected active profile to be 'workflow-validation-test', got '${statusData.active_profile}'`
+      );
+    }
+
+    return {
+      success: true,
+      workflow_steps: [
+        'Created profile with invalid syntax',
+        'Validated profile (failed as expected)',
+        'Fixed syntax error',
+        'Validated again (passed)',
+        'Activated fixed profile',
+        'Verified active profile',
+      ],
+    };
+  },
+  cleanup: async (client: ApiClient) => {
+    // Clean up the test profile
+    try {
+      await client.delete('/profiles/workflow-validation-test');
+    } catch (error) {
+      // Profile might not exist, ignore error
+    }
+  },
+  expectedStatus: 200,
+  expectedResponse: {
+    success: true,
+  },
+};
+
+/**
  * All workflow test cases
  */
 export const workflowTestCases: TestCase[] = [
   workflow_002,
+  workflow_003,
 ];
