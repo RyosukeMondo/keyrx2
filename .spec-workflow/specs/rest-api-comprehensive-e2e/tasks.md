@@ -343,7 +343,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Purpose: Immediate visibility of test failures
 
 ### Task 5.2: Enhance Reporting
-- [ ] 5.2.1 Add test category breakdown to console reporter
+- [x] 5.2.1 Add test category breakdown to console reporter
   - File: `scripts/comparator/validation-reporter.ts`
   - Add: Print summary per category (Health: 7/7 passed, Devices: 10/10 passed, etc.)
   - Purpose: Better visibility into test coverage

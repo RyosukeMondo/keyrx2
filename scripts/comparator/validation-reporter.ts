@@ -26,6 +26,8 @@ export interface TestResult {
   status: 'pass' | 'fail' | 'skip' | 'error';
   /** Test duration in milliseconds */
   duration: number;
+  /** Test category (e.g., 'health', 'devices', 'profiles') */
+  category?: string;
   /** Comparison result (if status is 'fail') */
   comparison?: ComparisonResult;
   /** Error message (if status is 'error') */
@@ -34,6 +36,24 @@ export interface TestResult {
   actual?: unknown;
   /** Expected response */
   expected?: unknown;
+}
+
+/**
+ * Category statistics
+ */
+export interface CategoryStats {
+  /** Total tests in category */
+  total: number;
+  /** Passed tests */
+  passed: number;
+  /** Failed tests */
+  failed: number;
+  /** Skipped tests */
+  skipped: number;
+  /** Error tests */
+  errors: number;
+  /** Category duration in milliseconds */
+  duration: number;
 }
 
 /**
@@ -80,12 +100,22 @@ export interface JsonReport {
     duration: number;
     passRate: number;
   };
+  /** Category statistics */
+  categories?: Record<string, {
+    total: number;
+    passed: number;
+    failed: number;
+    skipped: number;
+    errors: number;
+    duration: number;
+  }>;
   /** Individual test results */
   results: {
     id: string;
     name: string;
     status: string;
     duration: number;
+    category?: string;
     error?: string;
     diffs?: Array<{
       path: string;
@@ -166,6 +196,49 @@ export class ValidationReporter {
   }
 
   /**
+   * Compute category statistics from test results
+   */
+  private computeCategoryStats(results: TestResult[]): Map<string, CategoryStats> {
+    const categories = new Map<string, CategoryStats>();
+
+    for (const result of results) {
+      const category = result.category || 'uncategorized';
+
+      if (!categories.has(category)) {
+        categories.set(category, {
+          total: 0,
+          passed: 0,
+          failed: 0,
+          skipped: 0,
+          errors: 0,
+          duration: 0,
+        });
+      }
+
+      const stats = categories.get(category)!;
+      stats.total++;
+      stats.duration += result.duration;
+
+      switch (result.status) {
+        case 'pass':
+          stats.passed++;
+          break;
+        case 'fail':
+          stats.failed++;
+          break;
+        case 'skip':
+          stats.skipped++;
+          break;
+        case 'error':
+          stats.errors++;
+          break;
+      }
+    }
+
+    return categories;
+  }
+
+  /**
    * Format test suite results for human consumption
    *
    * @param suiteResult - Test suite result
@@ -208,6 +281,35 @@ export class ValidationReporter {
                          parseFloat(passRate) >= 80 ? 'yellow' : 'red';
     lines.push(`  Pass Rate: ${this.colorize(`${passRate}%`, passRateColor)}`);
     lines.push('');
+
+    // Category breakdown
+    const categoryStats = this.computeCategoryStats(suiteResult.results);
+    if (categoryStats.size > 1 || (categoryStats.size === 1 && !categoryStats.has('uncategorized'))) {
+      lines.push(this.colorize('Category Breakdown:', 'bold'));
+
+      // Sort categories alphabetically
+      const sortedCategories = Array.from(categoryStats.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+      for (const [category, stats] of sortedCategories) {
+        if (category === 'uncategorized') continue;
+
+        const catPassRate = stats.total > 0
+          ? ((stats.passed / stats.total) * 100).toFixed(1)
+          : '0.0';
+
+        const statusIcon = stats.failed === 0 && stats.errors === 0 ? '✓' : '✗';
+        const statusColor = stats.failed === 0 && stats.errors === 0 ? 'green' : 'red';
+
+        const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+        const passedInfo = this.colorize(`${stats.passed}/${stats.total}`, statusColor);
+        const rateInfo = this.colorize(`${catPassRate}%`, statusColor);
+        const durationInfo = this.colorize(`(${this.formatDuration(stats.duration)})`, 'gray');
+
+        lines.push(`  ${this.colorize(statusIcon, statusColor)} ${categoryName}: ${passedInfo} passed ${rateInfo} ${durationInfo}`);
+      }
+
+      lines.push('');
+    }
 
     // Individual test results
     if (suiteResult.results.length > 0) {
@@ -405,6 +507,30 @@ export class ValidationReporter {
       ? (suiteResult.passed / suiteResult.total) * 100
       : 0;
 
+    // Compute category statistics
+    const categoryStats = this.computeCategoryStats(suiteResult.results);
+    const categories: Record<string, {
+      total: number;
+      passed: number;
+      failed: number;
+      skipped: number;
+      errors: number;
+      duration: number;
+    }> = {};
+
+    for (const [category, stats] of categoryStats.entries()) {
+      if (category !== 'uncategorized') {
+        categories[category] = {
+          total: stats.total,
+          passed: stats.passed,
+          failed: stats.failed,
+          skipped: stats.skipped,
+          errors: stats.errors,
+          duration: stats.duration,
+        };
+      }
+    }
+
     return {
       version: '1.0',
       timestamp: suiteResult.timestamp ?? new Date().toISOString(),
@@ -418,11 +544,13 @@ export class ValidationReporter {
         duration: suiteResult.duration,
         passRate: parseFloat(passRate.toFixed(2)),
       },
+      categories: Object.keys(categories).length > 0 ? categories : undefined,
       results: suiteResult.results.map((result) => ({
         id: result.id,
         name: result.name,
         status: result.status,
         duration: result.duration,
+        category: result.category,
         error: result.error,
         diffs: result.comparison?.diffs.map((diff) => ({
           path: diff.path,
