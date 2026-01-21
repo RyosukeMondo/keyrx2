@@ -909,16 +909,19 @@ export const apiTestCases: TestCase[] = [
       }
 
       const deviceId = listResponse.data.devices[0].id;
+      const originalLayout = listResponse.data.devices[0].layout;
 
-      // Step 2: Update device
-      const updateResponse = await client.patchDevice(deviceId, { enabled: false });
+      // Step 2: Update device layout
+      const updateResponse = await client.patchDevice(deviceId, { layout: 'ansi_104' });
 
       // Step 3: Verify update
       const verifyResponse = await client.getDevices();
       const updatedDevice = verifyResponse.data.devices.find((d: { id: string }) => d.id === deviceId);
 
-      // Step 4: Restore original state
-      await client.patchDevice(deviceId, { enabled: true });
+      // Step 4: Restore original layout if it was set
+      if (originalLayout) {
+        await client.patchDevice(deviceId, { layout: originalLayout });
+      }
 
       return {
         status: 200,
@@ -933,8 +936,8 @@ export const apiTestCases: TestCase[] = [
       const actualData = extractData(actual) as {
         skipped?: boolean;
         list?: { devices: unknown[] };
-        update?: unknown;
-        verify?: { enabled: boolean };
+        update?: { success?: boolean };
+        verify?: { layout?: string };
       };
 
       // Allow skipped tests when no devices available
@@ -948,7 +951,8 @@ export const apiTestCases: TestCase[] = [
 
       const passed =
         Array.isArray(actualData.list?.devices) &&
-        actualData.verify?.enabled === false;
+        actualData.update?.success === true &&
+        actualData.verify?.layout === 'ansi_104';
 
       return {
         passed,
