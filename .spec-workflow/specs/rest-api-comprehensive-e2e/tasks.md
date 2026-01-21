@@ -124,7 +124,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Purpose: Test device removal
 
 ### Task 2.3: Profile Management Tests (10 endpoints)
-- [ ] 2.3.1 Add POST /api/profiles/:name/duplicate test
+- [x] 2.3.1 Add POST /api/profiles/:name/duplicate test
   - File: `scripts/test-cases/profile-management.tests.ts` (new file)
   - Test ID: `profiles-011`
   - Endpoint: POST /api/profiles/:name/duplicate
