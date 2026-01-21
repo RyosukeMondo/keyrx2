@@ -461,15 +461,18 @@ Phase 6 (Documentation) - CAN START ANYTIME
 Before marking spec complete:
 
 - [x] Run `npm install` - succeeds without errors
-- [ ] Run `npx tsx automated-e2e-test.ts --daemon-path ../target/release/keyrx_daemon` - all 83 tests pass
-  - **Current Status**: 36/83 passing (43.4%)
-  - **Recent Progress**: Fixed 4 tests with incorrect error assertion logic (macros-001b, macros-002b, simulator-001d, simulator-001e)
+- [ ] Run `npx tsx scripts/automated-e2e-test.ts --daemon-path target/release/keyrx_daemon` - all 83 tests pass
+  - **Current Status**: 36/83 passing (43.4%) - Test run crashed on WebSocket timeout
+  - **Recent Progress**:
+    - ✅ Fixed profile cleanup tracking mechanism - prevents "profile limit exceeded" errors
+    - ✅ Created cleanup script for manual profile removal (scripts/cleanup-test-profiles.ts)
+    - ✅ Verified cleanup now works correctly (0 test profiles left after run)
   - **Remaining Issues**:
+    - WebSocket tests timeout and crash the test runner
     - Error assertion pattern mismatch: Tests check result.status but executor only passes response.data to assert function
     - Profile API requires 'template' field not reflected in some tests
     - Many endpoints require active device configuration
     - Schema validation mismatches in several endpoints
-    - WebSocket subscriptions timeout (devices, profiles channels)
     - Config/layer tests fail with GENERATOR_ERROR (Device block not found)
 - [ ] Run tests 10 consecutive times - 0 flaky failures
 - [ ] Check execution time - < 3 minutes
