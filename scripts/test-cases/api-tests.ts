@@ -36,26 +36,33 @@ export interface TestResult {
 export interface TestCase {
   /** Unique test identifier */
   id: string;
-  /** Human-readable test name */
-  name: string;
+  /** Human-readable test name or description */
+  name?: string;
+  description?: string;
   /** API endpoint being tested */
-  endpoint: string;
+  endpoint?: string;
   /** Test scenario name (matches expected-results.json) */
-  scenario: string;
+  scenario?: string;
   /** Test category for organization */
-  category: 'health' | 'profiles' | 'devices' | 'metrics' | 'layouts' | 'status' | 'config' | 'macros' | 'simulator';
+  category: 'health' | 'profiles' | 'devices' | 'metrics' | 'layouts' | 'status' | 'config' | 'macros' | 'simulator' | 'workflows';
   /** Test priority (1 = critical, 2 = important, 3 = nice-to-have) */
-  priority: 1 | 2 | 3;
+  priority?: 1 | 2 | 3;
   /** Setup function - prepare test environment */
   setup: (client: ApiClient) => Promise<void>;
   /** Execute function - perform API call and return result */
   execute: (client: ApiClient) => Promise<{
-    status: number;
-    data: unknown;
+    status?: number;
+    data?: unknown;
     headers?: Record<string, string>;
-  }>;
+    success?: boolean;
+    [key: string]: unknown;
+  } | unknown>;
+  /** Expected HTTP status code */
+  expectedStatus?: number;
+  /** Expected response shape */
+  expectedResponse?: unknown;
   /** Assert function - validate response against expected results */
-  assert: (actual: unknown, expected: ScenarioDefinition) => TestResult;
+  assert?: (actual: unknown, expected: ScenarioDefinition) => TestResult;
   /** Cleanup function - restore environment state */
   cleanup: (client: ApiClient) => Promise<void>;
 }

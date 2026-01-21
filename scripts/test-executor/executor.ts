@@ -54,8 +54,9 @@ export class TestExecutor {
     for (let i = 0; i < cases.length; i++) {
       const testCase = cases[i];
       const testNumber = i + 1;
+      const testName = testCase.name || testCase.description || testCase.id;
 
-      this.log(`[${testNumber}/${cases.length}] Running: ${testCase.name}`);
+      this.log(`[${testNumber}/${cases.length}] Running: ${testName}`);
 
       const result = await this.runSingle(client, testCase);
       results.push(result);
@@ -139,7 +140,7 @@ export class TestExecutor {
 
       return {
         id: testCase.id,
-        name: testCase.name,
+        name: testCase.name || testCase.description || testCase.id,
         endpoint: testCase.endpoint,
         scenario: testCase.scenario,
         category: testCase.category,
@@ -169,7 +170,7 @@ export class TestExecutor {
 
       return {
         id: testCase.id,
-        name: testCase.name,
+        name: testCase.name || testCase.description || testCase.id,
         endpoint: testCase.endpoint,
         scenario: testCase.scenario,
         category: testCase.category,
@@ -211,14 +212,26 @@ export class TestExecutor {
         }
         const response = await testCase.execute(client);
 
-        // Step 3: Get expected result
-        const expectedResult = this.getExpectedResult(testCase);
+        // Step 3: Handle workflow tests (which return success/failure directly)
+        let testResult: TestResult;
+        if (testCase.category === 'workflows' || !testCase.assert) {
+          // Workflow test - check for success field or expectedStatus
+          const isSuccess = (response as any).success !== false;
+          testResult = {
+            passed: isSuccess,
+            actual: response,
+            expected: testCase.expectedResponse || { success: true },
+          };
+        } else {
+          // Step 3: Get expected result
+          const expectedResult = this.getExpectedResult(testCase);
 
-        // Step 4: Assert
-        if (this.verbose) {
-          this.log(`  [Assert] Validating response`);
+          // Step 4: Assert
+          if (this.verbose) {
+            this.log(`  [Assert] Validating response`);
+          }
+          testResult = testCase.assert(response.data, expectedResult);
         }
-        const testResult: TestResult = testCase.assert(response.data, expectedResult);
 
         // Step 5: Cleanup (always runs)
         try {

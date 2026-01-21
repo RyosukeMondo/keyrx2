@@ -326,7 +326,10 @@ export function validateApiResponse<T>(
     // but passthrough() already handles this by including extra fields in the result.
     // Just log that we received data for tracking purposes.
     if (receivedKeys.length > 0) {
-      if (import.meta.env.DEV) {
+      // Check if running in dev mode (Vite/browser or Node.js)
+      const isDev = (typeof import.meta !== 'undefined' && import.meta.env?.DEV) ||
+                    (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development');
+      if (isDev) {
         // eslint-disable-next-line no-console
         console.debug(
           JSON.stringify({

@@ -208,6 +208,7 @@ export class DaemonFixture {
       // Check for various health indicators
       const healthy =
         data.status === 'ready' ||
+        data.status === 'running' ||
         data.running === true ||
         data.state === 'running' ||
         data.healthy === true;

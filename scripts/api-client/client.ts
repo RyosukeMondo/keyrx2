@@ -19,7 +19,7 @@ import {
   DeviceRpcInfoSchema,
   ProfileRpcInfoSchema,
   validateApiResponse,
-} from '../../keyrx_ui/src/api/schemas.js';
+} from '../../keyrx_ui/src/api/schemas.ts';
 
 /**
  * API client configuration options
