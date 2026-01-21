@@ -67,7 +67,7 @@ fn profile_error_to_api_error(err: ProfileError) -> ApiError {
         ProfileError::NotFound(msg) => ApiError::NotFound(msg),
         ProfileError::InvalidName(msg) => ApiError::BadRequest(format!("Invalid name: {}", msg)),
         ProfileError::AlreadyExists(msg) => {
-            ApiError::BadRequest(format!("Profile already exists: {}", msg))
+            ApiError::Conflict(format!("Profile already exists: {}", msg))
         }
         ProfileError::ProfileLimitExceeded => {
             ApiError::BadRequest("Profile limit exceeded".to_string())
