@@ -37,10 +37,10 @@ const noOpCleanup = async (): Promise<void> => {
  * WebSocket URL for tests (derived from API base URL)
  */
 const getWebSocketUrl = (apiBaseUrl: string): string => {
-  // Convert http://host:port/api to ws://host:port/ws_rpc
+  // Convert http://host:port/api to ws://host:port/ws-rpc
   const url = new URL(apiBaseUrl);
   const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${url.host}/ws_rpc`;
+  return `${protocol}//${url.host}/ws-rpc`;
 };
 
 /**
@@ -53,7 +53,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-001',
     name: 'WebSocket - Connect and disconnect lifecycle',
-    endpoint: '/ws_rpc',
+    endpoint: '/ws-rpc',
     scenario: 'connection',
     category: 'websocket',
     priority: 1,
@@ -161,7 +161,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-002',
     name: 'WebSocket - Subscribe to channel and receive acknowledgment',
-    endpoint: '/ws_rpc',
+    endpoint: '/ws-rpc',
     scenario: 'subscription',
     category: 'websocket',
     priority: 1,
@@ -261,7 +261,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-003',
     name: 'WebSocket - Receive device event notification',
-    endpoint: '/ws_rpc',
+    endpoint: '/ws-rpc',
     scenario: 'device_event',
     category: 'websocket',
     priority: 1,
@@ -408,7 +408,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-004',
     name: 'WebSocket - Receive profile event notification',
-    endpoint: '/ws_rpc',
+    endpoint: '/ws-rpc',
     scenario: 'profile_event',
     category: 'websocket',
     priority: 1,
@@ -573,7 +573,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-005',
     name: 'WebSocket - Reconnection and subscription restoration',
-    endpoint: '/ws_rpc',
+    endpoint: '/ws-rpc',
     scenario: 'reconnection',
     category: 'websocket',
     priority: 2,

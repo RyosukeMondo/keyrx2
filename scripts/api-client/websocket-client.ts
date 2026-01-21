@@ -338,8 +338,8 @@ export class WebSocketClient {
       this.pendingRequests.set(messageId, {
         resolve: (result: unknown) => {
           clearTimeout(timeoutId);
-          const response = result as { success?: boolean };
-          if (response.success) {
+          const response = result as { subscribed?: boolean; channel?: string };
+          if (response.subscribed) {
             this.subscriptions.add(channel);
             resolve();
           } else {
@@ -595,7 +595,7 @@ export class WebSocketClient {
  * Create WebSocket client instance
  *
  * @example
- * const client = createWebSocketClient({ url: 'ws://localhost:9867/ws_rpc' });
+ * const client = createWebSocketClient({ url: 'ws://localhost:9867/ws-rpc' });
  * await client.connect();
  * await client.subscribe('devices');
  * const event = await client.waitForEvent(e => e.content.channel === 'devices');
