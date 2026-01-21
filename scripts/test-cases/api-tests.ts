@@ -18,6 +18,7 @@ import { layoutsTestCases } from './layouts.tests.js';
 import { macrosTestCases } from './macros.tests.js';
 import { simulatorTestCases } from './simulator.tests.js';
 import { workflowTestCases } from './workflows.tests.js';
+import { websocketTestCases } from './websocket.tests.js';
 
 /**
  * Test case execution result
@@ -44,7 +45,7 @@ export interface TestCase {
   /** Test scenario name (matches expected-results.json) */
   scenario?: string;
   /** Test category for organization */
-  category: 'health' | 'profiles' | 'devices' | 'metrics' | 'layouts' | 'status' | 'config' | 'macros' | 'simulator' | 'workflows';
+  category: 'health' | 'profiles' | 'devices' | 'metrics' | 'layouts' | 'status' | 'config' | 'macros' | 'simulator' | 'workflows' | 'websocket';
   /** Test priority (1 = critical, 2 = important, 3 = nice-to-have) */
   priority?: 1 | 2 | 3;
   /** Setup function - prepare test environment */
@@ -974,6 +975,7 @@ export function getAllTestCases(): TestCase[] {
     ...macrosTestCases,
     ...simulatorTestCases,
     ...workflowTestCases,
+    ...websocketTestCases,
   ];
 }
 

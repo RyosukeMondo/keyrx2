@@ -303,20 +303,20 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Purpose: Test channel subscription
 
 ### Task 4.2: WebSocket Event Tests
-- [ ] 4.2.1 Add device event test
+- [x] 4.2.1 Add device event test
   - File: `scripts/test-cases/websocket.tests.ts`
   - Test ID: `websocket-003`
   - Scenario: Subscribe to 'devices' → Update device via REST → Receive WebSocket event
   - Purpose: Validate device change notifications
 
-- [ ] 4.2.2 Add profile event test
+- [x] 4.2.2 Add profile event test
   - File: `scripts/test-cases/websocket.tests.ts`
   - Test ID: `websocket-004`
   - Scenario: Subscribe to 'profiles' → Activate profile via REST → Receive WebSocket event
   - Purpose: Validate profile change notifications
 
 ### Task 4.3: WebSocket Resilience Tests
-- [ ] 4.3.1 Add reconnection test
+- [x] 4.3.1 Add reconnection test
   - File: `scripts/test-cases/websocket.tests.ts`
   - Test ID: `websocket-005`
   - Scenario: Connect → Disconnect → Reconnect → Verify subscriptions restored
