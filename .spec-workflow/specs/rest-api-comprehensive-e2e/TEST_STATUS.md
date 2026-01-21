@@ -1,130 +1,195 @@
 # REST API E2E Test Status
 
-## Summary
+**Last Updated**: 2026-01-22
+**Current Status**: 27/83 tests passing (32.5%)
+**Target**: 100% pass rate
 
-**Test Run Date:** 2026-01-22
-**Test Suite:** 83 tests
-**Results:** 18 passed, 65 failed
-**Pass Rate:** 21.7%
+## Recent Fixes (Commits)
 
-## Fixed Issues
+### 1. Template and Endpoint Corrections (3a638453)
+- Changed invalid 'empty' template to 'blank' (valid template name)
+- Fixed profile config endpoints from `/profiles/:name` to `/profiles/:name/config`
+- **Impact**: Fixed 1-2 test failures
 
-### 1. Layout Endpoint Schema (Fixed)
-- **Issue:** Test expected wrapped object, API returns raw KLE JSON array
-- **Fix:** Updated `layouts.tests.ts` to expect array format
-- **Commit:** d727a391
+### 2. Error Handling Structure (f29f21ee)
+- Corrected error handling in layouts, macros, and simulator tests
+- Changed from `error.response?.status` to `error.statusCode` (ApiClientError structure)
+- Changed from `error.response?.data` to `error.response`
+- **Impact**: Fixed error handling logic, but tests still fail due to API behavior
 
-### 2. Event Type Case Sensitivity (Fixed)
-- **Issue:** Tests sent 'Press'/'Release', API expects 'press'/'release'
-- **Fix:** Updated `simulator.tests.ts` to use lowercase
-- **Commit:** d727a391
+### 3. Config Test Assertions (c6c9bcdb)
+- Fixed config test error handling to use ApiClientError pattern
+- Fixed assertions to unwrap data from `{status, data}` response structure
+- **Impact**: Fixed "Cannot read properties of undefined" errors
 
-## Remaining Issues
+## Remaining Test Failures (56 tests)
 
-### 3. API Client Method Missing (Critical)
-- **Files:** `workflows.tests.ts`
-- **Issue:** Tests call `client.post()`, `client.put()` methods that don't exist
-- **Affected Tests:**
-  - workflow-002: Profile duplicate → rename → activate
-  - workflow-003: Profile validation → fix → activate
-  - workflow-005: Config update → add mappings
-  - workflow-006: Macro record → simulate → playback
-  - workflow-007: Simulator event → mapping → output
-- **Fix Needed:** Either:
-  - Add convenience methods to ApiClient (post, put, delete)
-  - OR refactor tests to use customRequest()
-  - OR refactor tests to use specific typed methods
+### Category 1: SOCKET_NOT_CONNECTED / HTTP 503 (10 tests)
+**Root Cause**: Tests require an active profile with socket connection
 
-### 4. WebSocket Subscription Timeouts (Critical)
-- **Files:** `websocket.tests.ts`
-- **Issue:** All WebSocket subscription tests timeout after 5 seconds
-- **Affected Tests:**
-  - websocket-002: Subscribe to channel
-  - websocket-003: Device event notification
-  - websocket-004: Profile event notification
-  - websocket-005: Reconnection test
-- **Symptoms:** `Subscription timeout for channel: devices/profiles`
-- **Possible Causes:**
-  - WebSocket server not sending subscription acknowledgments
-  - Client waiting for wrong message format
-  - Channel names mismatch
-- **Fix Needed:** Investigate WebSocket server implementation
+Tests affected:
+- Profile config GET/PUT operations
+- Device management operations
+- Config/mapping operations
+- Several workflow tests
 
-### 5. Profile/Config API Errors (High Priority)
-- **Issue:** Many profile and config tests failing with errors
-- **Examples:**
-  - "Cannot read properties of undefined (reading 'status')"
-  - "Generator error: Device block not found"
-  - "Invalid request: Invalid template"
-- **Affected Categories:**
-  - Profile management (profiles-003 through profiles-013)
-  - Config operations (config-001 through config-004)
-  - Device operations (devices-004 through devices-007)
-- **Fix Needed:**
-  - Investigate why API returns unexpected error formats
-  - Check if daemon state is properly initialized
-  - Verify template validation logic
+**Fix Required**:
+- Tests need to create and activate a profile with proper socket setup
+- May need to mock/stub socket connection or use test daemon mode
 
-### 6. Error Response Validation
-- **Issue:** Tests expect specific error status codes but get different responses
-- **Examples:**
-  - Test expects 400, gets undefined status
-  - Test expects error object, gets null
-- **Fix Needed:**
-  - Align test expectations with actual error response format
-  - Ensure API returns consistent error structure
+### Category 2: GENERATOR_ERROR - Device block not found (6 tests)
+**Root Cause**: Config tests don't set up proper device blocks
 
-## Test Categories Breakdown
+Tests affected:
+- POST /api/config/key-mappings (all variants)
+- DELETE /api/config/key-mappings
+- GET /api/layers
 
-| Category | Total | Passed | Failed | Pass Rate |
-|----------|-------|--------|--------|-----------|
-| Health   | 4     | 3      | 1      | 75%       |
-| Devices  | 11    | 1      | 10     | 9%        |
-| Profiles | 13    | 0      | 13     | 0%        |
-| Config   | 9     | 0      | 9      | 0%        |
-| Layouts  | 2     | 0      | 2      | 0%        |
-| Macros   | 8     | 6      | 2      | 75%       |
-| Simulator| 7     | 3      | 4      | 43%       |
-| Workflows| 6     | 0      | 6      | 0%        |
-| WebSocket| 5     | 1      | 4      | 20%       |
-| Metrics  | 4     | 1      | 3      | 25%       |
-| Integration | 14 | 3      | 11     | 21%       |
+**Fix Required**:
+- Tests must create a valid config with device blocks before adding mappings
+- Example: Set up `[device.keyboard-0]` block with base_layer
+
+### Category 3: HTTP 400 - Bad Request (15 tests)
+**Root Cause**: Test request data doesn't match API expectations
+
+Common issues:
+- Invalid request body structure
+- Missing required fields
+- Invalid field values
+- Template/config syntax errors
+
+**Fix Required**:
+- Review each failing test's request payload
+- Align with actual API endpoint requirements
+- Check backend validation logic
+
+### Category 4: HTTP 404 - Not Found (4 tests)
+**Root Cause**: Tests reference resources that don't exist
+
+Tests affected:
+- Device operations on nonexistent devices
+- Profile operations on nonexistent profiles
+
+**Fix Required**:
+- Ensure setup creates required resources
+- Fix test data to use correct IDs/names
+
+### Category 5: WebSocket Subscription Timeout (4 tests)
+**Root Cause**: WebSocket subscription mechanism not responding
+
+Tests affected:
+- websocket-002: Subscribe to channel
+- websocket-003: Device event notification
+- websocket-004: Profile event notification
+- websocket-005: Reconnection
+
+**Fix Required**:
+- Investigate WebSocket server subscription handling
+- Check if subscription acknowledgment is being sent
+- May need to fix backend WebSocket implementation
+
+### Category 6: Expected Status Mismatch (4 tests)
+**Root Cause**: API returns different status than expected
+
+Tests affected:
+- simulator-001d: Expected 400, got undefined
+- simulator-001e: Expected 400, got undefined
+- macros-001b: Expected 400, got undefined
+- macros-002b: Expected 400, got undefined
+
+**Fix Required**:
+- Check if API should return 400 for these cases or if test expectations are wrong
+- May need to add validation to backend endpoints
+
+### Category 7: Workflow Test Failures (6 tests)
+**Root Cause**: Complex multi-step tests hit multiple issues
+
+Tests affected:
+- workflow-002: Profile duplicate → rename → activate
+- workflow-003: Profile validation → fix → activate
+- workflow-004: Device rename → layout change → disable
+- workflow-005: Config update → add mappings → verify layers
+- workflow-006: Macro record → simulate → playback
+- workflow-007: Simulator event → mapping → output
+
+**Fix Required**:
+- Fix underlying API issues first
+- Review each workflow step
+- May need test data/setup adjustments
 
 ## Next Steps
 
-### Immediate Actions
-1. Add missing ApiClient methods (post, put, delete) or refactor workflow tests
-2. Debug WebSocket subscription mechanism
-3. Fix profile/config API error handling
+### Immediate Priorities (High Impact)
+
+1. **Fix Socket Connection Requirements** (10 tests)
+   - Investigate how to properly set up active profile with socket
+   - May need daemon configuration or test mode
+
+2. **Fix Device Block Setup** (6 tests)
+   - Create helper to set up valid config with device blocks
+   - Update config test setup functions
+
+3. **Fix WebSocket Subscriptions** (4 tests)
+   - Debug WebSocket subscription acknowledgment
+   - May be backend bug in subscription handling
 
 ### Medium Priority
-4. Align error response format expectations
-5. Fix device management tests
-6. Investigate "Device block not found" errors
 
-### Long-term
-7. Add better error messages to tests
-8. Improve test isolation
-9. Add retry logic for flaky tests
-10. Update documentation to reflect actual API behavior
+4. **Review HTTP 400 Errors** (15 tests)
+   - Systematic review of each failing test
+   - Align request payloads with API expectations
 
-## Verification Checklist Status
+5. **Fix Status Mismatch Tests** (4 tests)
+   - Determine if API or test expectations are correct
+   - Add proper validation if needed
 
-- [x] npm install succeeds
-- [x] Test suite runs (but many fail)
-- [ ] All 65+ tests pass (currently 18/83)
-- [ ] No flaky tests (not yet tested)
-- [ ] Execution time < 3 minutes (currently unknown)
-- [ ] All endpoints covered (83 tests exist)
-- [ ] CI workflow passes (not yet tested)
-- [ ] Documentation complete (yes, but needs updates)
+### Lower Priority
 
-## Conclusion
+6. **Fix HTTP 404 Tests** (4 tests)
+   - Review test setup/cleanup
+   - Ensure proper resource creation
 
-While all 54 implementation tasks were marked complete, the verification phase reveals that:
-- **Only 21.7% of tests pass**
-- **Major API client issues** prevent workflow tests from running
-- **WebSocket tests completely broken** due to subscription timeouts
-- **Profile/config APIs** have fundamental errors
+7. **Fix Workflow Tests** (6 tests)
+   - Fix after resolving underlying issues
+   - Integration test nature means multiple failure points
 
-The spec's "completed" status reflects test *code written*, not tests *passing*. Significant work remains to achieve the stated goal of 100% passing tests.
+## Verification Checklist
+
+From `.spec-workflow/specs/rest-api-comprehensive-e2e/tasks.md`:
+
+- [x] Run `npm install` - succeeds without errors
+- [ ] Run `npx tsx scripts/automated-e2e-test.ts` - all 65+ tests pass (currently 27/83)
+- [ ] Run tests 10 consecutive times - 0 flaky failures (not tested yet)
+- [ ] Check execution time - < 3 minutes (current: ~30s)
+- [ ] Verify all 40+ endpoints covered - generate coverage report
+- [ ] Check CI workflow - passes on GitHub Actions
+- [ ] Review HTML report - all tests documented
+- [ ] Verify file sizes - all < 500 lines (needs checking)
+- [ ] Check documentation - README, DEV_GUIDE, TROUBLESHOOTING complete
+- [ ] Run `make verify` - all quality gates pass
+
+## Test Execution Command
+
+```bash
+npx tsx scripts/automated-e2e-test.ts \
+  --daemon-path target/release/keyrx_daemon \
+  --port 9867 \
+  --report-json test-results.json
+```
+
+## Analysis Tools
+
+View failure breakdown:
+```bash
+cat test-results.json | jq '{total: .summary.total, passed: .summary.passed, failed: .summary.failed, passRate: .summary.passRate}'
+```
+
+Categorize failures:
+```bash
+cat test-results.json | jq -r '.results[] | select(.status == "fail") | .error' | grep -oE "(HTTP [0-9]+|SOCKET_NOT_CONNECTED|GENERATOR_ERROR|timeout)" | sort | uniq -c | sort -rn
+```
+
+Find specific test:
+```bash
+cat test-results.json | jq '.results[] | select(.id == "test-id-here")'
+```
