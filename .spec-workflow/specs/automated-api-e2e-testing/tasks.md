@@ -69,7 +69,7 @@ Report Failure  Iterate (max 3 attempts)
   - _Requirements: Type-safe API access_
   - _Prompt: Role: API Client Developer | Task: Create ApiClient class with methods for all endpoints: getStatus(), getDevices(), getProfiles(), createProfile(name), activateProfile(name), deleteProfile(name), patchDevice(id, updates), getMetrics(), getLayouts(), setProfileConfig(name, config). Use axios or fetch with typed responses. Import Zod schemas from keyrx_ui/src/api/schemas.ts. Auto-retry on network errors (3 attempts, exponential backoff). | Restrictions: Validate all responses against Zod schemas, throw typed errors on validation failure, timeout requests after 5s | Success: All API endpoints accessible via typed methods_
 
-- [ ] 2.2 Create API test case definitions
+- [x] 2.2 Create API test case definitions
   - File: `scripts/test-cases/api-tests.ts`
   - Test case definitions for each endpoint
   - Arrange-Act-Assert pattern
