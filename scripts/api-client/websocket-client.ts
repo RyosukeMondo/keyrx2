@@ -22,38 +22,83 @@ export interface WebSocketClientConfig {
 }
 
 /**
- * WebSocket message types
+ * WebSocket RPC message types (matching daemon protocol)
  */
+
+// Client -> Server messages
 export interface SubscribeMessage {
   type: 'subscribe';
-  channel: string;
+  content: {
+    id: string;
+    channel: string;
+  };
 }
 
 export interface UnsubscribeMessage {
   type: 'unsubscribe';
-  channel: string;
+  content: {
+    id: string;
+    channel: string;
+  };
 }
 
-export interface SubscriptionAckMessage {
-  type: 'subscription_ack';
-  channel: string;
-  success: boolean;
-  message?: string;
+export interface QueryMessage {
+  type: 'query';
+  content: {
+    id: string;
+    method: string;
+    params?: unknown;
+  };
+}
+
+export interface CommandMessage {
+  type: 'command';
+  content: {
+    id: string;
+    method: string;
+    params?: unknown;
+  };
+}
+
+// Server -> Client messages
+export interface ConnectedMessage {
+  type: 'connected';
+  content: {
+    version: string;
+    timestamp: number;
+  };
+}
+
+export interface ResponseMessage {
+  type: 'response';
+  content: {
+    id: string;
+    result: unknown;
+    error: RpcError | null;
+  };
 }
 
 export interface EventMessage {
   type: 'event';
-  channel: string;
-  event: string;
-  data: unknown;
-  timestamp: string;
+  content: {
+    channel: string;
+    data: unknown;
+  };
 }
 
-export type WebSocketMessage =
+export interface RpcError {
+  code: number;
+  message: string;
+  data?: unknown;
+}
+
+export type ClientMessage =
   | SubscribeMessage
   | UnsubscribeMessage
-  | SubscriptionAckMessage
-  | EventMessage;
+  | QueryMessage
+  | CommandMessage;
+
+export type ServerMessage = ConnectedMessage | ResponseMessage | EventMessage;
 
 /**
  * Connection states
@@ -118,6 +163,14 @@ export class WebSocketClient {
   private readonly subscriptions = new Set<string>();
   private readonly eventHandlers: Array<(event: EventMessage) => void> = [];
   private readonly messageQueue: EventMessage[] = [];
+  private messageIdCounter = 0;
+  private readonly pendingRequests = new Map<
+    string,
+    {
+      resolve: (result: unknown) => void;
+      reject: (error: Error) => void;
+    }
+  >();
 
   constructor(config: WebSocketClientConfig) {
     this.config = {
@@ -127,6 +180,13 @@ export class WebSocketClient {
       maxReconnectAttempts: config.maxReconnectAttempts ?? 5,
       pingIntervalMs: config.pingIntervalMs ?? 30000,
     };
+  }
+
+  /**
+   * Generate unique message ID
+   */
+  private generateMessageId(): string {
+    return `msg-${Date.now()}-${++this.messageIdCounter}`;
   }
 
   /**
@@ -173,12 +233,31 @@ export class WebSocketClient {
       try {
         this.ws = new WebSocket(this.config.url);
 
+        // Wait for Connected handshake message from daemon
+        let connectionResolved = false;
+        const messageHandler = (data: WebSocket.Data) => {
+          try {
+            const message = JSON.parse(
+              data.toString()
+            ) as ServerMessage;
+            if (message.type === 'connected') {
+              if (!connectionResolved) {
+                connectionResolved = true;
+                clearTimeout(timeoutId);
+                this.state = ConnectionState.CONNECTED;
+                this.reconnectAttempts = 0;
+                this.startPingTimer();
+                resolve();
+              }
+            }
+          } catch (error) {
+            console.error('Failed to parse handshake message:', error);
+          }
+        };
+
         this.ws.on('open', () => {
-          clearTimeout(timeoutId);
-          this.state = ConnectionState.CONNECTED;
-          this.reconnectAttempts = 0;
-          this.startPingTimer();
-          resolve();
+          // Wait for Connected message, don't resolve immediately
+          this.ws!.once('message', messageHandler);
         });
 
         this.ws.on('message', (data: WebSocket.Data) => {
@@ -243,8 +322,11 @@ export class WebSocketClient {
       return; // Already subscribed
     }
 
+    const messageId = this.generateMessageId();
+
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
+        this.pendingRequests.delete(messageId);
         reject(
           new TimeoutError(
             `Subscription timeout for channel: ${channel}`
@@ -252,36 +334,38 @@ export class WebSocketClient {
         );
       }, timeoutMs);
 
-      // Handler for subscription acknowledgment
-      const ackHandler = (event: EventMessage) => {
-        const msg = event as unknown as SubscriptionAckMessage;
-        if (
-          msg.type === 'subscription_ack' &&
-          msg.channel === channel
-        ) {
+      // Register request handler
+      this.pendingRequests.set(messageId, {
+        resolve: (result: unknown) => {
           clearTimeout(timeoutId);
-          this.removeEventHandler(ackHandler);
-
-          if (msg.success) {
+          const response = result as { success?: boolean };
+          if (response.success) {
             this.subscriptions.add(channel);
             resolve();
           } else {
             reject(
               new SubscriptionError(
-                msg.message || 'Subscription failed',
+                'Subscription failed',
                 channel
               )
             );
           }
-        }
-      };
+        },
+        reject: (error: Error) => {
+          clearTimeout(timeoutId);
+          reject(
+            new SubscriptionError(error.message, channel)
+          );
+        },
+      });
 
-      this.addEventHandler(ackHandler);
-
-      // Send subscription message
+      // Send subscription message in RPC format
       const subscribeMsg: SubscribeMessage = {
         type: 'subscribe',
-        channel,
+        content: {
+          id: messageId,
+          channel,
+        },
       };
       this.send(subscribeMsg);
     });
@@ -297,7 +381,10 @@ export class WebSocketClient {
 
     const unsubscribeMsg: UnsubscribeMessage = {
       type: 'unsubscribe',
-      channel,
+      content: {
+        id: this.generateMessageId(),
+        channel,
+      },
     };
     this.send(unsubscribeMsg);
     this.subscriptions.delete(channel);
@@ -354,7 +441,7 @@ export class WebSocketClient {
   /**
    * Send message to server
    */
-  private send(message: WebSocketMessage): void {
+  private send(message: ClientMessage): void {
     if (!this.ws || this.state !== ConnectionState.CONNECTED) {
       throw new WebSocketClientError('Cannot send: not connected');
     }
@@ -367,10 +454,31 @@ export class WebSocketClient {
    */
   private handleMessage(data: WebSocket.Data): void {
     try {
-      const message = JSON.parse(data.toString()) as WebSocketMessage;
+      const message = JSON.parse(data.toString()) as ServerMessage;
 
-      // Only queue and dispatch event messages
-      if (message.type === 'event') {
+      if (message.type === 'connected') {
+        // Handshake message, already handled in connect()
+        return;
+      } else if (message.type === 'response') {
+        // Handle RPC response
+        const response = message as ResponseMessage;
+        const pending = this.pendingRequests.get(
+          response.content.id
+        );
+        if (pending) {
+          this.pendingRequests.delete(response.content.id);
+          if (response.content.error) {
+            pending.reject(
+              new WebSocketClientError(
+                response.content.error.message
+              )
+            );
+          } else {
+            pending.resolve(response.content.result);
+          }
+        }
+      } else if (message.type === 'event') {
+        // Handle event message
         const eventMsg = message as EventMessage;
         this.messageQueue.push(eventMsg);
 
@@ -378,16 +486,6 @@ export class WebSocketClient {
         for (const handler of this.eventHandlers) {
           try {
             handler(eventMsg);
-          } catch (error) {
-            console.error('Event handler error:', error);
-          }
-        }
-      } else {
-        // Non-event messages (like subscription_ack) also get dispatched
-        // but not queued
-        for (const handler of this.eventHandlers) {
-          try {
-            handler(message as unknown as EventMessage);
           } catch (error) {
             console.error('Event handler error:', error);
           }
@@ -485,6 +583,11 @@ export class WebSocketClient {
     this.subscriptions.clear();
     this.eventHandlers.length = 0;
     this.messageQueue.length = 0;
+    // Reject all pending requests
+    for (const [id, pending] of this.pendingRequests) {
+      pending.reject(new WebSocketClientError('Connection closed'));
+    }
+    this.pendingRequests.clear();
   }
 }
 
@@ -492,10 +595,10 @@ export class WebSocketClient {
  * Create WebSocket client instance
  *
  * @example
- * const client = createWebSocketClient({ url: 'ws://localhost:9867/ws' });
+ * const client = createWebSocketClient({ url: 'ws://localhost:9867/ws_rpc' });
  * await client.connect();
  * await client.subscribe('devices');
- * const event = await client.waitForEvent(e => e.channel === 'devices');
+ * const event = await client.waitForEvent(e => e.content.channel === 'devices');
  * client.disconnect();
  */
 export function createWebSocketClient(

@@ -37,10 +37,10 @@ const noOpCleanup = async (): Promise<void> => {
  * WebSocket URL for tests (derived from API base URL)
  */
 const getWebSocketUrl = (apiBaseUrl: string): string => {
-  // Convert http://host:port/api to ws://host:port/ws
+  // Convert http://host:port/api to ws://host:port/ws_rpc
   const url = new URL(apiBaseUrl);
   const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${url.host}/ws`;
+  return `${protocol}//${url.host}/ws_rpc`;
 };
 
 /**
@@ -53,7 +53,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-001',
     name: 'WebSocket - Connect and disconnect lifecycle',
-    endpoint: '/ws',
+    endpoint: '/ws_rpc',
     scenario: 'connection',
     category: 'websocket',
     priority: 1,
@@ -161,7 +161,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-002',
     name: 'WebSocket - Subscribe to channel and receive acknowledgment',
-    endpoint: '/ws',
+    endpoint: '/ws_rpc',
     scenario: 'subscription',
     category: 'websocket',
     priority: 1,
@@ -261,7 +261,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-003',
     name: 'WebSocket - Receive device event notification',
-    endpoint: '/ws',
+    endpoint: '/ws_rpc',
     scenario: 'device_event',
     category: 'websocket',
     priority: 1,
@@ -305,8 +305,7 @@ export const websocketTestCases: TestCase[] = [
 
         // Set up event listener before making change
         const eventPromise = wsClient.waitForEvent(
-          (event) =>
-            event.channel === 'devices' && event.event === 'device_updated',
+          (event) => event.content.channel === 'devices',
           5000
         );
 
@@ -337,9 +336,8 @@ export const websocketTestCases: TestCase[] = [
           data: {
             success: true,
             receivedEvent: true,
-            eventType: event.event,
-            eventChannel: event.channel,
-            eventData: event.data,
+            eventChannel: event.content.channel,
+            eventData: event.content.data,
           },
         };
       } catch (error) {
@@ -359,7 +357,6 @@ export const websocketTestCases: TestCase[] = [
       const actualData = actual as {
         success: boolean;
         receivedEvent?: boolean;
-        eventType?: string;
         eventChannel?: string;
         eventData?: unknown;
         error?: string;
@@ -385,16 +382,6 @@ export const websocketTestCases: TestCase[] = [
         };
       }
 
-      // Verify event type
-      if (actualData.eventType !== 'device_updated') {
-        return {
-          passed: false,
-          actual,
-          expected: { eventType: 'device_updated' },
-          error: `Expected event type 'device_updated', got '${actualData.eventType}'`,
-        };
-      }
-
       // Verify event channel
       if (actualData.eventChannel !== 'devices') {
         return {
@@ -413,7 +400,6 @@ export const websocketTestCases: TestCase[] = [
       body: {
         success: true,
         receivedEvent: true,
-        eventType: 'device_updated',
         eventChannel: 'devices',
       },
     },
@@ -422,7 +408,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-004',
     name: 'WebSocket - Receive profile event notification',
-    endpoint: '/ws',
+    endpoint: '/ws_rpc',
     scenario: 'profile_event',
     category: 'websocket',
     priority: 1,
@@ -452,9 +438,7 @@ export const websocketTestCases: TestCase[] = [
 
         // Set up event listener before activating profile
         const eventPromise = wsClient.waitForEvent(
-          (event) =>
-            event.channel === 'profiles' &&
-            event.event === 'profile_activated',
+          (event) => event.content.channel === 'profiles',
           5000
         );
 
@@ -503,9 +487,8 @@ export const websocketTestCases: TestCase[] = [
           data: {
             success: true,
             receivedEvent: true,
-            eventType: event.event,
-            eventChannel: event.channel,
-            eventData: event.data,
+            eventChannel: event.content.channel,
+            eventData: event.content.data,
           },
         };
       } catch (error) {
@@ -536,7 +519,6 @@ export const websocketTestCases: TestCase[] = [
       const actualData = actual as {
         success: boolean;
         receivedEvent?: boolean;
-        eventType?: string;
         eventChannel?: string;
         eventData?: unknown;
         error?: string;
@@ -562,16 +544,6 @@ export const websocketTestCases: TestCase[] = [
         };
       }
 
-      // Verify event type
-      if (actualData.eventType !== 'profile_activated') {
-        return {
-          passed: false,
-          actual,
-          expected: { eventType: 'profile_activated' },
-          error: `Expected event type 'profile_activated', got '${actualData.eventType}'`,
-        };
-      }
-
       // Verify event channel
       if (actualData.eventChannel !== 'profiles') {
         return {
@@ -590,7 +562,6 @@ export const websocketTestCases: TestCase[] = [
       body: {
         success: true,
         receivedEvent: true,
-        eventType: 'profile_activated',
         eventChannel: 'profiles',
       },
     },
@@ -602,7 +573,7 @@ export const websocketTestCases: TestCase[] = [
   {
     id: 'websocket-005',
     name: 'WebSocket - Reconnection and subscription restoration',
-    endpoint: '/ws',
+    endpoint: '/ws_rpc',
     scenario: 'reconnection',
     category: 'websocket',
     priority: 2,
