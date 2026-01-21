@@ -370,7 +370,7 @@ export const workflow_004: TestCase = {
     const newName = `workflow-test-device-${Date.now()}`;
     const renameResponse = await client.customRequest(
       'PUT',
-      `/api/devices/${deviceId}/name`,
+      `/api/devices/${encodeURIComponent(deviceId)}/name`,
       z.object({ success: z.boolean() }),
       { name: newName }
     );
@@ -399,7 +399,7 @@ export const workflow_004: TestCase = {
     const newLayout = originalLayout === 'ansi104' ? 'iso105' : 'ansi104';
     const layoutResponse = await client.customRequest(
       'PUT',
-      `/api/devices/${deviceId}/layout`,
+      `/api/devices/${encodeURIComponent(deviceId)}/layout`,
       z.object({ success: z.boolean() }),
       { layout: newLayout }
     );
@@ -411,7 +411,7 @@ export const workflow_004: TestCase = {
     // Verify the layout change
     const verifyLayoutResponse = await client.customRequest(
       'GET',
-      `/api/devices/${deviceId}/layout`,
+      `/api/devices/${encodeURIComponent(deviceId)}/layout`,
       z.object({ success: z.boolean(), layout: z.string() }),
       undefined
     );
@@ -489,7 +489,7 @@ export const workflow_004: TestCase = {
       // Restore original layout (default to ansi104)
       await client.customRequest(
         'PUT',
-        `/api/devices/${deviceId}/layout`,
+        `/api/devices/${encodeURIComponent(deviceId)}/layout`,
         z.object({ success: z.boolean() }),
         { layout: 'ansi104' }
       );

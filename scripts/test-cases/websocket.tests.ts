@@ -312,7 +312,7 @@ export const websocketTestCases: TestCase[] = [
         // Update device name via REST API
         await client.customRequest(
           'PUT',
-          `/api/devices/${testDevice.id}/name`,
+          `/api/devices/${encodeURIComponent(testDevice.id)}/name`,
           z.object({ success: z.boolean() }),
           { name: newName }
         );
@@ -323,7 +323,7 @@ export const websocketTestCases: TestCase[] = [
         // Restore original name
         await client.customRequest(
           'PUT',
-          `/api/devices/${testDevice.id}/name`,
+          `/api/devices/${encodeURIComponent(testDevice.id)}/name`,
           z.object({ success: z.boolean() }),
           { name: originalName }
         );

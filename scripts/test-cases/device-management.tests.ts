@@ -87,7 +87,7 @@ export const deviceManagementTestCases: TestCase[] = [
       const newName = `test-renamed-device-${Date.now()}`;
       const response = await client.customRequest(
         'PUT',
-        `/api/devices/${deviceId}/name`,
+        `/api/devices/${encodeURIComponent(deviceId)}/name`,
         SuccessResponseSchema,
         { name: newName }
       );
@@ -123,7 +123,7 @@ export const deviceManagementTestCases: TestCase[] = [
         if (context?.deviceId && context?.originalName) {
           await client.customRequest(
             'PUT',
-            `/api/devices/${context.deviceId}/name`,
+            `/api/devices/${encodeURIComponent(context.deviceId)}/name`,
             SuccessResponseSchema,
             { name: context.originalName }
           );
@@ -210,7 +210,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const response = await client.customRequest(
           'PUT',
-          `/api/devices/${deviceId}/name`,
+          `/api/devices/${encodeURIComponent(deviceId)}/name`,
           z.union([SuccessResponseSchema, ErrorResponseSchema]),
           { name: '' }
         );
@@ -277,7 +277,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const response = await client.customRequest(
           'PUT',
-          `/api/devices/${deviceId}/name`,
+          `/api/devices/${encodeURIComponent(deviceId)}/name`,
           z.union([SuccessResponseSchema, ErrorResponseSchema]),
           { name: tooLongName }
         );
@@ -346,7 +346,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const layoutResp = await client.customRequest(
           'GET',
-          `/api/devices/${deviceId}/layout`,
+          `/api/devices/${encodeURIComponent(deviceId)}/layout`,
           z.object({ layout: z.string().optional() })
         );
         originalLayout = layoutResp.data.layout;
@@ -357,7 +357,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       const response = await client.customRequest(
         'PUT',
-        `/api/devices/${deviceId}/layout`,
+        `/api/devices/${encodeURIComponent(deviceId)}/layout`,
         SuccessResponseSchema,
         { layout: 'ansi-104' }
       );
@@ -394,7 +394,7 @@ export const deviceManagementTestCases: TestCase[] = [
           if (context.originalLayout) {
             await client.customRequest(
               'PUT',
-              `/api/devices/${context.deviceId}/layout`,
+              `/api/devices/${encodeURIComponent(context.deviceId)}/layout`,
               SuccessResponseSchema,
               { layout: context.originalLayout }
             );
@@ -482,7 +482,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const response = await client.customRequest(
           'PUT',
-          `/api/devices/${deviceId}/layout`,
+          `/api/devices/${encodeURIComponent(deviceId)}/layout`,
           z.union([SuccessResponseSchema, ErrorResponseSchema]),
           { layout: '' }
         );
@@ -549,7 +549,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const response = await client.customRequest(
           'PUT',
-          `/api/devices/${deviceId}/layout`,
+          `/api/devices/${encodeURIComponent(deviceId)}/layout`,
           z.union([SuccessResponseSchema, ErrorResponseSchema]),
           { layout: tooLongLayout }
         );
@@ -610,7 +610,7 @@ export const deviceManagementTestCases: TestCase[] = [
       // Set a known layout for testing
       await client.customRequest(
         'PUT',
-        `/api/devices/${deviceId}/layout`,
+        `/api/devices/${encodeURIComponent(deviceId)}/layout`,
         SuccessResponseSchema,
         { layout: 'ansi-104' }
       );
@@ -623,7 +623,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       const response = await client.customRequest(
         'GET',
-        `/api/devices/${deviceId}/layout`,
+        `/api/devices/${encodeURIComponent(deviceId)}/layout`,
         z.object({ layout: z.string().optional() })
       );
 
