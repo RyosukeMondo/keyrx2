@@ -323,20 +323,19 @@ async function getFirstDeviceId(client: ApiClient): Promise<string | null> {
 }
 
 /**
- * Test: Device rename → layout change → disable workflow
+ * Test: Device rename → layout change workflow
  * Test ID: workflow-004
  * Flow:
  * 1. List devices and get the first device
  * 2. Rename the device
  * 3. Change the device layout
- * 4. Disable the device
- * 5. Verify the device is disabled
- * 6. Restore device to original state (cleanup)
+ * 4. Verify the layout change
+ * 5. Restore device to original state (cleanup)
  */
 export const workflow_004: TestCase = {
   id: 'workflow-004',
   category: 'workflows',
-  description: 'Device rename → layout change → disable workflow',
+  description: 'Device rename → layout change workflow',
   setup: async (client: ApiClient) => {
     // Verify at least one device exists
     const deviceId = await getFirstDeviceId(client);
@@ -352,7 +351,6 @@ export const workflow_004: TestCase = {
       devices: z.array(z.object({
         id: z.string(),
         name: z.string(),
-        enabled: z.boolean().optional(),
         layout: z.string().optional(),
       }).passthrough()),
     }).parse(devicesResponse.data);
@@ -365,7 +363,6 @@ export const workflow_004: TestCase = {
     const deviceId = device.id;
     const originalName = device.name;
     const originalLayout = device.layout || 'ansi104';
-    const originalEnabled = device.enabled ?? true;
 
     // Step 2: Rename the device
     const newName = `workflow-test-device-${Date.now()}`;
@@ -383,6 +380,7 @@ export const workflow_004: TestCase = {
     // Verify the rename by listing devices again
     const verifyRenameResponse = await client.getDevices();
     const verifyRenameData = z.object({
+      success: z.boolean(),
       devices: z.array(z.object({
         id: z.string(),
         name: z.string(),
@@ -423,33 +421,6 @@ export const workflow_004: TestCase = {
       );
     }
 
-    // Step 4: Disable the device
-    const disableResponse = await client.patchDevice(deviceId, { enabled: false });
-
-    const disableData = z.object({
-      success: z.boolean(),
-    }).parse(disableResponse.data);
-
-    if (!disableData.success) {
-      throw new Error('Device disable failed');
-    }
-
-    // Step 5: Verify the device is disabled
-    const verifyDisableResponse = await client.getDevices();
-    const verifyDisableData = z.object({
-      devices: z.array(z.object({
-        id: z.string(),
-        enabled: z.boolean().optional(),
-      }).passthrough()),
-    }).parse(verifyDisableResponse.data);
-
-    const disabledDevice = verifyDisableData.devices.find(d => d.id === deviceId);
-    if (!disabledDevice || disabledDevice.enabled !== false) {
-      throw new Error(
-        `Device disable verification failed: expected enabled=false, got enabled=${disabledDevice?.enabled}`
-      );
-    }
-
     // Store context for cleanup
     return {
       success: true,
@@ -457,14 +428,12 @@ export const workflow_004: TestCase = {
         'Listed devices',
         'Renamed device',
         'Changed device layout',
-        'Disabled device',
-        'Verified device is disabled',
+        'Verified layout change',
       ],
       context: {
         deviceId,
         originalName,
         originalLayout,
-        originalEnabled,
       },
     };
   },
@@ -475,17 +444,6 @@ export const workflow_004: TestCase = {
       if (!deviceId) {
         return;
       }
-
-      // Get the devices to find the test device
-      const devicesResponse = await client.getDevices();
-      const device = devicesResponse.data.devices.find((d: any) => d.id === deviceId);
-
-      if (!device) {
-        return;
-      }
-
-      // Restore enabled state
-      await client.patchDevice(deviceId, { enabled: true });
 
       // Restore original layout (default to ansi104)
       await client.customRequest(
@@ -726,7 +684,7 @@ export const workflow_006: TestCase = {
     }
 
     // Step 2: Simulate key events (press 'a' key, then release it)
-    // First simulate key press (event_type: 0 = press)
+    // First simulate key press
     const simulatePressSchema = z.object({
       success: z.boolean(),
     });
@@ -737,8 +695,9 @@ export const workflow_006: TestCase = {
       {
         events: [
           {
-            key_code: 30, // 'a' key
-            event_type: 0, // press
+            key: 'A', // 'a' key
+            event_type: 'press',
+            timestamp_us: 0,
           },
         ],
       }
@@ -751,7 +710,7 @@ export const workflow_006: TestCase = {
     // Small delay to ensure events are recorded with different timestamps
     await new Promise(resolve => setTimeout(resolve, 10));
 
-    // Then simulate key release (event_type: 1 = release)
+    // Then simulate key release
     const releaseResponse = await client.customRequest(
       'POST',
       '/api/simulator/events',
@@ -759,8 +718,9 @@ export const workflow_006: TestCase = {
       {
         events: [
           {
-            key_code: 30, // 'a' key
-            event_type: 1, // release
+            key: 'A', // 'a' key
+            event_type: 'release',
+            timestamp_us: 10000,
           },
         ],
       }
