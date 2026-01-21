@@ -348,7 +348,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Add: Print summary per category (Health: 7/7 passed, Devices: 10/10 passed, etc.)
   - Purpose: Better visibility into test coverage
 
-- [ ] 5.2.2 Add execution time tracking per category
+- [x] 5.2.2 Add execution time tracking per category
   - File: `scripts/test-executor/executor.ts`
   - Add: Track and report duration per category
   - Purpose: Identify slow test categories

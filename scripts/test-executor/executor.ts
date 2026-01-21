@@ -40,6 +40,73 @@ export class TestExecutor {
   }
 
   /**
+   * Compute category statistics from test results
+   */
+  private computeCategoryStats(results: TestExecutionResult[]): Map<string, {
+    total: number;
+    passed: number;
+    failed: number;
+    skipped: number;
+    duration: number;
+  }> {
+    const categories = new Map<string, {
+      total: number;
+      passed: number;
+      failed: number;
+      skipped: number;
+      duration: number;
+    }>();
+
+    for (const result of results) {
+      const category = result.category || 'uncategorized';
+
+      if (!categories.has(category)) {
+        categories.set(category, {
+          total: 0,
+          passed: 0,
+          failed: 0,
+          skipped: 0,
+          duration: 0,
+        });
+      }
+
+      const stats = categories.get(category)!;
+      stats.total++;
+      stats.duration += result.duration;
+
+      switch (result.status) {
+        case 'passed':
+          stats.passed++;
+          break;
+        case 'failed':
+        case 'error':
+          stats.failed++;
+          break;
+        case 'skipped':
+          stats.skipped++;
+          break;
+      }
+    }
+
+    return categories;
+  }
+
+  /**
+   * Format duration in human-readable form
+   */
+  private formatDuration(ms: number): string {
+    if (ms < 1000) {
+      return `${ms.toFixed(0)}ms`;
+    } else if (ms < 60000) {
+      return `${(ms / 1000).toFixed(2)}s`;
+    } else {
+      const minutes = Math.floor(ms / 60000);
+      const seconds = ((ms % 60000) / 1000).toFixed(0);
+      return `${minutes}m ${seconds}s`;
+    }
+  }
+
+  /**
    * Run all test cases in the suite
    */
   async runAll(client: ApiClient, cases: TestCase[]): Promise<TestSuiteResult> {
@@ -78,6 +145,9 @@ export class TestExecutor {
     const failed = results.filter((r) => r.status === 'failed' || r.status === 'error').length;
     const skipped = results.filter((r) => r.status === 'skipped').length;
 
+    // Compute category statistics
+    const categoryStats = this.computeCategoryStats(results);
+
     this.log(`\n${'='.repeat(80)}`);
     this.log(`Test suite complete:`);
     this.log(`  Total:   ${results.length}`);
@@ -85,6 +155,23 @@ export class TestExecutor {
     this.log(`  Failed:  ${failed}`);
     this.log(`  Skipped: ${skipped}`);
     this.log(`  Duration: ${suiteDuration}ms`);
+
+    // Log category breakdown
+    if (categoryStats.size > 1 || (categoryStats.size === 1 && !categoryStats.has('uncategorized'))) {
+      this.log(`\nCategory Performance:`);
+      const sortedCategories = Array.from(categoryStats.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+      for (const [category, stats] of sortedCategories) {
+        if (category === 'uncategorized') continue;
+
+        const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+        const statusIcon = stats.failed === 0 ? '✓' : '✗';
+        const passRate = stats.total > 0 ? ((stats.passed / stats.total) * 100).toFixed(1) : '0.0';
+
+        this.log(`  ${statusIcon} ${categoryName}: ${stats.passed}/${stats.total} passed (${passRate}%) - ${this.formatDuration(stats.duration)}`);
+      }
+    }
+
     this.log(`${'='.repeat(80)}\n`);
 
     return {
