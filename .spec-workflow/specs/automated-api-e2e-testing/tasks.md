@@ -129,7 +129,7 @@ Report Failure  Iterate (max 3 attempts)
   - _Requirements: Intelligent issue detection_
   - _Prompt: Role: Issue Analysis Engineer | Task: Create IssueClassifier class with method: classify(testResult): Issue[]. Issue { type: 'network'|'validation'|'logic'|'data', fixable: boolean, priority: number, description: string, suggestedFix?: string }. Analyze test failure patterns: network errors (ECONNREFUSED, timeout) → retry/restart daemon, validation errors (wrong type, missing field) → schema mismatch, logic errors (wrong value) → business logic bug, data errors (empty array) → fixture issue. Priority: 1 (auto-fixable), 2 (needs hint), 3 (manual). | Restrictions: Don't guess fixes for complex logic bugs, only suggest fixes for patterns you can detect | Success: Classifies failures into actionable categories_
 
-- [ ] 4.2 Create auto-fix strategies
+- [x] 4.2 Create auto-fix strategies
   - File: `scripts/auto-fix/fix-strategies.ts`
   - Strategy pattern for different fix types
   - Network fixes (restart daemon, wait longer)
