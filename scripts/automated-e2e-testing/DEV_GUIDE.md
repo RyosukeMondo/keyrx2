@@ -23,9 +23,31 @@ interface TestCase {
 }
 ```
 
+### Test File Organization
+
+Tests are organized by category in separate files:
+
+| File | Purpose | When to Add Tests Here |
+|------|---------|------------------------|
+| `api-tests.ts` | Core endpoints | Basic daemon status, device listing, profile CRUD |
+| `health-metrics.tests.ts` | Health & metrics | Health checks, version info, latency, event logs |
+| `device-management.tests.ts` | Device operations | Rename, layout, enable/disable, forget devices |
+| `profile-management.tests.ts` | Profile operations | Duplicate, rename, validate profiles |
+| `config-layers.tests.ts` | Config management | Config updates, key mappings, layer management |
+| `layouts.tests.ts` | Keyboard layouts | Layout listing, layout details |
+| `macros.tests.ts` | Macro recording | Start/stop recording, get/clear events |
+| `simulator.tests.ts` | Event simulation | Simulate events, reset simulator |
+| `websocket.tests.ts` | WebSocket events | Connection, subscription, real-time events |
+| `workflows.tests.ts` | Multi-step flows | Complex feature workflows combining multiple endpoints |
+
+**Choosing the right file:**
+- Single endpoint tests → Category-specific file
+- Multi-endpoint workflows → `workflows.tests.ts`
+- New feature category → Create new `feature-name.tests.ts`
+
 ### Step 1: Add Test to Test Suite
 
-Edit `scripts/test-cases/api-tests.ts` and add your test to the array:
+Edit the appropriate test file (e.g., `scripts/test-cases/profile-management.tests.ts`) and add your test to the array:
 
 ```typescript
 export function getAllTestCases(): TestCase[] {
@@ -104,7 +126,31 @@ Edit `scripts/fixtures/expected-results.json`:
 }
 ```
 
-### Step 3: Run Your Test
+### Step 3: Register New Test Files
+
+If you created a new test file (e.g., `new-feature.tests.ts`), register it in `scripts/automated-e2e-test.ts`:
+
+```typescript
+// Import your new test file
+import { getAllTestCases as getNewFeatureTests } from './test-cases/new-feature.tests.js';
+
+// Add to test collection
+const allTests = [
+  ...getApiTests(),
+  ...getHealthMetricsTests(),
+  ...getDeviceManagementTests(),
+  ...getProfileManagementTests(),
+  ...getConfigLayersTests(),
+  ...getLayoutsTests(),
+  ...getMacrosTests(),
+  ...getSimulatorTests(),
+  ...getWebSocketTests(),
+  ...getWorkflowTests(),
+  ...getNewFeatureTests(),  // Add your tests here
+];
+```
+
+### Step 4: Run Your Test
 
 ```bash
 # Run all tests
@@ -115,6 +161,119 @@ npm run test:e2e:auto -- --fix
 
 # Or run the test runner directly
 npx tsx scripts/automated-e2e-test.ts --daemon-path target/release/keyrx_daemon
+```
+
+### Creating a New Test File
+
+When adding a new feature category, create a new test file following this template:
+
+**File:** `scripts/test-cases/new-feature.tests.ts`
+
+```typescript
+/**
+ * Test suite for new feature endpoints
+ *
+ * Covers:
+ * - GET /api/feature
+ * - POST /api/feature
+ * - DELETE /api/feature/:id
+ */
+
+import { TestCase } from '../test-executor/types.js';
+import { ApiClient } from '../api-client/client.ts';
+import { ResponseComparator } from '../comparator/response-comparator.js';
+
+export function getAllTestCases(): TestCase[] {
+  return [
+    // Test 1: List features
+    {
+      id: 'feature-001',
+      name: 'GET /api/feature - list all features',
+      endpoint: '/api/feature',
+      scenario: 'list',
+      category: 'feature',
+      priority: 1,
+
+      execute: async (client: ApiClient) => {
+        return await client.getFeatures();
+      },
+
+      assert: (response, expected) => {
+        const comparator = new ResponseComparator();
+        return comparator.compare(response, expected);
+      },
+    },
+
+    // Test 2: Create feature
+    {
+      id: 'feature-002',
+      name: 'POST /api/feature - create new feature',
+      endpoint: '/api/feature',
+      scenario: 'create',
+      category: 'feature',
+      priority: 2,
+
+      setup: async () => {
+        // Clean up any existing test feature
+        const client = new ApiClient({ baseUrl: 'http://localhost:9867' });
+        try {
+          await client.deleteFeature('test-feature');
+        } catch {
+          // Doesn't exist, that's fine
+        }
+      },
+
+      execute: async (client: ApiClient) => {
+        return await client.createFeature({
+          name: 'test-feature',
+          enabled: true,
+        });
+      },
+
+      assert: (response, expected) => {
+        const comparator = new ResponseComparator();
+        return comparator.compare(response, expected, {
+          ignoreFields: ['id', 'created_at'],
+        });
+      },
+
+      cleanup: async () => {
+        const client = new ApiClient({ baseUrl: 'http://localhost:9867' });
+        await client.deleteFeature('test-feature');
+      },
+    },
+
+    // Add more tests...
+  ];
+}
+```
+
+**File:** `scripts/fixtures/expected-results.json`
+
+Add expected results for your new endpoints:
+
+```json
+{
+  "endpoints": {
+    "/api/feature": {
+      "scenarios": {
+        "list": {
+          "status": 200,
+          "body": {
+            "features": []
+          }
+        },
+        "create": {
+          "status": 201,
+          "body": {
+            "name": "test-feature",
+            "enabled": true
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
 ## Updating Expected Results
@@ -469,6 +628,249 @@ try {
 }
 ```
 
+## Writing WebSocket Tests
+
+WebSocket tests verify real-time event notifications.
+
+### Step 1: Use WebSocket Client
+
+```typescript
+import { WebSocketClient } from '../api-client/websocket-client.js';
+
+{
+  id: 'websocket-001',
+  name: 'WebSocket - receive device update event',
+  endpoint: '/ws',
+  scenario: 'device_update',
+  category: 'websocket',
+  priority: 2,
+
+  execute: async (client: ApiClient) => {
+    const wsClient = new WebSocketClient('ws://localhost:9867/ws');
+
+    try {
+      // 1. Connect to WebSocket
+      await wsClient.connect();
+
+      // 2. Subscribe to channel
+      await wsClient.subscribe('devices');
+
+      // 3. Trigger an event via REST API
+      await client.patchDevice('device-123', { enabled: false });
+
+      // 4. Wait for WebSocket event
+      const event = await wsClient.waitForEvent(
+        (msg) => msg.channel === 'devices' && msg.event === 'device_updated',
+        5000  // timeout in ms
+      );
+
+      return {
+        success: true,
+        event,
+      };
+    } finally {
+      await wsClient.disconnect();
+    }
+  },
+
+  assert: (response, expected) => {
+    return response.success &&
+           response.event?.data?.device_id === 'device-123';
+  },
+}
+```
+
+### Step 2: Common WebSocket Patterns
+
+**Connection test:**
+```typescript
+execute: async (client) => {
+  const wsClient = new WebSocketClient(wsUrl);
+  await wsClient.connect();
+  const connected = wsClient.isConnected();
+  await wsClient.disconnect();
+  return { connected };
+}
+```
+
+**Subscription test:**
+```typescript
+execute: async (client) => {
+  const wsClient = new WebSocketClient(wsUrl);
+  await wsClient.connect();
+  const ack = await wsClient.subscribe('profiles');
+  await wsClient.disconnect();
+  return { acknowledged: ack.success };
+}
+```
+
+**Event notification test:**
+```typescript
+execute: async (client) => {
+  const wsClient = new WebSocketClient(wsUrl);
+  await wsClient.connect();
+  await wsClient.subscribe('profiles');
+
+  // Trigger event
+  await client.activateProfile('test-profile');
+
+  // Wait for notification
+  const event = await wsClient.waitForEvent(
+    (msg) => msg.event === 'profile_activated',
+    5000
+  );
+
+  await wsClient.disconnect();
+  return { received: !!event };
+}
+```
+
+**Reconnection test:**
+```typescript
+execute: async (client) => {
+  const wsClient = new WebSocketClient(wsUrl);
+  await wsClient.connect();
+  await wsClient.subscribe('devices');
+
+  // Disconnect
+  await wsClient.disconnect();
+
+  // Reconnect
+  await wsClient.connect();
+
+  // Subscriptions should be restored automatically
+  const isSubscribed = wsClient.hasSubscription('devices');
+
+  await wsClient.disconnect();
+  return { reconnected: isSubscribed };
+}
+```
+
+## Writing Workflow Tests
+
+Workflow tests validate multi-step feature scenarios.
+
+### Step 1: Define the Workflow
+
+Workflow tests go in `scripts/test-cases/workflows.tests.ts`:
+
+```typescript
+{
+  id: 'workflow-008',
+  name: 'Complete device configuration workflow',
+  endpoint: 'multiple',  // Multiple endpoints
+  scenario: 'device_config',
+  category: 'workflow',
+  priority: 2,
+
+  execute: async (client: ApiClient) => {
+    const results: any[] = [];
+
+    // Step 1: List devices
+    const devices = await client.getDevices();
+    results.push({ step: 'list', count: devices.length });
+
+    if (devices.length === 0) {
+      throw new Error('No devices available for workflow test');
+    }
+
+    const deviceId = devices[0].id;
+
+    // Step 2: Rename device
+    await client.renameDevice(deviceId, 'workflow-test-device');
+    results.push({ step: 'rename', success: true });
+
+    // Step 3: Change layout
+    await client.setDeviceLayout(deviceId, 'ansi-104');
+    const layout = await client.getDeviceLayout(deviceId);
+    results.push({ step: 'layout', layout });
+
+    // Step 4: Disable device
+    await client.patchDevice(deviceId, { enabled: false });
+    const updated = await client.getDevices();
+    const device = updated.find(d => d.id === deviceId);
+    results.push({ step: 'disable', enabled: device?.enabled });
+
+    // Step 5: Re-enable device
+    await client.patchDevice(deviceId, { enabled: true });
+
+    return { steps: results };
+  },
+
+  assert: (response, expected) => {
+    const steps = response.steps;
+    return steps.length === 4 &&
+           steps[1].success === true &&
+           steps[2].layout === 'ansi-104' &&
+           steps[3].enabled === false;
+  },
+
+  cleanup: async () => {
+    // Restore original device state if needed
+  }
+}
+```
+
+### Step 2: Workflow Best Practices
+
+**Do:**
+- Test real user scenarios (not just API coverage)
+- Include error recovery (what if step 2 fails?)
+- Return intermediate results for debugging
+- Clean up all test artifacts
+
+**Don't:**
+- Make workflows too long (max 5-7 steps)
+- Ignore intermediate failures
+- Assume state from previous workflows
+
+**Example workflow patterns:**
+
+1. **Create → Configure → Use → Cleanup**
+   ```typescript
+   // Create resource
+   const id = await client.createResource(data);
+
+   // Configure it
+   await client.updateResource(id, config);
+
+   // Use it
+   const result = await client.processWithResource(id);
+
+   // Cleanup
+   await client.deleteResource(id);
+   ```
+
+2. **Error → Fix → Retry**
+   ```typescript
+   // Trigger error
+   let result = await client.validateProfile('invalid-profile');
+   assert(result.valid === false);
+
+   // Fix error
+   await client.updateProfile('invalid-profile', fixedConfig);
+
+   // Retry validation
+   result = await client.validateProfile('invalid-profile');
+   assert(result.valid === true);
+   ```
+
+3. **State Change → Verify → Restore**
+   ```typescript
+   // Save original state
+   const original = await client.getState();
+
+   // Change state
+   await client.updateState(newState);
+
+   // Verify change
+   const updated = await client.getState();
+   assert(updated !== original);
+
+   // Restore
+   await client.updateState(original);
+   ```
+
 ## Common Patterns
 
 ### Testing POST Endpoints
@@ -557,24 +959,40 @@ try {
 
 ### File Locations
 
-- Test cases: `scripts/test-cases/api-tests.ts`
+**Test Cases:**
+- Core endpoints: `scripts/test-cases/api-tests.ts`
+- Health & metrics: `scripts/test-cases/health-metrics.tests.ts`
+- Devices: `scripts/test-cases/device-management.tests.ts`
+- Profiles: `scripts/test-cases/profile-management.tests.ts`
+- Config & layers: `scripts/test-cases/config-layers.tests.ts`
+- Layouts: `scripts/test-cases/layouts.tests.ts`
+- Macros: `scripts/test-cases/macros.tests.ts`
+- Simulator: `scripts/test-cases/simulator.tests.ts`
+- WebSocket: `scripts/test-cases/websocket.tests.ts`
+- Workflows: `scripts/test-cases/workflows.tests.ts`
+
+**Infrastructure:**
 - Expected results: `scripts/fixtures/expected-results.json`
 - Fix strategies: `scripts/auto-fix/fix-strategies.ts`
 - Test runner: `scripts/automated-e2e-test.ts`
+- API client: `scripts/api-client/client.ts`
+- WebSocket client: `scripts/api-client/websocket-client.ts`
 
 ### npm Scripts
 
-- `npm run test:e2e:auto` - Run automated tests
+- `npm run test:e2e:auto` - Run automated tests (100+ tests)
 - `npm run test:e2e:auto:report` - Generate HTML report
 - `npm run metrics:report` - View metrics summary
 - `npm run metrics:latest` - View latest test run
+- `npm run metrics:clear` - Clear metrics history
 
 ### Key Interfaces
 
-- `TestCase` - Test definition
-- `FixStrategy` - Auto-fix strategy
-- `ValidationResult` - Assertion result
-- `ApiClient` - Type-safe API wrapper
+- `TestCase` - Test definition with setup/execute/assert/cleanup
+- `FixStrategy` - Auto-fix strategy for remediation
+- `ValidationResult` - Assertion result with diff details
+- `ApiClient` - Type-safe REST API wrapper (35+ methods)
+- `WebSocketClient` - WebSocket connection manager with subscriptions
 
 ## Further Reading
 

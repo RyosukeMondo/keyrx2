@@ -363,7 +363,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Add: Document all 40+ endpoints, test categories, examples
   - Purpose: Complete documentation
 
-- [ ] 6.1.2 Update developer guide
+- [x] 6.1.2 Update developer guide
   - File: `scripts/automated-e2e-testing/DEV_GUIDE.md`
   - Add: How to add WebSocket tests, workflow tests, new endpoint tests
   - Purpose: Enable contributors
