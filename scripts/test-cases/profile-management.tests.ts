@@ -106,11 +106,14 @@ const ValidationResponseSchema = z.object({
 });
 
 /**
- * Error response schema
+ * Error response schema matching API error format
  */
 const ErrorResponseSchema = z.object({
-  error: z.string(),
-  code: z.string().optional(),
+  success: z.boolean(),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+  }),
 });
 
 /**

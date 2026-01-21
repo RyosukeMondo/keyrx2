@@ -701,43 +701,38 @@ export const apiTestCases: TestCase[] = [
 
   {
     id: 'devices-003',
-    name: 'PATCH /api/devices/:id - Reject nonexistent device',
+    name: 'PATCH /api/devices/:id - Auto-register nonexistent device',
     endpoint: '/api/devices/:id',
-    scenario: 'update_not_found',
+    scenario: 'update_auto_register',
     category: 'devices',
     priority: 2,
     setup: noOpSetup,
     execute: async (client) => {
-      try {
-        const response = await client.patchDevice('nonexistent-device-xyz', { enabled: false });
-        return {
-          status: response.status,
-          data: response.data,
-        };
-      } catch (error) {
-        // Expect 404 Not Found error
-        if (error instanceof Error && 'statusCode' in error) {
-          const apiError = error as { statusCode: number; response: unknown };
-          return {
-            status: apiError.statusCode,
-            data: apiError.response,
-          };
-        }
-        throw error;
-      }
+      const response = await client.patchDevice('test-auto-register-device', { enabled: false });
+      return {
+        status: response.status,
+        data: response.data,
+      };
     },
     assert: (actual, expected) => {
-      const actualData = extractData(actual) as { error?: { code?: string; message?: string }; code?: string };
-      const passed = actualData.code === 'DEVICE_NOT_FOUND' || actualData.error?.code === 'DEVICE_NOT_FOUND' || actualData.error?.message?.toLowerCase().includes('not found');
+      const actualData = extractData(actual) as { success?: boolean };
+      const passed = actualData.success === true;
 
       return {
         passed,
         actualData,
         expected: expected.body,
-        error: passed ? undefined : 'Nonexistent device update not rejected correctly',
+        error: passed ? undefined : 'PATCH should auto-register nonexistent devices',
       };
     },
-    cleanup: noOpCleanup,
+    cleanup: async (client) => {
+      // Delete the auto-registered device
+      try {
+        await client.customRequest('DELETE', '/api/devices/test-auto-register-device', z.any());
+      } catch {
+        // Ignore cleanup errors
+      }
+    },
   },
 
   // =================================================================

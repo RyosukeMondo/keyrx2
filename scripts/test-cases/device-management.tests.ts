@@ -37,11 +37,14 @@ const SuccessResponseSchema = z.object({
 });
 
 /**
- * Error response schema
+ * Error response schema matching API error format
  */
 const ErrorResponseSchema = z.object({
-  error: z.string(),
-  code: z.string().optional(),
+  success: z.boolean(),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+  }),
 });
 
 /**
@@ -149,7 +152,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const response = await client.customRequest(
           'PUT',
-          '/api/devices/nonexistent-device-xyz/name',
+          '/api/devices/test-rename-404-check/name',
           z.union([SuccessResponseSchema, ErrorResponseSchema]),
           { name: 'test-name' }
         );
@@ -424,7 +427,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const response = await client.customRequest(
           'PUT',
-          '/api/devices/nonexistent-device-xyz/layout',
+          '/api/devices/test-set-layout-404-check/layout',
           z.union([SuccessResponseSchema, ErrorResponseSchema]),
           { layout: 'ansi-104' }
         );
@@ -675,7 +678,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const response = await client.customRequest(
           'GET',
-          '/api/devices/nonexistent-device-xyz/layout',
+          '/api/devices/test-get-layout-404-check/layout',
           z.object({ layout: z.string().optional() })
         );
         return {
@@ -731,7 +734,7 @@ export const deviceManagementTestCases: TestCase[] = [
       try {
         const response = await client.customRequest(
           'DELETE',
-          '/api/devices/nonexistent-device-xyz',
+          '/api/devices/test-delete-404-check',
           z.union([SuccessResponseSchema, ErrorResponseSchema])
         );
         return {
