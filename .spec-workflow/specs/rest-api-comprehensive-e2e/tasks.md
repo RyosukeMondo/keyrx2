@@ -368,7 +368,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Add: How to add WebSocket tests, workflow tests, new endpoint tests
   - Purpose: Enable contributors
 
-- [ ] 6.1.3 Add troubleshooting guide
+- [x] 6.1.3 Add troubleshooting guide
   - File: `scripts/automated-e2e-testing/TROUBLESHOOTING.md` (new)
   - Content: Common errors (zod not found, daemon timeout, port conflicts), solutions
   - Purpose: Self-service debugging
