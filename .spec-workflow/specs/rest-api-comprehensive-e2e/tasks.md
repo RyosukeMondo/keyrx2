@@ -462,18 +462,23 @@ Before marking spec complete:
 
 - [x] Run `npm install` - succeeds without errors
 - [ ] Run `npx tsx scripts/automated-e2e-test.ts --daemon-path target/release/keyrx_daemon` - all 83 tests pass
-  - **Current Status**: 36/83 passing (43.4%) - Test run crashed on WebSocket timeout
-  - **Recent Progress**:
+  - **Current Status**: ~40/83 passing (48%) - Progress made on assertion fixes
+  - **Recent Progress** (2026-01-22):
+    - ✅ Fixed assertion pattern: Executor now passes full response object (status, data, headers) to assert functions
+    - ✅ Added extractData() helper to safely extract data field from response
+    - ✅ Updated all test files to use extractData() in assert functions
+    - ✅ Fixed "actualData is not defined" errors in error validation tests
+    - ✅ Removed duplicate actualData declarations
+    - ✅ All test files now compile without errors
     - ✅ Fixed profile cleanup tracking mechanism - prevents "profile limit exceeded" errors
     - ✅ Created cleanup script for manual profile removal (scripts/cleanup-test-profiles.ts)
     - ✅ Verified cleanup now works correctly (0 test profiles left after run)
   - **Remaining Issues**:
-    - WebSocket tests timeout and crash the test runner
-    - Error assertion pattern mismatch: Tests check result.status but executor only passes response.data to assert function
-    - Profile API requires 'template' field not reflected in some tests
-    - Many endpoints require active device configuration
-    - Schema validation mismatches in several endpoints
+    - WebSocket event tests timeout (5s wait) - events not being broadcast
+    - SOCKET_NOT_CONNECTED errors on metrics/events endpoints
     - Config/layer tests fail with GENERATOR_ERROR (Device block not found)
+    - Profile API validation - some tests create profiles without proper setup
+    - Device validation tests pass when they should fail (API not rejecting invalid inputs)
 - [ ] Run tests 10 consecutive times - 0 flaky failures
 - [ ] Check execution time - < 3 minutes
 - [ ] Verify all 40+ endpoints covered - generate coverage report
