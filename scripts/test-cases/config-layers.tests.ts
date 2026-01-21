@@ -30,6 +30,46 @@ const noOpCleanup = async (): Promise<void> => {
 };
 
 /**
+ * Helper to ensure we have an active profile with valid device blocks
+ */
+async function ensureActiveProfile(client: ApiClient, profileName: string): Promise<void> {
+  const profiles = await client.getProfiles();
+
+  if (profiles.data.profiles.length === 0) {
+    // Create new profile
+    await client.createProfile(profileName);
+    // Activate it first
+    await client.activateProfile(profileName);
+    // Then set valid config with device blocks using PUT /api/config
+    await client.customRequest('PUT', '/api/config', z.any(), {
+      content: `// Auto-generated config\ndevice_start("*");\ndevice_end();`,
+    });
+  } else {
+    // Check if any profile is active
+    const activeProfile = await client.getActiveProfile();
+    if (!activeProfile.data.profile) {
+      // Activate the first profile
+      const firstProfile = profiles.data.profiles[0].name;
+      await client.activateProfile(firstProfile);
+      // Update its config to have device blocks
+      await client.customRequest('PUT', '/api/config', z.any(), {
+        content: `// Auto-generated config\ndevice_start("*");\ndevice_end();`,
+      });
+    } else {
+      // Profile is already active, ensure it has device blocks
+      try {
+        await client.customRequest('GET', '/api/config', z.any());
+      } catch {
+        // If GET fails, update the config
+        await client.customRequest('PUT', '/api/config', z.any(), {
+          content: `// Auto-generated config\ndevice_start("*");\ndevice_end();`,
+        });
+      }
+    }
+  }
+}
+
+/**
  * Config response schema
  */
 const ConfigSchema = z.object({
@@ -93,7 +133,9 @@ export const configLayersTestCases: TestCase[] = [
     scenario: 'default',
     category: 'config',
     priority: 1,
-    setup: noOpSetup,
+    setup: async (client) => {
+      await ensureActiveProfile(client, 'test-config-get');
+    },
     execute: async (client) => {
       const response = await client.customRequest('GET', '/api/config', ConfigSchema);
       return {
@@ -281,11 +323,7 @@ map_key("base", "A", remap("B";
     category: 'config',
     priority: 1,
     setup: async (client) => {
-      // Ensure we have a profile
-      const profiles = await client.getProfiles();
-      if (profiles.data.profiles.length === 0) {
-        await client.createProfile('test-mapping');
-      }
+      await ensureActiveProfile(client, 'test-mapping');
     },
     execute: async (client) => {
       const response = await client.customRequest(
@@ -294,9 +332,9 @@ map_key("base", "A", remap("B";
         SuccessResponseSchema,
         {
           layer: 'base',
-          key: 'A',
+          key: 'VK_A',
           action_type: 'simple',
-          output: 'B',
+          output: 'VK_B',
         }
       );
       return {
@@ -339,7 +377,9 @@ map_key("base", "A", remap("B";
     scenario: 'add_tap_hold',
     category: 'config',
     priority: 2,
-    setup: noOpSetup,
+    setup: async (client) => {
+      await ensureActiveProfile(client, 'test-mapping-taphold');
+    },
     execute: async (client) => {
       const response = await client.customRequest(
         'POST',
@@ -347,10 +387,10 @@ map_key("base", "A", remap("B";
         SuccessResponseSchema,
         {
           layer: 'base',
-          key: 'Space',
+          key: 'VK_SPACE',
           action_type: 'tap_hold',
-          tap: 'Space',
-          hold: 'LCtrl',
+          tap: 'VK_SPACE',
+          hold: 'VK_LCTRL',
           threshold_ms: 200,
         }
       );
@@ -508,6 +548,8 @@ map_key("base", "A", remap("B";
     category: 'config',
     priority: 1,
     setup: async (client) => {
+      await ensureActiveProfile(client, 'test-delete-mapping');
+
       // Add a mapping to delete
       await client.customRequest(
         'POST',
@@ -515,16 +557,16 @@ map_key("base", "A", remap("B";
         z.any(),
         {
           layer: 'base',
-          key: 'X',
+          key: 'VK_X',
           action_type: 'simple',
-          output: 'Y',
+          output: 'VK_Y',
         }
       );
     },
     execute: async (client) => {
       const response = await client.customRequest(
         'DELETE',
-        '/api/config/key-mappings/base:X',
+        '/api/config/key-mappings/base:VK_X',
         SuccessResponseSchema
       );
       return {
@@ -662,7 +704,9 @@ map_key("base", "A", remap("B";
     scenario: 'default',
     category: 'config',
     priority: 1,
-    setup: noOpSetup,
+    setup: async (client) => {
+      await ensureActiveProfile(client, 'test-layers-get');
+    },
     execute: async (client) => {
       const response = await client.customRequest(
         'GET',
