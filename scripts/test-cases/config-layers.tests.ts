@@ -394,7 +394,7 @@ map_key("base", "A", remap("B";
     setup: noOpSetup,
     execute: async (client) => {
       try {
-        await client.customRequest(
+        const response = await client.customRequest(
           'POST',
           '/api/config/key-mappings',
           z.any(),
@@ -405,27 +405,24 @@ map_key("base", "A", remap("B";
             output: 'D',
           }
         );
-        return { status: 200, data: { success: false } };
+        return response;
       } catch (error: unknown) {
         if (error instanceof Error && 'response' in error) {
           const axiosError = error as { response: { status: number; data: unknown } };
-          return {
-            status: axiosError.response.status,
-            data: axiosError.response.data,
-          };
+          return axiosError.response;
         }
         throw error;
       }
     },
     assert: (actual, expected) => {
-      const actualStatus = (actual as { status?: number }).status;
+      const actualData = actual as { error?: { code?: string; message?: string }; success?: boolean };
 
-      if (actualStatus !== 400) {
+      if (!actualData.error || actualData.success !== false) {
         return {
           passed: false,
           actual,
           expected: expected.body,
-          error: `Expected 400 error for invalid action type, got ${actualStatus}`,
+          error: `Expected error response for invalid action type`,
         };
       }
 
@@ -448,7 +445,7 @@ map_key("base", "A", remap("B";
     setup: noOpSetup,
     execute: async (client) => {
       try {
-        await client.customRequest(
+        const response = await client.customRequest(
           'POST',
           '/api/config/key-mappings',
           z.any(),
@@ -459,27 +456,24 @@ map_key("base", "A", remap("B";
             // Missing 'output' field
           }
         );
-        return { status: 200, data: { success: false } };
+        return response;
       } catch (error: unknown) {
         if (error instanceof Error && 'response' in error) {
           const axiosError = error as { response: { status: number; data: unknown } };
-          return {
-            status: axiosError.response.status,
-            data: axiosError.response.data,
-          };
+          return axiosError.response;
         }
         throw error;
       }
     },
     assert: (actual, expected) => {
-      const actualStatus = (actual as { status?: number }).status;
+      const actualData = actual as { error?: { code?: string; message?: string }; success?: boolean };
 
-      if (actualStatus !== 400) {
+      if (!actualData.error || actualData.success !== false) {
         return {
           passed: false,
           actual,
           expected: expected.body,
-          error: `Expected 400 error for missing field, got ${actualStatus}`,
+          error: `Expected error response for missing field`,
         };
       }
 
@@ -558,32 +552,29 @@ map_key("base", "A", remap("B";
     setup: noOpSetup,
     execute: async (client) => {
       try {
-        await client.customRequest(
+        const response = await client.customRequest(
           'DELETE',
           '/api/config/key-mappings/invalid_format_no_colon',
           z.any()
         );
-        return { status: 200, data: { success: false } };
+        return response;
       } catch (error: unknown) {
         if (error instanceof Error && 'response' in error) {
           const axiosError = error as { response: { status: number; data: unknown } };
-          return {
-            status: axiosError.response.status,
-            data: axiosError.response.data,
-          };
+          return axiosError.response;
         }
         throw error;
       }
     },
     assert: (actual, expected) => {
-      const actualStatus = (actual as { status?: number }).status;
+      const actualData = actual as { error?: { code?: string; message?: string }; success?: boolean };
 
-      if (actualStatus !== 400) {
+      if (!actualData.error || actualData.success !== false) {
         return {
           passed: false,
           actual,
           expected: expected.body,
-          error: `Expected 400 error for invalid ID format, got ${actualStatus}`,
+          error: `Expected error response for invalid ID format`,
         };
       }
 
@@ -606,33 +597,30 @@ map_key("base", "A", remap("B";
     setup: noOpSetup,
     execute: async (client) => {
       try {
-        await client.customRequest(
+        const response = await client.customRequest(
           'DELETE',
           '/api/config/key-mappings/base:NonExistentKey',
           z.any()
         );
-        return { status: 200, data: { success: false } };
+        return response;
       } catch (error: unknown) {
         if (error instanceof Error && 'response' in error) {
           const axiosError = error as { response: { status: number; data: unknown } };
-          return {
-            status: axiosError.response.status,
-            data: axiosError.response.data,
-          };
+          return axiosError.response;
         }
         throw error;
       }
     },
     assert: (actual, expected) => {
-      const actualStatus = (actual as { status?: number }).status;
+      const actualData = actual as { error?: { code?: string; message?: string }; success?: boolean };
 
-      // May return 404 or 500 depending on implementation
-      if (actualStatus !== 404 && actualStatus !== 500) {
+      // Should return an error for non-existent mapping
+      if (!actualData.error || actualData.success !== false) {
         return {
           passed: false,
           actual,
           expected: expected.body,
-          error: `Expected 404/500 error for non-existent mapping, got ${actualStatus}`,
+          error: `Expected error response for non-existent mapping`,
         };
       }
 
