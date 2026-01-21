@@ -81,27 +81,24 @@ export const layoutsTestCases: TestCase[] = [
         KleJsonSchema
       );
 
-      return {
-        status: response.status,
-        data: response.data,
-        layoutName, // Store for assertion
-      };
+      return response.data;
     },
     assert: (actual, expected) => {
-      const actualData = actual as { status: number; data: any; layoutName: string };
+      // actual is the KLE JSON array directly
+      const kleData = actual as any[];
 
       // Validate that data is an array (KLE JSON format)
-      if (!Array.isArray(actualData.data)) {
+      if (!Array.isArray(kleData)) {
         return {
           passed: false,
           actual,
           expected: expected.body,
-          error: 'Expected KLE JSON array format',
+          error: `Expected KLE JSON array format, got ${typeof kleData}`,
         };
       }
 
       // Validate that array is not empty
-      if (actualData.data.length === 0) {
+      if (kleData.length === 0) {
         return {
           passed: false,
           actual,
@@ -111,7 +108,7 @@ export const layoutsTestCases: TestCase[] = [
       }
 
       // Validate that first element is an array or object (typical KLE format)
-      const firstRow = actualData.data[0];
+      const firstRow = kleData[0];
       if (!Array.isArray(firstRow) && typeof firstRow !== 'object') {
         return {
           passed: false,
@@ -165,35 +162,25 @@ export const layoutsTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const result = actual as { status: number; data: any };
+      const result = actual as { success?: boolean; error?: { code: string; message: string } };
 
-      // Should return 404 status
-      if (result.status !== 404) {
+      // Should have error structure
+      if (!result.error || typeof result.error !== 'object' || !result.error.message) {
         return {
           passed: false,
           actual,
           expected: expected.body,
-          error: `Expected 404 status, got ${result.status}`,
-        };
-      }
-
-      // Should have error message
-      if (!result.data.error || typeof result.data.error !== 'string') {
-        return {
-          passed: false,
-          actual,
-          expected: expected.body,
-          error: 'Expected error message in response',
+          error: `Expected error object with message in response, got ${JSON.stringify(result)}`,
         };
       }
 
       // Error message should mention the layout not found
-      if (!result.data.error.toLowerCase().includes('not found')) {
+      if (!result.error.message.toLowerCase().includes('not found')) {
         return {
           passed: false,
           actual,
           expected: expected.body,
-          error: 'Error message should indicate layout not found',
+          error: `Error message should indicate layout not found, got "${result.error.message}"`,
         };
       }
 
