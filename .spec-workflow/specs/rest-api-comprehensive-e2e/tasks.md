@@ -131,7 +131,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Scenarios: Success duplicate, not found source, duplicate name conflict
   - Purpose: Test profile cloning
 
-- [ ] 2.3.2 Add PUT /api/profiles/:name/rename test
+- [x] 2.3.2 Add PUT /api/profiles/:name/rename test
   - File: `scripts/test-cases/profile-management.tests.ts`
   - Test ID: `profiles-012`
   - Endpoint: PUT /api/profiles/:name/rename
