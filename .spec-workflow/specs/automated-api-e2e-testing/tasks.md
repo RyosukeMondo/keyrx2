@@ -236,7 +236,7 @@ Report Failure  Iterate (max 3 attempts)
   - _Requirements: Complete documentation_
   - _Prompt: Role: Technical Writer | Task: Create README.md with sections: Overview (architecture diagram), Quick Start (npm run test:e2e:auto), Configuration (flags: --daemon-path, --port, --max-iterations, --fix), Expected Results Database (how to update expected-results.json), Auto-Fix Strategies (how to add new strategies), Troubleshooting (common errors and solutions), CI Integration (workflow usage). Include code examples. | Restrictions: Keep concise (max 2000 words), use diagrams (Mermaid), link to implementation files | Success: Complete, clear documentation_
 
-- [ ] 7.2 Create developer guide for adding tests
+- [x] 7.2 Create developer guide for adding tests
   - File: `scripts/automated-e2e-testing/DEV_GUIDE.md`
   - How to add new test cases
   - How to update expected results
