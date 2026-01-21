@@ -95,28 +95,28 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Purpose: Test event log clearing (when implemented)
 
 ### Task 2.2: Device Management Tests (7 endpoints)
-- [ ] 2.2.1 Add PUT /api/devices/:id/name test
+- [x] 2.2.1 Add PUT /api/devices/:id/name test
   - File: `scripts/test-cases/device-management.tests.ts` (new file)
   - Test ID: `devices-004`
   - Endpoint: PUT /api/devices/:id/name
   - Scenarios: Success rename, not found, invalid name (empty, too long)
   - Purpose: Test device renaming
 
-- [ ] 2.2.2 Add PUT /api/devices/:id/layout test
+- [x] 2.2.2 Add PUT /api/devices/:id/layout test
   - File: `scripts/test-cases/device-management.tests.ts`
   - Test ID: `devices-005`
   - Endpoint: PUT /api/devices/:id/layout
   - Scenarios: Success set layout, not found device, invalid layout name
   - Purpose: Test device layout assignment
 
-- [ ] 2.2.3 Add GET /api/devices/:id/layout test
+- [x] 2.2.3 Add GET /api/devices/:id/layout test
   - File: `scripts/test-cases/device-management.tests.ts`
   - Test ID: `devices-006`
   - Endpoint: GET /api/devices/:id/layout
   - Scenarios: Get layout, default layout, not found device
   - Purpose: Test device layout retrieval
 
-- [ ] 2.2.4 Add DELETE /api/devices/:id test
+- [x] 2.2.4 Add DELETE /api/devices/:id test
   - File: `scripts/test-cases/device-management.tests.ts`
   - Test ID: `devices-007`
   - Endpoint: DELETE /api/devices/:id
