@@ -458,6 +458,25 @@ export class ApiClient {
   }
 
   /**
+   * Convenience method for GET requests
+   * Returns raw response data without schema validation
+   *
+   * @param path - API endpoint path
+   * @returns Promise with response data
+   *
+   * @example
+   * const response = await client.get('/api/daemon/state');
+   */
+  async get(path: string): Promise<any> {
+    const response = await this.customRequest(
+      'GET',
+      path,
+      z.any()
+    );
+    return response.data;
+  }
+
+  /**
    * Convenience method for POST requests
    * Returns raw response data without schema validation
    *
