@@ -268,19 +268,15 @@ async fn get_active_profile(
 }
 
 /// GET /api/profiles/:name/config - Get profile configuration
-async fn get_profile_config(
-    State(state): State<Arc<AppState>>,
-    Path(name): Path<String>,
-) -> Result<Json<Value>, ApiError> {
-    let config = state
-        .profile_service
-        .get_profile_config(&name)
-        .await
-        .map_err(profile_error_to_api_error)?;
+async fn get_profile_config(Path(name): Path<String>) -> Result<Json<Value>, ApiError> {
+    let config_dir = get_config_dir().map_err(|e| ApiError::InternalError(e.to_string()))?;
+    let pm = ProfileManager::new(config_dir).map_err(profile_error_to_api_error)?;
+
+    let config = pm.get_config(&name).map_err(profile_error_to_api_error)?;
 
     Ok(Json(json!({
         "name": name,
-        "config": config,
+        "source": config,
     })))
 }
 
@@ -291,14 +287,13 @@ struct SetProfileConfigRequest {
 }
 
 async fn set_profile_config(
-    State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
     Json(payload): Json<SetProfileConfigRequest>,
 ) -> Result<Json<Value>, ApiError> {
-    state
-        .profile_service
-        .set_profile_config(&name, &payload.config)
-        .await
+    let config_dir = get_config_dir().map_err(|e| ApiError::InternalError(e.to_string()))?;
+    let mut pm = ProfileManager::new(config_dir).map_err(profile_error_to_api_error)?;
+
+    pm.set_config(&name, &payload.config)
         .map_err(profile_error_to_api_error)?;
 
     Ok(Json(json!({
