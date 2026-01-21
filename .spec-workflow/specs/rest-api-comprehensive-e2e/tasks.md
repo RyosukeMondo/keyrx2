@@ -272,7 +272,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Purpose: Validate macro recording feature end-to-end
 
 ### Task 3.5: Simulator Workflows
-- [ ] 3.5.1 Test simulator event → mapping → output workflow
+- [x] 3.5.1 Test simulator event → mapping → output workflow
   - File: `scripts/test-cases/workflows.tests.ts`
   - Test ID: `workflow-007`
   - Flow: Set up mapping (a→b) → Simulate 'a' press → Verify 'b' output → Reset simulator

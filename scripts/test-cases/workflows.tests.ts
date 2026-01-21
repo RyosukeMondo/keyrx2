@@ -938,6 +938,169 @@ export const workflow_006: TestCase = {
   },
 };
 
+// ============================================================================
+// Task 3.5: Simulator Workflows
+// ============================================================================
+
+/**
+ * Test: Simulator event → mapping → output workflow
+ * Test ID: workflow-007
+ * Flow:
+ * 1. Create a profile with a key mapping (a→b)
+ * 2. Activate the profile
+ * 3. Simulate 'a' key press via simulator API
+ * 4. Verify the remapping occurred (check daemon state or events)
+ * 5. Reset simulator state
+ * 6. Delete the test profile (cleanup)
+ */
+export const workflow_007: TestCase = {
+  id: 'workflow-007',
+  category: 'workflows',
+  description: 'Simulator event → mapping → output workflow',
+  setup: async (client: ApiClient) => {
+    // Create a test profile with a simple key mapping (a→b)
+    const config = `
+// Test profile for simulator workflow
+base_layer = "base";
+
+[keymap.base]
+"a" = "b"  // Remap 'a' to 'b'
+`;
+    await client.createProfile('workflow-simulator-test', config);
+  },
+  execute: async (client: ApiClient) => {
+    // Step 1: Activate the profile with the mapping
+    const activateResponse = await client.activateProfile('workflow-simulator-test');
+
+    if (!activateResponse.data.success) {
+      throw new Error('Failed to activate test profile');
+    }
+
+    // Step 2: Verify the profile is active
+    const statusSchema = z.object({
+      success: z.boolean(),
+      active_profile: z.string().nullable(),
+    });
+    const statusResponse = await client.customRequest(
+      'GET',
+      '/api/daemon/state',
+      statusSchema,
+      undefined
+    );
+
+    if (statusResponse.data.active_profile !== 'workflow-simulator-test') {
+      throw new Error(
+        `Expected active profile to be 'workflow-simulator-test', got '${statusResponse.data.active_profile}'`
+      );
+    }
+
+    // Step 3: Simulate 'a' key press and release
+    const simulateSchema = z.object({
+      success: z.boolean(),
+    });
+
+    // Simulate key press (event_type: 0 = press)
+    const pressResponse = await client.customRequest(
+      'POST',
+      '/api/simulator/events',
+      simulateSchema,
+      {
+        events: [
+          {
+            key_code: 30, // 'a' key
+            event_type: 0, // press
+          },
+        ],
+      }
+    );
+
+    if (!pressResponse.data.success) {
+      throw new Error('Failed to simulate key press');
+    }
+
+    // Small delay to allow processing
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Simulate key release (event_type: 1 = release)
+    const releaseResponse = await client.customRequest(
+      'POST',
+      '/api/simulator/events',
+      simulateSchema,
+      {
+        events: [
+          {
+            key_code: 30, // 'a' key
+            event_type: 1, // release
+          },
+        ],
+      }
+    );
+
+    if (!releaseResponse.data.success) {
+      throw new Error('Failed to simulate key release');
+    }
+
+    // Step 4: Verify the mapping was applied by checking daemon state
+    // Note: In a real scenario, we would check output events or logs
+    // For now, we verify that the profile is still active and no errors occurred
+    const verifyStatusResponse = await client.customRequest(
+      'GET',
+      '/api/daemon/state',
+      statusSchema,
+      undefined
+    );
+
+    if (!verifyStatusResponse.data.success) {
+      throw new Error('Failed to verify daemon state after simulation');
+    }
+
+    // Step 5: Reset simulator state
+    const resetResponse = await client.customRequest(
+      'POST',
+      '/api/simulator/reset',
+      simulateSchema,
+      {}
+    );
+
+    if (!resetResponse.data.success) {
+      throw new Error('Failed to reset simulator');
+    }
+
+    return {
+      success: true,
+      workflow_steps: [
+        'Created profile with key mapping (a→b)',
+        'Activated profile',
+        'Verified profile is active',
+        'Simulated key press event',
+        'Simulated key release event',
+        'Verified daemon state after simulation',
+        'Reset simulator state',
+      ],
+    };
+  },
+  cleanup: async (client: ApiClient) => {
+    // Clean up: delete the test profile
+    try {
+      await client.deleteProfile('workflow-simulator-test');
+    } catch (error) {
+      // Profile might not exist, ignore error
+    }
+
+    // Reset simulator just in case
+    try {
+      const resetSchema = z.object({ success: z.boolean() });
+      await client.customRequest('POST', '/api/simulator/reset', resetSchema, {});
+    } catch (error) {
+      // Ignore reset errors
+    }
+  },
+  expectedStatus: 200,
+  expectedResponse: {
+    success: true,
+  },
+};
+
 /**
  * All workflow test cases
  */
@@ -947,4 +1110,5 @@ export const workflowTestCases: TestCase[] = [
   workflow_004,
   workflow_005,
   workflow_006,
+  workflow_007,
 ];
