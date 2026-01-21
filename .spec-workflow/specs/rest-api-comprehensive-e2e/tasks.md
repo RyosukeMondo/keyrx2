@@ -374,7 +374,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Purpose: Self-service debugging
 
 ### Task 6.2: Create Example Tests
-- [ ] 6.2.1 Add comprehensive example for each test type
+- [x] 6.2.1 Add comprehensive example for each test type
   - File: `scripts/automated-e2e-testing/examples/` (new directory)
   - Examples:
     - `simple-endpoint.example.ts` - Basic GET test
