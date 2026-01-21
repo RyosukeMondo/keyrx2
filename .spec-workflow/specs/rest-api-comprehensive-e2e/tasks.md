@@ -460,8 +460,14 @@ Phase 6 (Documentation) - CAN START ANYTIME
 
 Before marking spec complete:
 
-- [ ] Run `npm install` - succeeds without errors
-- [ ] Run `npm run test:e2e:auto` - all 65+ tests pass
+- [x] Run `npm install` - succeeds without errors
+- [ ] Run `npx tsx automated-e2e-test.ts --daemon-path ../target/release/keyrx_daemon` - all 83 tests pass
+  - **Current Status**: 28/83 passing (33.7%)
+  - **Issues Found**:
+    - WebSocket subscriptions timeout (devices, profiles channels)
+    - Many endpoints require active device configuration
+    - Schema validation mismatches in several endpoints
+    - Error handling not matching expected codes
 - [ ] Run tests 10 consecutive times - 0 flaky failures
 - [ ] Check execution time - < 3 minutes
 - [ ] Verify all 40+ endpoints covered - generate coverage report
