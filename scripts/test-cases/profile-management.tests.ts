@@ -12,6 +12,36 @@ import type { TestCase } from './api-tests.js';
 import { z } from 'zod';
 
 /**
+ * Track profiles created during tests for cleanup
+ * Map<testId, Set<profileName>>
+ */
+const createdProfiles = new Map<string, Set<string>>();
+
+/**
+ * Register a profile for cleanup
+ */
+function trackProfile(testId: string, profileName: string): void {
+  if (!createdProfiles.has(testId)) {
+    createdProfiles.set(testId, new Set());
+  }
+  createdProfiles.get(testId)!.add(profileName);
+}
+
+/**
+ * Get tracked profiles for a test
+ */
+function getTrackedProfiles(testId: string): string[] {
+  return Array.from(createdProfiles.get(testId) || []);
+}
+
+/**
+ * Clear tracked profiles for a test
+ */
+function clearTrackedProfiles(testId: string): void {
+  createdProfiles.delete(testId);
+}
+
+/**
  * Generate a short test profile name (max 32 chars per API limit)
  * Format: "prf-{prefix}-{timestamp_last6}"
  * Example: "prf-dup-234567" (14-18 chars depending on prefix)
@@ -98,6 +128,7 @@ export const profileManagementTestCases: TestCase[] = [
       // Create source profile for duplication
       const sourceName = shortProfileName('src');
       await client.createProfile(sourceName);
+      trackProfile('profiles-011', sourceName);
     },
     execute: async (client) => {
       // Find the source profile we just created
@@ -112,6 +143,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       const sourceName = sourceProfile.name;
       const newName = shortProfileName('dup');
+      trackProfile('profiles-011', newName);
 
       const response = await client.customRequest(
         'POST',
@@ -123,7 +155,6 @@ export const profileManagementTestCases: TestCase[] = [
       return {
         status: response.status,
         data: response.data,
-        context: { sourceName, newName },
       };
     },
     assert: (actual, expected) => {
@@ -165,19 +196,17 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: async (client, result) => {
-      // Delete both source and duplicate profiles
-      try {
-        const context = (result as any)?.context;
-        if (context?.sourceName) {
-          await client.deleteProfile(context.sourceName);
+    cleanup: async (client) => {
+      // Delete all tracked profiles for this test
+      const profiles = getTrackedProfiles('profiles-011');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
         }
-        if (context?.newName) {
-          await client.deleteProfile(context.newName);
-        }
-      } catch {
-        // Ignore cleanup errors
       }
+      clearTrackedProfiles('profiles-011');
     },
   },
 
@@ -191,6 +220,7 @@ export const profileManagementTestCases: TestCase[] = [
     setup: noOpSetup,
     execute: async (client) => {
       const newName = shortProfileName("dup");
+      trackProfile('profiles-011b', newName);
 
       try {
         const response = await client.customRequest(
@@ -233,7 +263,17 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: noOpCleanup,
+    cleanup: async (client) => {
+      const profiles = getTrackedProfiles('profiles-011b');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      clearTrackedProfiles('profiles-011b');
+    },
   },
 
   {
@@ -249,6 +289,8 @@ export const profileManagementTestCases: TestCase[] = [
       const targetName = shortProfileName("tgt");
       await client.createProfile(sourceName);
       await client.createProfile(targetName);
+      trackProfile('profiles-011c', sourceName);
+      trackProfile('profiles-011c', targetName);
     },
     execute: async (client) => {
       // Find both profiles
@@ -311,19 +353,16 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: async (client, result) => {
-      // Delete both profiles
-      try {
-        const context = (result as any)?.context;
-        if (context?.sourceName) {
-          await client.deleteProfile(context.sourceName);
+    cleanup: async (client) => {
+      const profiles = getTrackedProfiles('profiles-011c');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
         }
-        if (context?.targetName) {
-          await client.deleteProfile(context.targetName);
-        }
-      } catch {
-        // Ignore cleanup errors
       }
+      clearTrackedProfiles('profiles-011c');
     },
   },
 
@@ -341,6 +380,7 @@ export const profileManagementTestCases: TestCase[] = [
       // Create profile to rename
       const originalName = shortProfileName("ren");
       await client.createProfile(originalName);
+      trackProfile('profiles-012', originalName);
     },
     execute: async (client) => {
       // Find the profile we just created
@@ -355,6 +395,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       const originalName = profile.name;
       const newName = shortProfileName("new");
+      trackProfile('profiles-012', newName);
 
       const response = await client.customRequest(
         'PUT',
@@ -417,24 +458,16 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: async (client, result) => {
-      // Delete the renamed profile
-      try {
-        const context = (result as any)?.context;
-        if (context?.newName) {
-          await client.deleteProfile(context.newName);
+    cleanup: async (client) => {
+      const profiles = getTrackedProfiles('profiles-012');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
         }
-        // Also try to delete original name in case rename failed
-        if (context?.originalName) {
-          try {
-            await client.deleteProfile(context.originalName);
-          } catch {
-            // Ignore - profile was successfully renamed
-          }
-        }
-      } catch {
-        // Ignore cleanup errors
       }
+      clearTrackedProfiles('profiles-012');
     },
   },
 
@@ -448,6 +481,7 @@ export const profileManagementTestCases: TestCase[] = [
     setup: noOpSetup,
     execute: async (client) => {
       const newName = shortProfileName("new");
+      trackProfile('profiles-012b', newName);
 
       try {
         const response = await client.customRequest(
@@ -490,7 +524,17 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: noOpCleanup,
+    cleanup: async (client) => {
+      const profiles = getTrackedProfiles('profiles-012b');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      clearTrackedProfiles('profiles-012b');
+    },
   },
 
   {
@@ -504,6 +548,7 @@ export const profileManagementTestCases: TestCase[] = [
       // Create profile to rename
       const originalName = shortProfileName("inv");
       await client.createProfile(originalName);
+      trackProfile('profiles-012c', originalName);
     },
     execute: async (client) => {
       // Find the profile we just created
@@ -563,16 +608,16 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: async (client, result) => {
-      // Delete the original profile
-      try {
-        const context = (result as any)?.context;
-        if (context?.originalName) {
-          await client.deleteProfile(context.originalName);
+    cleanup: async (client) => {
+      const profiles = getTrackedProfiles('profiles-012c');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
         }
-      } catch {
-        // Ignore cleanup errors
       }
+      clearTrackedProfiles('profiles-012c');
     },
   },
 
@@ -589,6 +634,8 @@ export const profileManagementTestCases: TestCase[] = [
       const targetName = shortProfileName("rtgt");
       await client.createProfile(sourceName);
       await client.createProfile(targetName);
+      trackProfile('profiles-012d', sourceName);
+      trackProfile('profiles-012d', targetName);
     },
     execute: async (client) => {
       // Find both profiles
@@ -651,19 +698,16 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: async (client, result) => {
-      // Delete both profiles
-      try {
-        const context = (result as any)?.context;
-        if (context?.sourceName) {
-          await client.deleteProfile(context.sourceName);
+    cleanup: async (client) => {
+      const profiles = getTrackedProfiles('profiles-012d');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
         }
-        if (context?.targetName) {
-          await client.deleteProfile(context.targetName);
-        }
-      } catch {
-        // Ignore cleanup errors
       }
+      clearTrackedProfiles('profiles-012d');
     },
   },
 
@@ -681,6 +725,7 @@ export const profileManagementTestCases: TestCase[] = [
       // Create a valid profile
       const profileName = shortProfileName("val");
       await client.createProfile(profileName);
+      trackProfile('profiles-013', profileName);
     },
     execute: async (client) => {
       // Find the profile we just created
@@ -747,16 +792,16 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: async (client, result) => {
-      // Delete the profile
-      try {
-        const context = (result as any)?.context;
-        if (context?.profileName) {
-          await client.deleteProfile(context.profileName);
+    cleanup: async (client) => {
+      const profiles = getTrackedProfiles('profiles-013');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
         }
-      } catch {
-        // Ignore cleanup errors
       }
+      clearTrackedProfiles('profiles-013');
     },
   },
 
@@ -810,6 +855,16 @@ export const profileManagementTestCases: TestCase[] = [
         expected: expected.body,
       };
     },
-    cleanup: noOpCleanup,
+    cleanup: async (client) => {
+      const profiles = getTrackedProfiles('profiles-013b');
+      for (const profileName of profiles) {
+        try {
+          await client.deleteProfile(profileName);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      clearTrackedProfiles('profiles-013b');
+    },
   },
 ];
