@@ -271,14 +271,12 @@ async fn get_active_profile(
 async fn get_profile_config(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
-) -> Result<Json<Value>, DaemonError> {
-    use crate::error::ConfigError;
-
+) -> Result<Json<Value>, ApiError> {
     let config = state
         .profile_service
         .get_profile_config(&name)
         .await
-        .map_err(|e| ConfigError::Profile(e.to_string()))?;
+        .map_err(profile_error_to_api_error)?;
 
     Ok(Json(json!({
         "name": name,
@@ -296,14 +294,12 @@ async fn set_profile_config(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
     Json(payload): Json<SetProfileConfigRequest>,
-) -> Result<Json<Value>, DaemonError> {
-    use crate::error::ConfigError;
-
+) -> Result<Json<Value>, ApiError> {
     state
         .profile_service
         .set_profile_config(&name, &payload.config)
         .await
-        .map_err(|e| ConfigError::Profile(e.to_string()))?;
+        .map_err(profile_error_to_api_error)?;
 
     Ok(Json(json!({
         "success": true,
