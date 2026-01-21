@@ -17,6 +17,7 @@ import {
   SubscriptionError,
 } from '../api-client/websocket-client.js';
 import type { TestCase, TestResult } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import { z } from 'zod';
 
 /**
@@ -94,7 +95,7 @@ export const websocketTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         success: boolean;
         connectedState?: string;
         isConnected?: boolean;
@@ -105,7 +106,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Connection failed: ${actualData.error}`,
         };
@@ -115,7 +116,7 @@ export const websocketTestCases: TestCase[] = [
       if (actualData.connectedState !== ConnectionState.CONNECTED) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { connectedState: ConnectionState.CONNECTED },
           error: `Expected state 'connected', got '${actualData.connectedState}'`,
         };
@@ -125,7 +126,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.isConnected) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { isConnected: true },
           error: 'Expected isConnected to be true',
         };
@@ -135,7 +136,7 @@ export const websocketTestCases: TestCase[] = [
       if (actualData.disconnectedState !== ConnectionState.CLOSED) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { disconnectedState: ConnectionState.CLOSED },
           error: `Expected state 'closed', got '${actualData.disconnectedState}'`,
         };
@@ -205,7 +206,7 @@ export const websocketTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         success: boolean;
         subscribed?: boolean;
         subscriptions?: string[];
@@ -216,7 +217,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Subscription failed: ${actualData.error} (${actualData.errorType})`,
         };
@@ -226,7 +227,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.subscribed) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { subscribed: true },
           error: 'Expected to be subscribed to devices channel',
         };
@@ -236,7 +237,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.subscriptions?.includes('devices')) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { subscriptions: ['devices'] },
           error: `Expected subscriptions to include 'devices', got: ${actualData.subscriptions?.join(', ')}`,
         };
@@ -354,7 +355,7 @@ export const websocketTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         success: boolean;
         receivedEvent?: boolean;
         eventChannel?: string;
@@ -366,7 +367,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Event notification failed: ${actualData.error} (${actualData.errorType})`,
         };
@@ -376,7 +377,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.receivedEvent) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { receivedEvent: true },
           error: 'Expected to receive device event',
         };
@@ -386,7 +387,7 @@ export const websocketTestCases: TestCase[] = [
       if (actualData.eventChannel !== 'devices') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { eventChannel: 'devices' },
           error: `Expected channel 'devices', got '${actualData.eventChannel}'`,
         };
@@ -508,7 +509,7 @@ export const websocketTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         success: boolean;
         receivedEvent?: boolean;
         eventChannel?: string;
@@ -520,7 +521,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Profile event notification failed: ${actualData.error} (${actualData.errorType})`,
         };
@@ -530,7 +531,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.receivedEvent) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { receivedEvent: true },
           error: 'Expected to receive profile event',
         };
@@ -540,7 +541,7 @@ export const websocketTestCases: TestCase[] = [
       if (actualData.eventChannel !== 'profiles') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { eventChannel: 'profiles' },
           error: `Expected channel 'profiles', got '${actualData.eventChannel}'`,
         };
@@ -630,7 +631,7 @@ export const websocketTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         success: boolean;
         initialState?: string;
         disconnectedState?: string;
@@ -645,7 +646,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Reconnection test failed: ${actualData.error} (${actualData.errorType})`,
         };
@@ -655,7 +656,7 @@ export const websocketTestCases: TestCase[] = [
       if (actualData.initialState !== ConnectionState.CONNECTED) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { initialState: ConnectionState.CONNECTED },
           error: `Expected initial state 'connected', got '${actualData.initialState}'`,
         };
@@ -665,7 +666,7 @@ export const websocketTestCases: TestCase[] = [
       if (actualData.disconnectedState !== ConnectionState.CLOSED) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { disconnectedState: ConnectionState.CLOSED },
           error: `Expected disconnected state 'closed', got '${actualData.disconnectedState}'`,
         };
@@ -675,7 +676,7 @@ export const websocketTestCases: TestCase[] = [
       if (actualData.reconnectedState !== ConnectionState.CONNECTED) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { reconnectedState: ConnectionState.CONNECTED },
           error: `Expected reconnected state 'connected', got '${actualData.reconnectedState}'`,
         };
@@ -685,7 +686,7 @@ export const websocketTestCases: TestCase[] = [
       if (!actualData.canResubscribe) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: { canResubscribe: true },
           error: 'Expected to be able to resubscribe after reconnection',
         };

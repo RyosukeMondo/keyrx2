@@ -11,6 +11,7 @@
 
 import { ApiClient } from '../api-client/client.js';
 import type { TestCase, TestResult } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import type { ScenarioDefinition } from './types.js';
 import { z } from 'zod';
 
@@ -101,7 +102,7 @@ export const configLayersTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as Config;
+      const actualData = extractData(actual) as Config;
 
       // Validate structure
       const hasRequiredFields =
@@ -112,7 +113,7 @@ export const configLayersTestCases: TestCase[] = [
       if (!hasRequiredFields) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Missing required config fields',
         };
@@ -127,7 +128,7 @@ export const configLayersTestCases: TestCase[] = [
       if (!layersValid) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Invalid layer structure',
         };
@@ -135,7 +136,7 @@ export const configLayersTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -175,12 +176,12 @@ map_key("base", "A", remap("B"));
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as UpdateConfigResponse;
+      const actualData = extractData(actual) as UpdateConfigResponse;
 
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Config update should succeed',
         };
@@ -189,7 +190,7 @@ map_key("base", "A", remap("B"));
       if (typeof actualData.message !== 'string') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Missing message field',
         };
@@ -198,7 +199,7 @@ map_key("base", "A", remap("B"));
       if (typeof actualData.profile !== 'string') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Missing profile field',
         };
@@ -206,7 +207,7 @@ map_key("base", "A", remap("B"));
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -237,13 +238,13 @@ map_key("base", "A", remap("B";
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as UpdateConfigResponse;
+      const actualData = extractData(actual) as UpdateConfigResponse;
 
       // The file is written but validation error is included
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Update should succeed even with validation errors',
         };
@@ -252,7 +253,7 @@ map_key("base", "A", remap("B";
       if (!actualData.validation_error) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Should include validation_error field',
         };
@@ -260,7 +261,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -302,12 +303,12 @@ map_key("base", "A", remap("B";
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success: boolean };
+      const actualData = extractData(actual) as { success: boolean };
 
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Key mapping addition should succeed',
         };
@@ -315,7 +316,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -357,12 +358,12 @@ map_key("base", "A", remap("B";
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success: boolean };
+      const actualData = extractData(actual) as { success: boolean };
 
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Tap-hold mapping addition should succeed',
         };
@@ -370,7 +371,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -424,7 +425,7 @@ map_key("base", "A", remap("B";
       if (!actualData || !actualData.error || actualData.success !== false) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error response for invalid action type`,
         };
@@ -432,7 +433,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -479,7 +480,7 @@ map_key("base", "A", remap("B";
       if (!actualData || !actualData.error || actualData.success !== false) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error response for missing field`,
         };
@@ -487,7 +488,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -530,12 +531,12 @@ map_key("base", "A", remap("B";
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success: boolean };
+      const actualData = extractData(actual) as { success: boolean };
 
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Key mapping deletion should succeed',
         };
@@ -543,7 +544,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -584,7 +585,7 @@ map_key("base", "A", remap("B";
       if (!actualData || !actualData.error || actualData.success !== false) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error response for invalid ID format`,
         };
@@ -592,7 +593,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -634,7 +635,7 @@ map_key("base", "A", remap("B";
       if (!actualData || !actualData.error || actualData.success !== false) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error response for non-existent mapping`,
         };
@@ -642,7 +643,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -672,12 +673,12 @@ map_key("base", "A", remap("B";
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as LayersResponse;
+      const actualData = extractData(actual) as LayersResponse;
 
       if (!Array.isArray(actualData.layers)) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'layers should be an array',
         };
@@ -694,7 +695,7 @@ map_key("base", "A", remap("B";
       if (!layersValid) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Invalid layer structure',
         };
@@ -705,7 +706,7 @@ map_key("base", "A", remap("B";
       if (!hasBaseLayer) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Should include base layer',
         };
@@ -713,7 +714,7 @@ map_key("base", "A", remap("B";
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },

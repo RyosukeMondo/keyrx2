@@ -10,6 +10,7 @@
 
 import { ApiClient } from '../api-client/client.js';
 import type { TestCase, TestResult } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import type { ScenarioDefinition } from './types.js';
 import { z } from 'zod';
 
@@ -105,12 +106,12 @@ export const macrosTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as StartRecordingResponse;
+      const actualData = extractData(actual) as StartRecordingResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Recording did not start successfully',
         };
@@ -119,7 +120,7 @@ export const macrosTestCases: TestCase[] = [
       if (actualData.message !== 'Recording started') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected message "Recording started", got "${actualData.message}"`,
         };
@@ -127,7 +128,7 @@ export const macrosTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -190,7 +191,7 @@ export const macrosTestCases: TestCase[] = [
       if (result.success !== false || result.error?.code !== 'BAD_REQUEST') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error with BAD_REQUEST code, got ${JSON.stringify(result)}`,
         };
@@ -198,7 +199,7 @@ export const macrosTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -244,12 +245,12 @@ export const macrosTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as StopRecordingResponse;
+      const actualData = extractData(actual) as StopRecordingResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Recording did not stop successfully',
         };
@@ -258,7 +259,7 @@ export const macrosTestCases: TestCase[] = [
       if (actualData.message !== 'Recording stopped') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected message "Recording stopped", got "${actualData.message}"`,
         };
@@ -267,7 +268,7 @@ export const macrosTestCases: TestCase[] = [
       if (typeof actualData.event_count !== 'number') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'event_count must be a number',
         };
@@ -275,7 +276,7 @@ export const macrosTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -337,7 +338,7 @@ export const macrosTestCases: TestCase[] = [
       if (result.success !== false || result.error?.code !== 'BAD_REQUEST') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error with BAD_REQUEST code, got ${JSON.stringify(result)}`,
         };
@@ -345,7 +346,7 @@ export const macrosTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -387,12 +388,12 @@ export const macrosTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as RecordedEventsResponse;
+      const actualData = extractData(actual) as RecordedEventsResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Request did not succeed',
         };
@@ -401,7 +402,7 @@ export const macrosTestCases: TestCase[] = [
       if (actualData.recording !== false) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected recording to be false',
         };
@@ -410,7 +411,7 @@ export const macrosTestCases: TestCase[] = [
       if (actualData.event_count !== 0) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 0 events, got ${actualData.event_count}`,
         };
@@ -419,7 +420,7 @@ export const macrosTestCases: TestCase[] = [
       if (!Array.isArray(actualData.events)) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'events must be an array',
         };
@@ -427,7 +428,7 @@ export const macrosTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -465,12 +466,12 @@ export const macrosTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as RecordedEventsResponse;
+      const actualData = extractData(actual) as RecordedEventsResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Request did not succeed',
         };
@@ -479,7 +480,7 @@ export const macrosTestCases: TestCase[] = [
       if (actualData.recording !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected recording to be true',
         };
@@ -488,7 +489,7 @@ export const macrosTestCases: TestCase[] = [
       if (typeof actualData.event_count !== 'number') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'event_count must be a number',
         };
@@ -497,7 +498,7 @@ export const macrosTestCases: TestCase[] = [
       if (!Array.isArray(actualData.events)) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'events must be an array',
         };
@@ -505,7 +506,7 @@ export const macrosTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -556,12 +557,12 @@ export const macrosTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as ClearEventsResponse;
+      const actualData = extractData(actual) as ClearEventsResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Clear operation did not succeed',
         };
@@ -570,7 +571,7 @@ export const macrosTestCases: TestCase[] = [
       if (actualData.message !== 'Events cleared') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected message "Events cleared", got "${actualData.message}"`,
         };
@@ -578,7 +579,7 @@ export const macrosTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -623,12 +624,12 @@ export const macrosTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as RecordedEventsResponse;
+      const actualData = extractData(actual) as RecordedEventsResponse;
 
       if (actualData.event_count !== 0) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 0 events after clear, got ${actualData.event_count}`,
         };
@@ -637,7 +638,7 @@ export const macrosTestCases: TestCase[] = [
       if (actualData.events.length !== 0) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected empty events array, got ${actualData.events.length} events`,
         };
@@ -645,7 +646,7 @@ export const macrosTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },

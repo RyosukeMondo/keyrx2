@@ -9,6 +9,9 @@
 
 import { ApiClient } from '../api-client/client.js';
 import type { TestCase } from './api-tests.js';
+import { extractData } from './api-tests.js';
+import { extractData } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import { z } from 'zod';
 
 /**
@@ -158,7 +161,7 @@ export const profileManagementTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         success?: boolean;
         profile?: { name?: string; rhai_path?: string };
       };
@@ -166,7 +169,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected success=true for profile duplicate',
         };
@@ -175,7 +178,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (!actualData.profile?.name) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected profile.name in response',
         };
@@ -184,7 +187,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (!actualData.profile?.rhai_path) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected profile.rhai_path in response',
         };
@@ -192,7 +195,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -251,7 +254,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (status !== 404 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 404 or 500 for nonexistent profile, got ${status}`,
         };
@@ -259,7 +262,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -341,7 +344,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (status !== 409 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 409 or 500 for duplicate name, got ${status}`,
         };
@@ -349,7 +352,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -411,7 +414,7 @@ export const profileManagementTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         success?: boolean;
         profile?: { name?: string; rhai_path?: string; krx_path?: string };
       };
@@ -419,7 +422,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected success=true for profile rename',
         };
@@ -428,7 +431,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (!actualData.profile?.name) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected profile.name in response',
         };
@@ -437,7 +440,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (!actualData.profile?.rhai_path) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected profile.rhai_path in response',
         };
@@ -446,7 +449,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (!actualData.profile?.krx_path) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected profile.krx_path in response',
         };
@@ -454,7 +457,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -512,7 +515,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (status !== 404 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 404 or 500 for nonexistent profile, got ${status}`,
         };
@@ -520,7 +523,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -596,7 +599,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (status !== 400 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 400 or 500 for invalid name, got ${status}`,
         };
@@ -604,7 +607,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -686,7 +689,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (status !== 409 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 409 or 500 for duplicate name, got ${status}`,
         };
@@ -694,7 +697,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -754,7 +757,7 @@ export const profileManagementTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         valid?: boolean;
         errors?: Array<{ line?: number; column?: number; message?: string }>;
       };
@@ -762,7 +765,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (actualData.valid !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected valid=true for valid profile',
         };
@@ -771,7 +774,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (!Array.isArray(actualData.errors)) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected errors array in response',
         };
@@ -780,7 +783,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (actualData.errors.length !== 0) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected empty errors array for valid profile',
         };
@@ -788,7 +791,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -843,7 +846,7 @@ export const profileManagementTestCases: TestCase[] = [
       if (status !== 404 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 404 or 500 for nonexistent profile, got ${status}`,
         };
@@ -851,7 +854,7 @@ export const profileManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },

@@ -7,6 +7,7 @@
 
 import { ApiClient } from '../api-client/client.js';
 import type { TestCase, TestResult } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import type { ScenarioDefinition } from './types.js';
 import { z } from 'zod';
 
@@ -91,7 +92,7 @@ export const layoutsTestCases: TestCase[] = [
       if (!Array.isArray(kleData)) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected KLE JSON array format, got ${typeof kleData}`,
         };
@@ -101,7 +102,7 @@ export const layoutsTestCases: TestCase[] = [
       if (kleData.length === 0) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'KLE JSON array must have at least one row',
         };
@@ -112,7 +113,7 @@ export const layoutsTestCases: TestCase[] = [
       if (!Array.isArray(firstRow) && typeof firstRow !== 'object') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Invalid KLE JSON format - rows must be arrays or objects',
         };
@@ -120,7 +121,7 @@ export const layoutsTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -168,7 +169,7 @@ export const layoutsTestCases: TestCase[] = [
       if (!result.error || typeof result.error !== 'object' || !result.error.message) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error object with message in response, got ${JSON.stringify(result)}`,
         };
@@ -178,7 +179,7 @@ export const layoutsTestCases: TestCase[] = [
       if (!result.error.message.toLowerCase().includes('not found')) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Error message should indicate layout not found, got "${result.error.message}"`,
         };
@@ -186,7 +187,7 @@ export const layoutsTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },

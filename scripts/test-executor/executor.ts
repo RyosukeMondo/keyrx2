@@ -317,7 +317,8 @@ export class TestExecutor {
           if (this.verbose) {
             this.log(`  [Assert] Validating response`);
           }
-          testResult = testCase.assert(response.data, expectedResult);
+          // Pass the full response object to assert function so tests can access status, data, etc.
+          testResult = testCase.assert(response, expectedResult);
         }
 
         // Step 5: Cleanup (always runs)

@@ -8,6 +8,7 @@
 
 import { ApiClient } from '../api-client/client.js';
 import type { TestCase, TestResult } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import type { ScenarioDefinition } from './types.js';
 import { z } from 'zod';
 
@@ -90,12 +91,12 @@ export const simulatorTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as SimulateEventsResponse;
+      const actualData = extractData(actual) as SimulateEventsResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Simulation did not succeed',
         };
@@ -104,7 +105,7 @@ export const simulatorTestCases: TestCase[] = [
       if (actualData.event_count !== 2) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 2 events, got ${actualData.event_count}`,
         };
@@ -113,7 +114,7 @@ export const simulatorTestCases: TestCase[] = [
       if (!Array.isArray(actualData.outputs) || actualData.outputs.length !== 2) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 2 outputs, got ${actualData.outputs?.length || 0}`,
         };
@@ -122,7 +123,7 @@ export const simulatorTestCases: TestCase[] = [
       if (typeof actualData.duration_us !== 'number') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'duration_us must be a number',
         };
@@ -130,7 +131,7 @@ export const simulatorTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -172,12 +173,12 @@ export const simulatorTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as SimulateEventsResponse;
+      const actualData = extractData(actual) as SimulateEventsResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Simulation did not succeed',
         };
@@ -186,7 +187,7 @@ export const simulatorTestCases: TestCase[] = [
       if (actualData.event_count !== 4) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 4 events, got ${actualData.event_count}`,
         };
@@ -194,7 +195,7 @@ export const simulatorTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -236,12 +237,12 @@ export const simulatorTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as SimulateEventsResponse;
+      const actualData = extractData(actual) as SimulateEventsResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Simulation did not succeed',
         };
@@ -250,7 +251,7 @@ export const simulatorTestCases: TestCase[] = [
       if (actualData.event_count < 1) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected at least 1 event, got ${actualData.event_count}`,
         };
@@ -259,7 +260,7 @@ export const simulatorTestCases: TestCase[] = [
       if (!Array.isArray(actualData.outputs)) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'outputs must be an array',
         };
@@ -267,7 +268,7 @@ export const simulatorTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -321,7 +322,7 @@ export const simulatorTestCases: TestCase[] = [
       if (result.success !== false) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error response, got ${JSON.stringify(result)}`,
         };
@@ -329,7 +330,7 @@ export const simulatorTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -382,7 +383,7 @@ export const simulatorTestCases: TestCase[] = [
       if (result.success !== false) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected error response, got ${JSON.stringify(result)}`,
         };
@@ -390,7 +391,7 @@ export const simulatorTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -424,12 +425,12 @@ export const simulatorTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as ResetSimulatorResponse;
+      const actualData = extractData(actual) as ResetSimulatorResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Reset operation did not succeed',
         };
@@ -438,7 +439,7 @@ export const simulatorTestCases: TestCase[] = [
       if (typeof actualData.message !== 'string') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'message must be a string',
         };
@@ -446,7 +447,7 @@ export const simulatorTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -480,12 +481,12 @@ export const simulatorTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as ResetSimulatorResponse;
+      const actualData = extractData(actual) as ResetSimulatorResponse;
 
       if (!actualData.success) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Second reset did not succeed',
         };
@@ -493,7 +494,7 @@ export const simulatorTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },

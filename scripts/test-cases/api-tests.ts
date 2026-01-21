@@ -69,17 +69,32 @@ export interface TestCase {
 }
 
 /**
+ * Extract data from response object
+ * The executor passes the full response object {status, data, headers, ...}
+ * This helper extracts the data field for backward compatibility
+ */
+export function extractData(response: unknown): unknown {
+  if (response && typeof response === 'object' && 'data' in response) {
+    return (response as { data: unknown }).data;
+  }
+  return response;
+}
+
+/**
  * Default assertion function using deep equality
  */
 function defaultAssert(actual: unknown, expected: ScenarioDefinition): TestResult {
+  // Extract data from response object
+  const actualData = extractData(actual);
+
   // Simple deep equality check - will be enhanced by comparator in Phase 3
-  const actualJson = JSON.stringify(actual);
+  const actualJson = JSON.stringify(actualData);
   const expectedJson = JSON.stringify(expected.body);
   const passed = actualJson === expectedJson;
 
   return {
     passed,
-    actual,
+    actual: actualData,
     expected: expected.body,
     error: passed ? undefined : 'Response does not match expected result',
   };
@@ -166,10 +181,10 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { status: string; version: string };
+      const actualData = extractData(actual) as { status: string; version: string };
       return {
         passed: actualData.status === 'ok',
-        actual,
+        actual: actualData,
         expected: expected.body,
         error: actualData.status !== 'ok' ? 'Health check failed' : undefined,
       };
@@ -193,7 +208,7 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { version: string; build_time: string; platform: string };
+      const actualData = extractData(actual) as { version: string; build_time: string; platform: string };
       const hasRequiredFields =
         typeof actualData.version === 'string' &&
         typeof actualData.build_time === 'string' &&
@@ -201,7 +216,7 @@ export const apiTestCases: TestCase[] = [
 
       return {
         passed: hasRequiredFields,
-        actual,
+        actualData,
         expected: expected.body,
         error: hasRequiredFields ? undefined : 'Missing required version fields',
       };
@@ -228,12 +243,12 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { status: string; daemon_running: boolean };
+      const actualData = extractData(actual) as { status: string; daemon_running: boolean };
       const passed = actualData.status === 'running' && actualData.daemon_running === true;
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Daemon not in expected running state',
       };
@@ -260,12 +275,12 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { profiles: unknown[] };
+      const actualData = extractData(actual) as { profiles: unknown[] };
       const passed = Array.isArray(actualData.profiles);
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'profiles is not an array',
       };
@@ -311,7 +326,7 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success: boolean; profile: { name: string; rhai_path: string; krx_path: string } };
+      const actualData = extractData(actual) as { success: boolean; profile: { name: string; rhai_path: string; krx_path: string } };
       const passed =
         actualData.success === true &&
         actualData.profile?.name === 'test-profile-create' &&
@@ -320,7 +335,7 @@ export const apiTestCases: TestCase[] = [
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Profile creation response invalid',
       };
@@ -361,12 +376,12 @@ export const apiTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as { error?: { code?: string; message?: string }; code?: string };
+      const actualData = extractData(actual) as { error?: { code?: string; message?: string }; code?: string };
       const passed = actualData.code === 'PROFILE_EXISTS' || actualData.error?.code === 'PROFILE_EXISTS' || actualData.error?.message?.includes('exists');
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Duplicate profile not rejected correctly',
       };
@@ -395,14 +410,14 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { profile?: string; message?: string };
+      const actualData = extractData(actual) as { profile?: string; message?: string };
       const passed =
         actualData.profile === 'test-profile-activate' ||
         typeof actualData.message === 'string';
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Profile activation failed',
       };
@@ -440,12 +455,12 @@ export const apiTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as { error?: { code?: string; message?: string }; code?: string };
+      const actualData = extractData(actual) as { error?: { code?: string; message?: string }; code?: string };
       const passed = actualData.code === 'PROFILE_NOT_FOUND' || actualData.error?.code === 'PROFILE_NOT_FOUND' || actualData.error?.message?.toLowerCase().includes('not found');
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Nonexistent profile activation not rejected correctly',
       };
@@ -472,12 +487,12 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success?: boolean; message?: string };
+      const actualData = extractData(actual) as { success?: boolean; message?: string };
       const passed = actualData.success === true || typeof actualData.message === 'string';
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Profile deletion failed',
       };
@@ -513,12 +528,12 @@ export const apiTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as { error?: { code?: string; message?: string }; code?: string };
+      const actualData = extractData(actual) as { error?: { code?: string; message?: string }; code?: string };
       const passed = actualData.code === 'PROFILE_NOT_FOUND' || actualData.error?.code === 'PROFILE_NOT_FOUND' || actualData.error?.message?.toLowerCase().includes('not found');
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Nonexistent profile deletion not rejected correctly',
       };
@@ -545,14 +560,14 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { name?: string; source?: string };
+      const actualData = extractData(actual) as { name?: string; source?: string };
       const passed =
         actualData.name === 'test-profile-get-config' ||
         typeof actualData.source === 'string';
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Profile config retrieval failed',
       };
@@ -583,12 +598,12 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success?: boolean };
+      const actualData = extractData(actual) as { success?: boolean };
       const passed = actualData.success === true;
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Profile config update failed',
       };
@@ -617,12 +632,12 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { devices: unknown[] };
+      const actualData = extractData(actual) as { devices: unknown[] };
       const passed = Array.isArray(actualData.devices);
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'devices is not an array',
       };
@@ -660,12 +675,12 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { message?: string; device?: unknown };
+      const actualData = extractData(actual) as { message?: string; device?: unknown };
       const passed = typeof actualData.message === 'string' || actualData.device !== undefined;
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Device update failed',
       };
@@ -712,12 +727,12 @@ export const apiTestCases: TestCase[] = [
       }
     },
     assert: (actual, expected) => {
-      const actualData = actual as { error?: { code?: string; message?: string }; code?: string };
+      const actualData = extractData(actual) as { error?: { code?: string; message?: string }; code?: string };
       const passed = actualData.code === 'DEVICE_NOT_FOUND' || actualData.error?.code === 'DEVICE_NOT_FOUND' || actualData.error?.message?.toLowerCase().includes('not found');
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Nonexistent device update not rejected correctly',
       };
@@ -744,7 +759,7 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         min_us?: number;
         avg_us?: number;
         max_us?: number;
@@ -758,7 +773,7 @@ export const apiTestCases: TestCase[] = [
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Latency metrics missing required fields',
       };
@@ -785,12 +800,12 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { layouts: unknown[] };
+      const actualData = extractData(actual) as { layouts: unknown[] };
       const passed = Array.isArray(actualData.layouts);
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'layouts is not an array',
       };
@@ -836,7 +851,7 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         create: { profile: { name: string } };
         activate: { profile: string };
         active: { active_profile: string };
@@ -851,7 +866,7 @@ export const apiTestCases: TestCase[] = [
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Profile lifecycle workflow failed',
       };
@@ -904,7 +919,7 @@ export const apiTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as {
+      const actualData = extractData(actual) as {
         skipped?: boolean;
         list?: { devices: unknown[] };
         update?: unknown;
@@ -915,7 +930,7 @@ export const apiTestCases: TestCase[] = [
       if (actualData.skipped) {
         return {
           passed: true,
-          actual,
+          actualData,
           expected: expected.body,
         };
       }
@@ -926,7 +941,7 @@ export const apiTestCases: TestCase[] = [
 
       return {
         passed,
-        actual,
+        actualData,
         expected: expected.body,
         error: passed ? undefined : 'Device configuration workflow failed',
       };

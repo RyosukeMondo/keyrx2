@@ -10,6 +10,9 @@
 
 import { ApiClient } from '../api-client/client.js';
 import type { TestCase } from './api-tests.js';
+import { extractData } from './api-tests.js';
+import { extractData } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import { z } from 'zod';
 
 /**
@@ -99,12 +102,12 @@ export const deviceManagementTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success?: boolean };
+      const actualData = extractData(actual) as { success?: boolean };
 
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected success=true for device rename',
         };
@@ -112,7 +115,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -172,7 +175,7 @@ export const deviceManagementTestCases: TestCase[] = [
       if (status !== 404) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 404 for nonexistent device, got ${status}`,
         };
@@ -180,7 +183,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -236,7 +239,7 @@ export const deviceManagementTestCases: TestCase[] = [
       if (status !== 400) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 400 for empty name, got ${status}`,
         };
@@ -244,7 +247,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -303,7 +306,7 @@ export const deviceManagementTestCases: TestCase[] = [
       if (status !== 400) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 400 for name > 100 chars, got ${status}`,
         };
@@ -311,7 +314,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -369,12 +372,12 @@ export const deviceManagementTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success?: boolean };
+      const actualData = extractData(actual) as { success?: boolean };
 
       if (actualData.success !== true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected success=true for device layout set',
         };
@@ -382,7 +385,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -444,7 +447,7 @@ export const deviceManagementTestCases: TestCase[] = [
       if (status !== 404 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 404 or 500 for nonexistent device, got ${status}`,
         };
@@ -452,7 +455,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -508,7 +511,7 @@ export const deviceManagementTestCases: TestCase[] = [
       if (status !== 400) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 400 for empty layout, got ${status}`,
         };
@@ -516,7 +519,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -575,7 +578,7 @@ export const deviceManagementTestCases: TestCase[] = [
       if (status !== 400) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 400 for layout name > 50 chars, got ${status}`,
         };
@@ -583,7 +586,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -634,12 +637,12 @@ export const deviceManagementTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { layout?: string };
+      const actualData = extractData(actual) as { layout?: string };
 
       if (actualData.layout !== 'ansi-104') {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected layout='ansi-104', got ${actualData.layout}`,
         };
@@ -647,7 +650,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -691,7 +694,7 @@ export const deviceManagementTestCases: TestCase[] = [
       if (status !== 404 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 404 or 500 for nonexistent device, got ${status}`,
         };
@@ -699,7 +702,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -746,7 +749,7 @@ export const deviceManagementTestCases: TestCase[] = [
       if (status !== 404 && status !== 500) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected 404 or 500 for nonexistent device, got ${status}`,
         };
@@ -754,7 +757,7 @@ export const deviceManagementTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },

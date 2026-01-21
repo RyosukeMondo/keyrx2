@@ -11,6 +11,9 @@
 
 import { ApiClient } from '../api-client/client.js';
 import type { TestCase } from './api-tests.js';
+import { extractData } from './api-tests.js';
+import { extractData } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import { z } from 'zod';
 
 /**

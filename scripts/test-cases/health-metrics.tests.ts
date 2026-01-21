@@ -9,6 +9,7 @@
 
 import { ApiClient } from '../api-client/client.js';
 import type { TestCase, TestResult } from './api-tests.js';
+import { extractData } from './api-tests.js';
 import type { ScenarioDefinition } from './types.js';
 import { z } from 'zod';
 
@@ -77,7 +78,7 @@ export const healthMetricsTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as DaemonState;
+      const actualData = extractData(actual) as DaemonState;
 
       // Validate structure
       const hasRequiredFields =
@@ -90,7 +91,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (!hasRequiredFields) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Missing required daemon state fields',
         };
@@ -100,7 +101,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (actualData.raw_state.length !== 255) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected raw_state to have 255 bits, got ${actualData.raw_state.length}`,
         };
@@ -110,7 +111,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (actualData.active_modifier_count !== actualData.modifiers.length) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Modifier count mismatch: count=${actualData.active_modifier_count}, array length=${actualData.modifiers.length}`,
         };
@@ -119,7 +120,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (actualData.active_lock_count !== actualData.locks.length) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Lock count mismatch: count=${actualData.active_lock_count}, array length=${actualData.locks.length}`,
         };
@@ -127,7 +128,7 @@ export const healthMetricsTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -157,7 +158,7 @@ export const healthMetricsTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as EventLog;
+      const actualData = extractData(actual) as EventLog;
 
       // Validate structure
       const hasRequiredFields =
@@ -167,7 +168,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (!hasRequiredFields) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Missing required event log fields (count, events)',
         };
@@ -177,7 +178,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (actualData.count !== actualData.events.length) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Event count mismatch: count=${actualData.count}, array length=${actualData.events.length}`,
         };
@@ -185,7 +186,7 @@ export const healthMetricsTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -212,7 +213,7 @@ export const healthMetricsTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as EventLog;
+      const actualData = extractData(actual) as EventLog;
 
       // Validate structure
       const hasRequiredFields =
@@ -222,7 +223,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (!hasRequiredFields) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Missing required event log fields',
         };
@@ -232,7 +233,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (actualData.count !== actualData.events.length) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Event count mismatch: count=${actualData.count}, array length=${actualData.events.length}`,
         };
@@ -242,7 +243,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (actualData.count > 10) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: `Expected at most 10 events, got ${actualData.count}`,
         };
@@ -250,7 +251,7 @@ export const healthMetricsTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
@@ -283,14 +284,14 @@ export const healthMetricsTestCases: TestCase[] = [
       };
     },
     assert: (actual, expected) => {
-      const actualData = actual as { success: boolean; error?: string };
+      const actualData = extractData(actual) as { success: boolean; error?: string };
 
       // This endpoint is not yet implemented in the daemon
       // It should return success=false with an error message
       if (actualData.success === true) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected success=false for unimplemented endpoint',
         };
@@ -299,7 +300,7 @@ export const healthMetricsTestCases: TestCase[] = [
       if (!actualData.error || !actualData.error.includes('not yet implemented')) {
         return {
           passed: false,
-          actual,
+          actualData,
           expected: expected.body,
           error: 'Expected error message indicating not implemented',
         };
@@ -307,7 +308,7 @@ export const healthMetricsTestCases: TestCase[] = [
 
       return {
         passed: true,
-        actual,
+        actualData,
         expected: expected.body,
       };
     },
