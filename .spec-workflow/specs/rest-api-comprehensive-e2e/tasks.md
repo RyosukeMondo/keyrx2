@@ -138,7 +138,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Scenarios: Success rename, not found, invalid name, name conflict
   - Purpose: Test profile renaming
 
-- [ ] 2.3.3 Add POST /api/profiles/:name/validate test
+- [x] 2.3.3 Add POST /api/profiles/:name/validate test
   - File: `scripts/test-cases/profile-management.tests.ts`
   - Test ID: `profiles-013`
   - Endpoint: POST /api/profiles/:name/validate

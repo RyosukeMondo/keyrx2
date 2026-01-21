@@ -49,6 +49,20 @@ const RenameProfileResponseSchema = z.object({
 });
 
 /**
+ * Response schema for profile validation operation
+ */
+const ValidationResponseSchema = z.object({
+  valid: z.boolean(),
+  errors: z.array(
+    z.object({
+      line: z.number(),
+      column: z.number().optional(),
+      message: z.string(),
+    })
+  ),
+});
+
+/**
  * Error response schema
  */
 const ErrorResponseSchema = z.object({
@@ -641,5 +655,151 @@ export const profileManagementTestCases: TestCase[] = [
         // Ignore cleanup errors
       }
     },
+  },
+
+  // =================================================================
+  // Profile Validate Tests
+  // =================================================================
+  {
+    id: 'profiles-013',
+    name: 'POST /api/profiles/:name/validate - Validate valid profile (success)',
+    endpoint: '/api/profiles/:name/validate',
+    scenario: 'validate_success',
+    category: 'profiles',
+    priority: 2,
+    setup: async (client) => {
+      // Create a valid profile
+      const profileName = `test-profile-validate-${Date.now()}`;
+      await client.createProfile(profileName);
+    },
+    execute: async (client) => {
+      // Find the profile we just created
+      const profiles = await client.getProfiles();
+      const profile = profiles.data.profiles.find((p: any) =>
+        p.name.startsWith('test-profile-validate-')
+      );
+
+      if (!profile) {
+        throw new Error('Profile to validate not found');
+      }
+
+      const profileName = profile.name;
+
+      const response = await client.customRequest(
+        'POST',
+        `/api/profiles/${encodeURIComponent(profileName)}/validate`,
+        ValidationResponseSchema,
+        {}
+      );
+
+      return {
+        status: response.status,
+        data: response.data,
+        context: { profileName },
+      };
+    },
+    assert: (actual, expected) => {
+      const actualData = actual as {
+        valid?: boolean;
+        errors?: Array<{ line?: number; column?: number; message?: string }>;
+      };
+
+      if (actualData.valid !== true) {
+        return {
+          passed: false,
+          actual,
+          expected: expected.body,
+          error: 'Expected valid=true for valid profile',
+        };
+      }
+
+      if (!Array.isArray(actualData.errors)) {
+        return {
+          passed: false,
+          actual,
+          expected: expected.body,
+          error: 'Expected errors array in response',
+        };
+      }
+
+      if (actualData.errors.length !== 0) {
+        return {
+          passed: false,
+          actual,
+          expected: expected.body,
+          error: 'Expected empty errors array for valid profile',
+        };
+      }
+
+      return {
+        passed: true,
+        actual,
+        expected: expected.body,
+      };
+    },
+    cleanup: async (client, result) => {
+      // Delete the profile
+      try {
+        const context = (result as any)?.context;
+        if (context?.profileName) {
+          await client.deleteProfile(context.profileName);
+        }
+      } catch {
+        // Ignore cleanup errors
+      }
+    },
+  },
+
+  {
+    id: 'profiles-013b',
+    name: 'POST /api/profiles/:name/validate - Validate nonexistent profile (404)',
+    endpoint: '/api/profiles/:name/validate',
+    scenario: 'validate_not_found',
+    category: 'profiles',
+    priority: 2,
+    setup: noOpSetup,
+    execute: async (client) => {
+      try {
+        const response = await client.customRequest(
+          'POST',
+          '/api/profiles/nonexistent-profile-xyz/validate',
+          z.union([ValidationResponseSchema, ErrorResponseSchema]),
+          {}
+        );
+        return {
+          status: response.status,
+          data: response.data,
+        };
+      } catch (error) {
+        // Expect 404 Not Found or 500 error
+        if (error instanceof Error && 'statusCode' in error) {
+          const apiError = error as { statusCode: number; response: unknown };
+          return {
+            status: apiError.statusCode,
+            data: apiError.response,
+          };
+        }
+        throw error;
+      }
+    },
+    assert: (actual, expected) => {
+      const status = (actual as any).status || 200;
+
+      if (status !== 404 && status !== 500) {
+        return {
+          passed: false,
+          actual,
+          expected: expected.body,
+          error: `Expected 404 or 500 for nonexistent profile, got ${status}`,
+        };
+      }
+
+      return {
+        passed: true,
+        actual,
+        expected: expected.body,
+      };
+    },
+    cleanup: noOpCleanup,
   },
 ];
