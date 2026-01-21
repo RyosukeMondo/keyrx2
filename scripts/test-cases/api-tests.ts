@@ -590,7 +590,7 @@ export const apiTestCases: TestCase[] = [
     },
     execute: async (client) => {
       const response = await client.setProfileConfig('test-profile-update', {
-        source: '// Test config\nmap("a", "b");',
+        source: '// Test config\ndevice_start("*");\n  map("VK_A", "VK_B");\ndevice_end();',
       });
       return {
         status: response.status,

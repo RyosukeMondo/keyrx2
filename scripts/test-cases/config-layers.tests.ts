@@ -162,7 +162,9 @@ export const configLayersTestCases: TestCase[] = [
     },
     execute: async (client) => {
       const validRhai = `// Valid Rhai configuration
-map_key("base", "A", remap("B"));
+device_start("*");
+  map("VK_A", "VK_B");
+device_end();
 `;
       const response = await client.customRequest(
         'PUT',

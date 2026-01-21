@@ -201,11 +201,10 @@ export const workflow_003: TestCase = {
     await client.createProfile('workflow-validation-test', 'blank');
 
     const invalidConfig = `
-// Test profile with syntax error
-base_layer = "base;
-
-[keymap.base]
-"a" = "b"
+// Test profile with syntax error (missing closing paren)
+device_start("*");
+  map("VK_A", "VK_B";  // Missing closing paren
+device_end();
 `;
     await client.setProfileConfig('workflow-validation-test', { source: invalidConfig });
 
@@ -229,13 +228,12 @@ base_layer = "base;
       throw new Error('Expected validation errors for invalid syntax');
     }
 
-    // Step 3: Fix the syntax error (add closing quote)
+    // Step 3: Fix the syntax error (add closing paren)
     const validConfig = `
 // Test profile with syntax fixed
-base_layer = "base";
-
-[keymap.base]
-"a" = "b"
+device_start("*");
+  map("VK_A", "VK_B");  // Fixed closing paren
+device_end();
 `;
     const updateResponse = await client.setProfileConfig('workflow-validation-test', {
       source: validConfig,
@@ -528,7 +526,14 @@ export const workflow_005: TestCase = {
   id: 'workflow-005',
   category: 'workflows',
   description: 'Config update → add mappings → verify layers workflow',
-  setup: noOpSetup,
+  setup: async (client: ApiClient) => {
+    // Ensure we have a profile to work with
+    const profiles = await client.getProfiles();
+    if (profiles.data.profiles.length === 0) {
+      await client.createProfile('workflow-config-test', 'blank');
+      await client.activateProfile('workflow-config-test');
+    }
+  },
   execute: async (client: ApiClient) => {
     // Step 1: Get initial config
     const configSchema = z.object({
@@ -947,14 +952,15 @@ export const workflow_007: TestCase = {
   description: 'Simulator event → mapping → output workflow',
   setup: async (client: ApiClient) => {
     // Create a test profile with a simple key mapping (a→b)
+    await client.createProfile('workflow-simulator-test', 'blank');
+
     const config = `
 // Test profile for simulator workflow
-base_layer = "base";
-
-[keymap.base]
-"a" = "b"  // Remap 'a' to 'b'
+device_start("*");
+  map("VK_A", "VK_B");  // Remap 'a' to 'b'
+device_end();
 `;
-    await client.createProfile('workflow-simulator-test', config);
+    await client.setProfileConfig('workflow-simulator-test', { source: config });
   },
   execute: async (client: ApiClient) => {
     // Step 1: Activate the profile with the mapping
