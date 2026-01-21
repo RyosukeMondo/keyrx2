@@ -21,15 +21,15 @@ export interface ScenarioDefinition {
 export interface ExpectedResults {
   version: string;
   apiVersion: string;
-  description: string;
+  description?: string;
   endpoints: Record<string, {
     scenarios: Record<string, ScenarioDefinition>;
   }>;
-  commonScenarios: Record<string, ScenarioDefinition>;
-  metadata: {
-    lastUpdated: string;
-    author: string;
-    notes: string[];
+  commonScenarios?: Record<string, ScenarioDefinition>;
+  metadata?: {
+    lastUpdated?: string;
+    author?: string;
+    notes?: string[];
   };
 }
 

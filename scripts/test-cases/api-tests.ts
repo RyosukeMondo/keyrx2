@@ -946,6 +946,13 @@ export function getTestCaseById(id: string): TestCase | undefined {
 }
 
 /**
+ * Get all test cases
+ */
+export function getAllTestCases(): TestCase[] {
+  return apiTestCases;
+}
+
+/**
  * Get test statistics
  */
 export function getTestStatistics(): {

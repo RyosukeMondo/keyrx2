@@ -155,7 +155,7 @@ Report Failure  Iterate (max 3 attempts)
 ## Phase 5: Integration & Reporting
 
 ### Task 5: Integrate Components
-- [ ] 5.1 Wire up test runner with auto-fix
+- [x] 5.1 Wire up test runner with auto-fix
   - File: `scripts/automated-e2e-test.ts` (update)
   - Connect test executor → comparator → auto-fix → retry loop
   - Command-line flags for fix behavior

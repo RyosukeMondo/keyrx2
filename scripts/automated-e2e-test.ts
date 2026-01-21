@@ -23,6 +23,13 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { DaemonFixture } from './fixtures/daemon-fixture.js';
+import { ApiClient } from './api-client/client.js';
+import { TestExecutor } from './test-executor/executor.js';
+import { ValidationReporter } from './comparator/validation-reporter.js';
+import { FixOrchestrator } from './auto-fix/fix-orchestrator.js';
+import { getAllTestCases } from './test-cases/api-tests.js';
+import type { ExpectedResults } from './test-cases/types.js';
+import type { TestSuiteResult as ExecutorTestSuiteResult } from './test-cases/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -59,78 +66,221 @@ interface TestSuiteResult {
 // Type alias for backward compatibility
 type DaemonManager = DaemonFixture;
 
-// Test execution (placeholder - will be implemented in later tasks)
-async function executeTests(port: number): Promise<TestSuiteResult> {
-  console.log('Executing test suite...');
+// Load expected results database
+function loadExpectedResults(): ExpectedResults {
+  const expectedResultsPath = path.join(__dirname, 'fixtures', 'expected-results.json');
 
-  // Placeholder: Return empty test results
-  // This will be replaced with actual test execution in Task 2
+  if (!fs.existsSync(expectedResultsPath)) {
+    console.warn('⚠️  Expected results file not found, using defaults');
+    return {
+      version: '1.0',
+      apiVersion: '0.1.0',
+      endpoints: {},
+    };
+  }
+
+  const content = fs.readFileSync(expectedResultsPath, 'utf-8');
+  return JSON.parse(content);
+}
+
+// Test execution using TestExecutor and ApiClient
+async function executeTests(port: number): Promise<TestSuiteResult> {
+  console.log('\n📋 Loading test suite...');
+
+  // Create API client
+  const apiClient = new ApiClient({
+    baseUrl: `http://localhost:${port}`,
+    timeout: 5000,
+    maxRetries: 3,
+  });
+
+  // Load expected results
+  const expectedResults = loadExpectedResults();
+
+  // Get all test cases
+  const testCases = getAllTestCases();
+  console.log(`✓ Loaded ${testCases.length} test cases`);
+
+  // Create test executor
+  const executor = new TestExecutor({
+    testTimeout: 30000,
+    verbose: false,
+    expectedResults,
+  });
+
+  // Run all tests
+  console.log('\n🧪 Executing test suite...\n');
+  const executorResult = await executor.runAll(apiClient, testCases);
+
+  // Convert executor result to our TestSuiteResult format
   const result: TestSuiteResult = {
-    total: 0,
-    passed: 0,
-    failed: 0,
-    skipped: 0,
-    duration: 0,
-    results: [],
+    total: executorResult.total,
+    passed: executorResult.passed,
+    failed: executorResult.failed,
+    skipped: executorResult.skipped,
+    duration: executorResult.duration,
+    results: executorResult.results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      status: r.status === 'passed' ? 'pass' : r.status === 'skipped' ? 'skip' : 'fail',
+      duration: r.duration,
+      error: r.error,
+      actual: r.actual,
+      expected: r.expected,
+    })),
   };
 
-  console.log('Test execution complete (placeholder)');
   return result;
 }
 
-// Auto-fix engine (placeholder - will be implemented in later tasks)
+// Auto-fix engine using FixOrchestrator
 async function applyAutoFixes(
   results: TestSuiteResult,
   daemonFixture: DaemonFixture,
   port: number,
-  iteration: number,
   maxIterations: number
 ): Promise<TestSuiteResult> {
-  console.log(`Auto-fix iteration ${iteration}/${maxIterations} (placeholder)`);
+  console.log(`\n🔧 Starting auto-fix engine (max ${maxIterations} iterations)...`);
 
-  // Placeholder: Return original results unchanged
-  // This will be replaced with actual auto-fix logic in Task 4
-  return results;
+  // Create API client
+  const apiClient = new ApiClient({
+    baseUrl: `http://localhost:${port}`,
+    timeout: 5000,
+    maxRetries: 3,
+  });
+
+  // Load test cases and expected results
+  const testCases = getAllTestCases();
+  const expectedResults = loadExpectedResults();
+
+  // Create test executor for retrying tests
+  const testExecutor = new TestExecutor({
+    testTimeout: 30000,
+    verbose: false,
+    expectedResults,
+  });
+
+  // Create fix orchestrator
+  const fixOrchestrator = new FixOrchestrator({
+    maxIterations,
+    globalTimeout: 5 * 60 * 1000, // 5 minutes
+    verbose: true,
+  });
+
+  // Convert our results to executor format for fix orchestrator
+  const executorResults = results.results.map((r) => ({
+    id: r.id,
+    name: r.name,
+    endpoint: testCases.find((tc) => tc.id === r.id)?.endpoint ?? '',
+    scenario: testCases.find((tc) => tc.id === r.id)?.scenario ?? '',
+    category: testCases.find((tc) => tc.id === r.id)?.category ?? 'status',
+    priority: testCases.find((tc) => tc.id === r.id)?.priority ?? 3,
+    status: r.status === 'pass' ? 'passed' : r.status === 'skip' ? 'skipped' : 'failed',
+    duration: r.duration,
+    error: r.error,
+    actual: r.actual,
+    expected: r.expected,
+  }));
+
+  // Apply fixes
+  const fixResult = await fixOrchestrator.fixAndRetry(
+    executorResults,
+    testCases,
+    testExecutor,
+    apiClient,
+    {
+      daemonFixture,
+      apiClient,
+      expectedResultsPath: path.join(__dirname, 'fixtures', 'expected-results.json'),
+    }
+  );
+
+  console.log(`\n✓ Auto-fix complete: ${fixResult.fixedTests} fixed, ${fixResult.failedTests} still failing`);
+
+  // Re-run all tests to get final results
+  console.log('\n🔄 Running final test suite...');
+  const finalExecutorResult = await testExecutor.runAll(apiClient, testCases);
+
+  // Convert back to our format
+  return {
+    total: finalExecutorResult.total,
+    passed: finalExecutorResult.passed,
+    failed: finalExecutorResult.failed,
+    skipped: finalExecutorResult.skipped,
+    duration: finalExecutorResult.duration,
+    results: finalExecutorResult.results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      status: r.status === 'passed' ? 'pass' : r.status === 'skipped' ? 'skip' : 'fail',
+      duration: r.duration,
+      error: r.error,
+      actual: r.actual,
+      expected: r.expected,
+    })),
+  };
 }
 
-// Report generation
+// Report generation using ValidationReporter
 function generateReport(results: TestSuiteResult, outputPath?: string): void {
-  const report = {
-    version: '1.0',
+  const reporter = new ValidationReporter();
+
+  // Convert to format expected by ValidationReporter
+  const reporterResult = {
+    name: 'Automated API E2E Tests',
+    total: results.total,
+    passed: results.passed,
+    failed: results.failed,
+    skipped: results.skipped,
+    errors: 0,
+    duration: results.duration,
     timestamp: new Date().toISOString(),
-    summary: {
-      total: results.total,
-      passed: results.passed,
-      failed: results.failed,
-      skipped: results.skipped,
-      duration: results.duration,
-    },
-    results: results.results,
+    results: results.results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      status: r.status,
+      duration: r.duration,
+      error: r.error,
+      actual: r.actual,
+      expected: r.expected,
+    })),
   };
 
+  // Generate and save JSON report if path provided
   if (outputPath) {
-    fs.writeFileSync(outputPath, JSON.stringify(report, null, 2));
-    console.log(`JSON report written to: ${outputPath}`);
+    const jsonReport = reporter.formatJson(reporterResult);
+    fs.writeFileSync(outputPath, JSON.stringify(jsonReport, null, 2));
+    console.log(`\n📄 JSON report written to: ${outputPath}`);
   }
 }
 
-// Display human-readable summary
+// Display human-readable summary using ValidationReporter
 function displaySummary(results: TestSuiteResult): void {
-  console.log('\n=== Test Summary ===');
-  console.log(`Total:   ${results.total}`);
-  console.log(`Passed:  ${results.passed}`);
-  console.log(`Failed:  ${results.failed}`);
-  console.log(`Skipped: ${results.skipped}`);
-  console.log(`Duration: ${results.duration}ms`);
+  const reporter = new ValidationReporter();
 
-  if (results.failed > 0) {
-    console.log('\nFailed tests:');
-    results.results
-      .filter((r) => r.status === 'fail')
-      .forEach((r) => {
-        console.log(`  - ${r.name}: ${r.error}`);
-      });
-  }
+  // Convert to format expected by ValidationReporter
+  const reporterResult = {
+    name: 'Automated API E2E Tests',
+    total: results.total,
+    passed: results.passed,
+    failed: results.failed,
+    skipped: results.skipped,
+    errors: 0,
+    duration: results.duration,
+    timestamp: new Date().toISOString(),
+    results: results.results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      status: r.status,
+      duration: r.duration,
+      error: r.error,
+      actual: r.actual,
+      expected: r.expected,
+    })),
+  };
+
+  // Display formatted output
+  const humanOutput = reporter.formatHuman(reporterResult);
+  console.log(humanOutput);
 }
 
 // Parse CLI arguments
@@ -208,37 +358,42 @@ async function main(): Promise<void> {
   });
 
   try {
+    console.log('═'.repeat(80));
+    console.log('🚀 Automated E2E Test Runner');
+    console.log('═'.repeat(80));
+    console.log(`Daemon:    ${options.daemonPath}`);
+    console.log(`Port:      ${options.port}`);
+    console.log(`Auto-fix:  ${options.fix ? 'enabled' : 'disabled'}`);
+    if (options.fix) {
+      console.log(`Max iterations: ${options.maxIterations}`);
+    }
+    console.log('═'.repeat(80));
+
     // Start daemon
-    console.log(`Starting daemon: ${options.daemonPath} on port ${options.port}...`);
+    console.log(`\n🔄 Starting daemon...`);
     await daemonFixture.start();
-    console.log('Daemon is ready');
+    console.log(`✓ Daemon is ready on port ${daemonFixture.getPort()}`);
 
     // Execute tests
     let results = await executeTests(daemonFixture.getPort());
 
-    // Apply auto-fixes if enabled
+    // Progress update after initial run
+    console.log(`\n📊 Initial results: ${results.passed} passed, ${results.failed} failed, ${results.skipped} skipped`);
+
+    // Apply auto-fixes if enabled and there are failures
     if (options.fix && results.failed > 0) {
-      console.log('\nAuto-fix enabled, attempting to fix failures...');
+      results = await applyAutoFixes(
+        results,
+        daemonFixture,
+        daemonFixture.getPort(),
+        options.maxIterations
+      );
 
-      for (let iteration = 1; iteration <= options.maxIterations; iteration++) {
-        results = await applyAutoFixes(
-          results,
-          daemonFixture,
-          daemonFixture.getPort(),
-          iteration,
-          options.maxIterations
-        );
-
-        if (results.failed === 0) {
-          console.log('All tests fixed!');
-          break;
-        }
-
-        if (iteration < options.maxIterations) {
-          console.log(
-            `${results.failed} test(s) still failing, retrying (${iteration}/${options.maxIterations})...`
-          );
-        }
+      // Final status after auto-fix
+      if (results.failed === 0) {
+        console.log('\n✅ All tests fixed!');
+      } else {
+        console.log(`\n⚠️  ${results.failed} test(s) still failing after auto-fix`);
       }
     }
 
@@ -258,12 +413,12 @@ async function main(): Promise<void> {
 
     process.exit(exitCode);
   } catch (error) {
-    console.error('Error during test execution:', error);
+    console.error('\n❌ Error during test execution:', error);
 
     // Try to collect daemon logs
     const logs = daemonFixture.getLogs();
     if (logs.length > 0) {
-      console.error('\nDaemon logs:');
+      console.error('\n📋 Daemon logs:');
       console.error(logs.join('\n'));
     }
 
