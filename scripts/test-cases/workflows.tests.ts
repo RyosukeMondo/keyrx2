@@ -411,11 +411,11 @@ export const workflow_004: TestCase = {
     const verifyLayoutResponse = await client.customRequest(
       'GET',
       `/api/devices/${encodeURIComponent(deviceId)}/layout`,
-      z.object({ success: z.boolean(), layout: z.string() }),
+      z.object({ layout: z.string().optional() }),
       undefined
     );
 
-    if (!verifyLayoutResponse.data.success || verifyLayoutResponse.data.layout !== newLayout) {
+    if (verifyLayoutResponse.data.layout !== newLayout) {
       throw new Error(
         `Device layout verification failed: expected '${newLayout}', got '${verifyLayoutResponse.data.layout}'`
       );
