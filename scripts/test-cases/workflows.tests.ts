@@ -701,6 +701,243 @@ export const workflow_005: TestCase = {
   },
 };
 
+// ============================================================================
+// Task 3.4: Macro Recording Workflows
+// ============================================================================
+
+/**
+ * Test: Macro record → simulate → playback workflow
+ * Test ID: workflow-006
+ * Flow:
+ * 1. Clear any existing recorded events
+ * 2. Start macro recording
+ * 3. Simulate key events (press and release)
+ * 4. Stop macro recording
+ * 5. Get recorded events and verify timing
+ * 6. Verify event count and structure
+ * 7. Clear recorded events (cleanup)
+ */
+export const workflow_006: TestCase = {
+  id: 'workflow-006',
+  category: 'workflows',
+  description: 'Macro record → simulate → playback workflow',
+  setup: async (client: ApiClient) => {
+    // Clear any existing recorded events
+    const clearSchema = z.object({ success: z.boolean() });
+    await client.customRequest('POST', '/api/macros/clear', clearSchema, {});
+  },
+  execute: async (client: ApiClient) => {
+    // Step 1: Start macro recording
+    const startRecordingSchema = z.object({
+      success: z.boolean(),
+      message: z.string().optional(),
+    });
+    const startResponse = await client.customRequest(
+      'POST',
+      '/api/macros/start-recording',
+      startRecordingSchema,
+      {}
+    );
+
+    if (!startResponse.data.success) {
+      throw new Error('Failed to start macro recording');
+    }
+
+    // Step 2: Simulate key events (press 'a' key, then release it)
+    // First simulate key press (event_type: 0 = press)
+    const simulatePressSchema = z.object({
+      success: z.boolean(),
+    });
+    const pressResponse = await client.customRequest(
+      'POST',
+      '/api/simulator/events',
+      simulatePressSchema,
+      {
+        events: [
+          {
+            key_code: 30, // 'a' key
+            event_type: 0, // press
+          },
+        ],
+      }
+    );
+
+    if (!pressResponse.data.success) {
+      throw new Error('Failed to simulate key press');
+    }
+
+    // Small delay to ensure events are recorded with different timestamps
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Then simulate key release (event_type: 1 = release)
+    const releaseResponse = await client.customRequest(
+      'POST',
+      '/api/simulator/events',
+      simulatePressSchema,
+      {
+        events: [
+          {
+            key_code: 30, // 'a' key
+            event_type: 1, // release
+          },
+        ],
+      }
+    );
+
+    if (!releaseResponse.data.success) {
+      throw new Error('Failed to simulate key release');
+    }
+
+    // Small delay to ensure events are recorded
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Step 3: Stop macro recording
+    const stopRecordingSchema = z.object({
+      success: z.boolean(),
+      message: z.string().optional(),
+    });
+    const stopResponse = await client.customRequest(
+      'POST',
+      '/api/macros/stop-recording',
+      stopRecordingSchema,
+      {}
+    );
+
+    if (!stopResponse.data.success) {
+      throw new Error('Failed to stop macro recording');
+    }
+
+    // Step 4: Get recorded events
+    const getEventsSchema = z.object({
+      success: z.boolean(),
+      events: z.array(z.object({
+        key_code: z.number(),
+        event_type: z.number(),
+        timestamp_micros: z.number().optional(),
+      })).optional(),
+    });
+    const eventsResponse = await client.customRequest(
+      'GET',
+      '/api/macros/recorded-events',
+      getEventsSchema,
+      undefined
+    );
+
+    if (!eventsResponse.data.success) {
+      throw new Error('Failed to get recorded events');
+    }
+
+    if (!eventsResponse.data.events) {
+      throw new Error('No events array returned from recorded-events endpoint');
+    }
+
+    // Step 5: Verify event count and structure
+    const events = eventsResponse.data.events;
+    if (events.length < 2) {
+      throw new Error(
+        `Expected at least 2 recorded events (press and release), got ${events.length}`
+      );
+    }
+
+    // Verify the first event is a press
+    const pressEvent = events[0];
+    if (pressEvent.key_code !== 30) {
+      throw new Error(`Expected first event key_code to be 30, got ${pressEvent.key_code}`);
+    }
+    if (pressEvent.event_type !== 0) {
+      throw new Error(`Expected first event to be press (0), got ${pressEvent.event_type}`);
+    }
+
+    // Verify the second event is a release
+    const releaseEvent = events[1];
+    if (releaseEvent.key_code !== 30) {
+      throw new Error(`Expected second event key_code to be 30, got ${releaseEvent.key_code}`);
+    }
+    if (releaseEvent.event_type !== 1) {
+      throw new Error(`Expected second event to be release (1), got ${releaseEvent.event_type}`);
+    }
+
+    // Step 6: Verify timing (if timestamps are provided)
+    if (pressEvent.timestamp_micros && releaseEvent.timestamp_micros) {
+      const timeDiff = releaseEvent.timestamp_micros - pressEvent.timestamp_micros;
+      if (timeDiff < 0) {
+        throw new Error(
+          `Release event timestamp should be after press event, got diff ${timeDiff}`
+        );
+      }
+    }
+
+    // Step 7: Clear recorded events
+    const clearSchema = z.object({
+      success: z.boolean(),
+    });
+    const clearResponse = await client.customRequest(
+      'POST',
+      '/api/macros/clear',
+      clearSchema,
+      {}
+    );
+
+    if (!clearResponse.data.success) {
+      throw new Error('Failed to clear recorded events');
+    }
+
+    // Verify events were cleared
+    const verifyEmptyResponse = await client.customRequest(
+      'GET',
+      '/api/macros/recorded-events',
+      getEventsSchema,
+      undefined
+    );
+
+    if (!verifyEmptyResponse.data.success) {
+      throw new Error('Failed to verify events were cleared');
+    }
+
+    const eventsAfterClear = verifyEmptyResponse.data.events || [];
+    if (eventsAfterClear.length > 0) {
+      throw new Error(
+        `Expected 0 events after clear, got ${eventsAfterClear.length}`
+      );
+    }
+
+    return {
+      success: true,
+      workflow_steps: [
+        'Started macro recording',
+        'Simulated key press event',
+        'Simulated key release event',
+        'Stopped macro recording',
+        'Retrieved recorded events',
+        'Verified event count and structure',
+        'Verified event timing',
+        'Cleared recorded events',
+        'Verified events were cleared',
+      ],
+      events_recorded: events.length,
+    };
+  },
+  cleanup: async (client: ApiClient) => {
+    // Ensure recording is stopped and events are cleared
+    try {
+      const stopSchema = z.object({ success: z.boolean(), message: z.string().optional() });
+      await client.customRequest('POST', '/api/macros/stop-recording', stopSchema, {});
+    } catch (error) {
+      // Recording might not be active, ignore error
+    }
+    try {
+      const clearSchema = z.object({ success: z.boolean() });
+      await client.customRequest('POST', '/api/macros/clear', clearSchema, {});
+    } catch (error) {
+      // Events might already be cleared, ignore error
+    }
+  },
+  expectedStatus: 200,
+  expectedResponse: {
+    success: true,
+  },
+};
+
 /**
  * All workflow test cases
  */
@@ -709,4 +946,5 @@ export const workflowTestCases: TestCase[] = [
   workflow_003,
   workflow_004,
   workflow_005,
+  workflow_006,
 ];

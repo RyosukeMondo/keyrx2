@@ -265,7 +265,7 @@ Comprehensive REST API testing that exercises ALL daemon features via JSON-based
   - Purpose: Validate configuration management workflow
 
 ### Task 3.4: Macro Recording Workflows
-- [ ] 3.4.1 Test macro record → simulate → playback workflow
+- [x] 3.4.1 Test macro record → simulate → playback workflow
   - File: `scripts/test-cases/workflows.tests.ts`
   - Test ID: `workflow-006`
   - Flow: Start recording → Simulate events → Stop recording → Get events → Verify timing → Clear
