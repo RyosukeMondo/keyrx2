@@ -85,11 +85,11 @@ Fix 2 failing WebSocket event notification tests by adding event publishing to d
 
 ## Verification Checklist
 
-- [ ] Run `npx tsx scripts/automated-e2e-test.ts --filter=websocket` - all 5 tests pass
-- [ ] Run tests 10 consecutive times - zero failures
-- [ ] Measure event latency - < 100ms (p95)
-- [ ] Check logs - events published and received correctly
-- [ ] Verify no API performance regression
+- [x] Run `npx tsx scripts/automated-e2e-test.ts --filter=websocket` - all 5 tests pass
+- [x] Run tests 10 consecutive times - zero failures
+- [x] Measure event latency - < 100ms (p95)
+- [x] Check logs - events published and received correctly
+- [x] Verify no API performance regression
 
 ## Notes
 
