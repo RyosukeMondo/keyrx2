@@ -1,0 +1,178 @@
+//! IPC server implementation for test mode.
+//!
+//! This module provides a Unix socket server that listens for IPC commands
+//! in test mode, enabling profile activation and daemon status queries.
+
+use super::{IpcRequest, IpcResponse};
+use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
+use std::io::{BufRead, BufReader, Write};
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+/// IPC server for handling test mode commands
+pub struct IpcServer {
+    socket_path: PathBuf,
+    listener: Option<LocalSocketListener>,
+}
+
+impl IpcServer {
+    /// Create a new IPC server with the given socket path
+    pub fn new(socket_path: PathBuf) -> Result<Self, std::io::Error> {
+        Ok(Self {
+            socket_path,
+            listener: None,
+        })
+    }
+
+    /// Start the IPC server and bind to the socket
+    pub fn start(&mut self) -> Result<(), std::io::Error> {
+        // Remove socket file if it exists
+        if self.socket_path.exists() {
+            std::fs::remove_file(&self.socket_path)?;
+        }
+
+        // Bind to the socket
+        let listener = LocalSocketListener::bind(self.socket_path.to_string_lossy().as_ref())?;
+
+        // Set socket permissions to 600 (owner only) on Unix
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let perms = std::fs::Permissions::from_mode(0o600);
+            std::fs::set_permissions(&self.socket_path, perms)?;
+        }
+
+        self.listener = Some(listener);
+        log::info!("IPC server listening on {}", self.socket_path.display());
+        Ok(())
+    }
+
+    /// Handle incoming connections in a loop
+    ///
+    /// This function spawns a new thread for each connection and handles
+    /// IPC requests. The handler closure is called for each request.
+    pub fn handle_connections<F>(&self, handler: Arc<Mutex<F>>) -> Result<(), std::io::Error>
+    where
+        F: Fn(IpcRequest) -> Result<IpcResponse, String> + Send + 'static,
+    {
+        let listener = self.listener.as_ref().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::NotConnected,
+                "Server not started - call start() first",
+            )
+        })?;
+
+        loop {
+            match listener.accept() {
+                Ok(stream) => {
+                    let handler = Arc::clone(&handler);
+                    std::thread::spawn(move || {
+                        if let Err(e) = Self::handle_client(stream, handler) {
+                            log::error!("Error handling IPC client: {}", e);
+                        }
+                    });
+                }
+                Err(e) => {
+                    log::error!("Failed to accept IPC connection: {}", e);
+                    // Continue accepting other connections
+                }
+            }
+        }
+    }
+
+    /// Handle a single client connection
+    fn handle_client<F>(
+        mut stream: LocalSocketStream,
+        handler: Arc<Mutex<F>>,
+    ) -> Result<(), Box<dyn std::error::Error>>
+    where
+        F: Fn(IpcRequest) -> Result<IpcResponse, String> + Send + 'static,
+    {
+        // Read request (newline-delimited JSON)
+        let mut request_line = String::new();
+        {
+            let mut reader = BufReader::new(&mut stream);
+            reader.read_line(&mut request_line)?;
+        }
+
+        // Parse request
+        let request: IpcRequest = serde_json::from_str(request_line.trim())?;
+
+        log::debug!("Received IPC request: {:?}", request);
+
+        // Call handler - need to use blocking context since we're in a std::thread
+        let response = {
+            let handler_guard = handler.blocking_lock();
+            match handler_guard(request) {
+                Ok(resp) => resp,
+                Err(err_msg) => IpcResponse::Error {
+                    code: 5000,
+                    message: err_msg,
+                },
+            }
+        };
+
+        // Serialize and send response
+        let response_json = serde_json::to_string(&response)?;
+        stream.write_all(response_json.as_bytes())?;
+        stream.write_all(b"\n")?;
+        stream.flush()?;
+
+        log::debug!("Sent IPC response");
+        Ok(())
+    }
+
+    /// Get the socket path
+    pub fn socket_path(&self) -> &PathBuf {
+        &self.socket_path
+    }
+}
+
+impl Drop for IpcServer {
+    fn drop(&mut self) {
+        // Clean up socket file
+        if self.socket_path.exists() {
+            if let Err(e) = std::fs::remove_file(&self.socket_path) {
+                log::warn!(
+                    "Failed to remove socket file {}: {}",
+                    self.socket_path.display(),
+                    e
+                );
+            } else {
+                log::info!("Cleaned up socket file {}", self.socket_path.display());
+            }
+        }
+    }
+}
+
+/// Get the test mode IPC socket path for the current process
+pub fn get_test_socket_path() -> PathBuf {
+    let pid = std::process::id();
+    PathBuf::from(format!("/tmp/keyrx-test-{}.sock", pid))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_socket_path_format() {
+        let path = get_test_socket_path();
+        let path_str = path.to_str().unwrap();
+        assert!(path_str.starts_with("/tmp/keyrx-test-"));
+        assert!(path_str.ends_with(".sock"));
+    }
+
+    #[test]
+    fn test_server_creation() {
+        let socket_path = PathBuf::from("/tmp/keyrx-test-unittest.sock");
+        let server = IpcServer::new(socket_path.clone());
+        assert!(server.is_ok());
+        let server = server.unwrap();
+        assert_eq!(server.socket_path(), &socket_path);
+    }
+
+    // Integration test for start/stop would require actual socket creation
+    // which is tested at a higher level
+}

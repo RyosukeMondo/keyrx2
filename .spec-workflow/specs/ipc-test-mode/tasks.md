@@ -27,7 +27,7 @@ Enable 5 failing IPC-dependent E2E tests by adding test mode with full IPC infra
   - _Requirements: REQ-3.2.1, REQ-3.2.2_
   - _Prompt: Role: Systems Programmer with expertise in IPC and Rust async programming | Task: Create IPC module with IpcServer, IpcClient, IpcCommand types following REQ-3.2.x, using Unix sockets and JSON protocol | Restrictions: Must use tokio UnixListener/UnixStream, must handle socket cleanup, must support async command handling | Success: IPC module compiles, socket creates successfully, clean shutdown removes socket file_
 
-- [ ] 3. Implement IPC server for test mode
+- [x] 3. Implement IPC server for test mode
   - File: keyrx_daemon/src/ipc/server.rs (new file)
   - Implement IpcServer::new() to create Unix socket at /tmp/keyrx-test-{pid}.sock
   - Implement connection handling loop that accepts clients and spawns handlers
