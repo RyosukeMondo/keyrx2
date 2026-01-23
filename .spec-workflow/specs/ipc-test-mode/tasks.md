@@ -76,7 +76,7 @@ Enable 5 failing IPC-dependent E2E tests by adding test mode with full IPC infra
   - _Requirements: REQ-3.1.2, REQ-3.1.3, REQ-3.1.4, REQ-4.1.2_
   - _Prompt: Role: Systems Engineer with expertise in application initialization and Rust tokio | Task: Update daemon startup to initialize IPC server in test mode following REQ-3.1.x and REQ-4.1.2, skipping keyboard capture, startup < 2 seconds | Restrictions: Must start IPC server before REST API, must skip platform layer init in test mode, must cleanup IPC on shutdown | Success: Daemon starts with IPC in test mode, startup < 2 seconds, IPC server ready before API endpoints, clean shutdown_
 
-- [ ] 8. Test IPC-dependent E2E tests
+- [-] 8. Test IPC-dependent E2E tests
   - File: Run tests with --test-mode: scripts/automated-e2e-test.ts
   - Update test runner to pass --test-mode flag to daemon
   - Run all 5 IPC-dependent tests (status-001, integration-001, workflow-002, workflow-003, workflow-007)

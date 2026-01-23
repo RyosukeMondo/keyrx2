@@ -26,7 +26,7 @@ impl TestModeContext {
     /// # Returns
     ///
     /// Returns a TestModeContext or an error if IPC server creation fails.
-    pub fn new(profile_manager: Arc<RwLock<ProfileManager>>) -> Result<Self, std::io::Error> {
+    pub fn new(profile_manager: Arc<ProfileManager>) -> Result<Self, std::io::Error> {
         let socket_path = get_test_socket_path();
         log::info!(
             "Test mode: Creating IPC server at {}",
@@ -101,7 +101,7 @@ mod tests {
         let config_dir = temp_dir.path().to_path_buf();
 
         let profile_manager = ProfileManager::new(config_dir).unwrap();
-        let profile_manager = Arc::new(RwLock::new(profile_manager));
+        let profile_manager = Arc::new(profile_manager);
 
         let context = TestModeContext::new(profile_manager);
         assert!(context.is_ok());
@@ -113,7 +113,7 @@ mod tests {
         let config_dir = temp_dir.path().to_path_buf();
 
         let profile_manager = ProfileManager::new(config_dir).unwrap();
-        let profile_manager = Arc::new(RwLock::new(profile_manager));
+        let profile_manager = Arc::new(profile_manager);
 
         let context = TestModeContext::new(profile_manager).unwrap();
         let running = context.daemon_running();

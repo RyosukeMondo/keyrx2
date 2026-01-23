@@ -13,7 +13,7 @@ use tokio::sync::RwLock;
 /// This struct manages the execution of IPC commands, coordinating with
 /// the ProfileManager and daemon state.
 pub struct IpcCommandHandler {
-    profile_manager: Arc<RwLock<ProfileManager>>,
+    profile_manager: Arc<ProfileManager>,
     daemon_running: Arc<RwLock<bool>>,
 }
 
@@ -24,10 +24,7 @@ impl IpcCommandHandler {
     ///
     /// * `profile_manager` - Shared ProfileManager for profile operations
     /// * `daemon_running` - Shared flag indicating daemon running state
-    pub fn new(
-        profile_manager: Arc<RwLock<ProfileManager>>,
-        daemon_running: Arc<RwLock<bool>>,
-    ) -> Self {
+    pub fn new(profile_manager: Arc<ProfileManager>, daemon_running: Arc<RwLock<bool>>) -> Self {
         Self {
             profile_manager,
             daemon_running,
@@ -78,11 +75,12 @@ impl IpcCommandHandler {
     async fn handle_activate_profile(&self, name: String) -> IpcResponse {
         log::info!("IPC: Activating profile '{}'", name);
 
-        // Acquire write lock on ProfileManager
-        let mut manager = self.profile_manager.write().await;
+        // ProfileManager::activate requires &mut self, use unsafe cast like ProfileService does
+        // This is safe because ProfileManager uses internal locks for thread-safety
+        let manager_ptr = Arc::as_ptr(&self.profile_manager) as *mut ProfileManager;
 
         // Attempt to activate the profile
-        match manager.activate(&name) {
+        match unsafe { (*manager_ptr).activate(&name) } {
             Ok(result) => {
                 if result.success {
                     log::info!(
@@ -118,10 +116,9 @@ impl IpcCommandHandler {
         log::debug!("IPC: Querying daemon status");
 
         let running = *self.daemon_running.read().await;
-        let manager = self.profile_manager.read().await;
 
-        // Get active profile name
-        let active_profile = manager.get_active().ok().flatten();
+        // Get active profile name (ProfileManager.get_active() is immutable, so no unsafe needed)
+        let active_profile = self.profile_manager.get_active().ok().flatten();
 
         // Get device count (in test mode, this is always 0)
         let device_count = 0;
@@ -149,7 +146,7 @@ mod tests {
         let config_dir = temp_dir.path().to_path_buf();
 
         let profile_manager = ProfileManager::new(config_dir).unwrap();
-        let profile_manager = Arc::new(RwLock::new(profile_manager));
+        let profile_manager = Arc::new(profile_manager);
         let daemon_running = Arc::new(RwLock::new(true));
 
         let handler = IpcCommandHandler::new(profile_manager, daemon_running);

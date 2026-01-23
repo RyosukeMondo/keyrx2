@@ -332,9 +332,9 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
         path
     };
 
-    // Initialize ProfileManager
+    // Initialize ProfileManager (without RwLock - ProfileManager has internal mutability)
     let profile_manager = match ProfileManager::new(config_dir.clone()) {
-        Ok(mgr) => Arc::new(RwLock::new(mgr)),
+        Ok(mgr) => Arc::new(mgr),
         Err(e) => {
             return Err((
                 exit_codes::CONFIG_ERROR,
@@ -404,22 +404,16 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
 
     // Create services for web API
     let macro_recorder = Arc::new(keyrx_daemon::macro_recorder::MacroRecorder::new());
-    let profile_manager_for_service =
-        Arc::new(ProfileManager::new(config_dir.clone()).map_err(|e| {
-            (
-                exit_codes::CONFIG_ERROR,
-                format!("Failed to initialize ProfileManager: {}", e),
-            )
-        })?);
+    // Reuse the same ProfileManager instance for IPC and REST API
     let profile_service = Arc::new(keyrx_daemon::services::ProfileService::new(Arc::clone(
-        &profile_manager_for_service,
+        &profile_manager,
     )));
     let device_service = Arc::new(keyrx_daemon::services::DeviceService::new(
         config_dir.clone(),
     ));
-    let config_service = Arc::new(keyrx_daemon::services::ConfigService::new(
-        profile_manager_for_service,
-    ));
+    let config_service = Arc::new(keyrx_daemon::services::ConfigService::new(Arc::clone(
+        &profile_manager,
+    )));
     let settings_service = Arc::new(keyrx_daemon::services::SettingsService::new(
         config_dir.clone(),
     ));
@@ -735,9 +729,9 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
         path
     };
 
-    // Initialize ProfileManager
+    // Initialize ProfileManager (without RwLock - ProfileManager has internal mutability)
     let profile_manager = match ProfileManager::new(config_dir.clone()) {
-        Ok(mgr) => Arc::new(RwLock::new(mgr)),
+        Ok(mgr) => Arc::new(mgr),
         Err(e) => {
             return Err((
                 exit_codes::CONFIG_ERROR,
@@ -807,22 +801,16 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
 
     // Create services for web API
     let macro_recorder = Arc::new(keyrx_daemon::macro_recorder::MacroRecorder::new());
-    let profile_manager_for_service =
-        Arc::new(ProfileManager::new(config_dir.clone()).map_err(|e| {
-            (
-                exit_codes::CONFIG_ERROR,
-                format!("Failed to initialize ProfileManager: {}", e),
-            )
-        })?);
+    // Reuse the same ProfileManager instance for IPC and REST API
     let profile_service = Arc::new(keyrx_daemon::services::ProfileService::new(Arc::clone(
-        &profile_manager_for_service,
+        &profile_manager,
     )));
     let device_service = Arc::new(keyrx_daemon::services::DeviceService::new(
         config_dir.clone(),
     ));
-    let config_service = Arc::new(keyrx_daemon::services::ConfigService::new(
-        profile_manager_for_service,
-    ));
+    let config_service = Arc::new(keyrx_daemon::services::ConfigService::new(Arc::clone(
+        &profile_manager,
+    )));
     let settings_service = Arc::new(keyrx_daemon::services::SettingsService::new(
         config_dir.clone(),
     ));
