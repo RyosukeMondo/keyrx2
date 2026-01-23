@@ -160,7 +160,10 @@ async fn create_profile(
 }
 
 /// POST /api/profiles/:name/activate - Activate profile
-async fn activate_profile(Path(name): Path<String>) -> Result<Json<Value>, DaemonError> {
+async fn activate_profile(
+    State(state): State<Arc<AppState>>,
+    Path(name): Path<String>,
+) -> Result<Json<Value>, DaemonError> {
     use crate::error::ConfigError;
 
     let config_dir = get_config_dir()?;
@@ -176,6 +179,19 @@ async fn activate_profile(Path(name): Path<String>) -> Result<Json<Value>, Daemo
             reason: result.error.unwrap_or_else(|| "Unknown error".to_string()),
         }
         .into());
+    }
+
+    // Broadcast event to WebSocket subscribers
+    use crate::web::rpc_types::ServerMessage;
+    let event = ServerMessage::Event {
+        channel: "profiles".to_string(),
+        data: serde_json::json!({
+            "action": "activated",
+            "profile": name.clone()
+        }),
+    };
+    if let Err(e) = state.event_broadcaster.send(event) {
+        log::warn!("Failed to broadcast profile activated event: {}", e);
     }
 
     Ok(Json(json!({

@@ -1,7 +1,7 @@
 //! Device management endpoints.
 
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     routing::{delete, get, patch, put},
     Json, Router,
 };
@@ -95,6 +95,7 @@ struct RenameDeviceRequest {
 }
 
 async fn rename_device(
+    State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
     Json(payload): Json<RenameDeviceRequest>,
 ) -> Result<Json<Value>, ApiError> {
@@ -117,6 +118,20 @@ async fn rename_device(
     registry
         .save()
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
+
+    // Broadcast event to WebSocket subscribers
+    use crate::web::rpc_types::ServerMessage;
+    let event = ServerMessage::Event {
+        channel: "devices".to_string(),
+        data: serde_json::json!({
+            "action": "renamed",
+            "id": id,
+            "name": payload.name
+        }),
+    };
+    if let Err(e) = state.event_broadcaster.send(event) {
+        log::warn!("Failed to broadcast device renamed event: {}", e);
+    }
 
     Ok(Json(json!({ "success": true })))
 }
