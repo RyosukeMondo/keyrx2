@@ -24,7 +24,6 @@
 
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use keyrx_core::config::KeyCode;
 use keyrx_core::runtime::KeyEvent;
@@ -154,11 +153,8 @@ impl SimulationService {
                 }
             };
 
-            // Get current timestamp
-            let timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_micros() as u64;
+            // Use the timestamp from the output event
+            let timestamp = output.timestamp_us;
 
             // Create KeyEvent based on event type
             let key_event = match output.event_type {

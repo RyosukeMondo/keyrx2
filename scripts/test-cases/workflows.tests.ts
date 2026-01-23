@@ -689,42 +689,23 @@ export const workflow_006: TestCase = {
       throw new Error('Failed to start macro recording');
     }
 
-    // Step 2: Simulate key events (press 'a' key, then release it)
-    // First simulate key press
-    const simulatePressSchema = z.object({
+    // Step 2: Simulate key events (press and release 'A' key in single request)
+    const simulateSchema = z.object({
       success: z.boolean(),
     });
-    const pressResponse = await client.customRequest(
+    const simulateResponse = await client.customRequest(
       'POST',
       '/api/simulator/events',
-      simulatePressSchema,
+      simulateSchema,
       {
         events: [
           {
-            key: 'A', // 'a' key
+            key: 'A',
             event_type: 'press',
             timestamp_us: 0,
           },
-        ],
-      }
-    );
-
-    if (!pressResponse.data.success) {
-      throw new Error('Failed to simulate key press');
-    }
-
-    // Small delay to ensure events are recorded with different timestamps
-    await new Promise(resolve => setTimeout(resolve, 10));
-
-    // Then simulate key release
-    const releaseResponse = await client.customRequest(
-      'POST',
-      '/api/simulator/events',
-      simulatePressSchema,
-      {
-        events: [
           {
-            key: 'A', // 'a' key
+            key: 'A',
             event_type: 'release',
             timestamp_us: 10000,
           },
@@ -732,12 +713,12 @@ export const workflow_006: TestCase = {
       }
     );
 
-    if (!releaseResponse.data.success) {
-      throw new Error('Failed to simulate key release');
+    if (!simulateResponse.data.success) {
+      throw new Error('Failed to simulate events');
     }
 
-    // Small delay to ensure events are recorded
-    await new Promise(resolve => setTimeout(resolve, 10));
+    // Small delay to ensure events are fully processed and recorded
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     // Step 3: Stop macro recording
     const stopRecordingSchema = z.object({
