@@ -36,7 +36,7 @@ Enable 5 failing IPC-dependent E2E tests by adding test mode with full IPC infra
   - _Requirements: REQ-3.2.1, REQ-3.2.2, REQ-4.1.2, REQ-4.3.2_
   - _Prompt: Role: Backend Developer with expertise in Rust tokio and Unix sockets | Task: Implement IPC server with Unix socket creation and connection handling following REQ-3.2.x and REQ-4.x, spawning async handlers for each connection | Restrictions: Must use unique socket path per daemon instance, must set socket permissions to 600, must cleanup socket on shutdown | Success: IPC server accepts connections, handles multiple clients concurrently, cleans up socket file on exit_
 
-- [ ] 4. Implement profile activation via IPC
+- [x] 4. Implement profile activation via IPC
   - File: keyrx_daemon/src/ipc/commands.rs (new file)
   - Add IpcCommand::ActivateProfile variant with profile name
   - Implement command handler that activates profile via ProfileManager

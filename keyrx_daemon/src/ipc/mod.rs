@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
 
+pub mod commands;
 pub mod server;
 pub mod unix_socket;
 
