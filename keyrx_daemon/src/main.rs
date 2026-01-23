@@ -314,6 +314,152 @@ fn open_browser(url: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Handles the `run` subcommand in test mode - starts web server and IPC without keyboard capture.
+#[cfg(target_os = "linux")]
+fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<(), (i32, String)> {
+    use keyrx_daemon::config::ProfileManager;
+    use keyrx_daemon::ipc::commands::IpcCommandHandler;
+    use keyrx_daemon::ipc::server::IpcServer;
+    use std::sync::Arc;
+    use tokio::sync::{Mutex, RwLock};
+
+    log::info!("Starting daemon in test mode (no keyboard capture)");
+
+    // Determine config directory
+    let config_dir = {
+        let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push("keyrx");
+        path
+    };
+
+    // Initialize ProfileManager
+    let profile_manager = match ProfileManager::new(config_dir.clone()) {
+        Ok(mgr) => Arc::new(RwLock::new(mgr)),
+        Err(e) => {
+            return Err((
+                exit_codes::CONFIG_ERROR,
+                format!("Failed to initialize ProfileManager: {}", e),
+            ));
+        }
+    };
+
+    // Create daemon running flag
+    let daemon_running = Arc::new(RwLock::new(true));
+
+    // Create IPC command handler
+    let ipc_handler = Arc::new(IpcCommandHandler::new(
+        Arc::clone(&profile_manager),
+        Arc::clone(&daemon_running),
+    ));
+
+    // Create IPC server with unique socket path
+    let pid = std::process::id();
+    let socket_path = PathBuf::from(format!("/tmp/keyrx-test-{}.sock", pid));
+    let mut ipc_server = IpcServer::new(socket_path.clone()).map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to create IPC server: {}", e),
+        )
+    })?;
+
+    // Start IPC server
+    ipc_server.start().map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to start IPC server: {}", e),
+        )
+    })?;
+
+    log::info!("IPC server started on {}", socket_path.display());
+
+    // Create tokio runtime for async operations
+    let rt = tokio::runtime::Runtime::new().map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to create tokio runtime: {}", e),
+        )
+    })?;
+
+    // Clone handler for server thread
+    let ipc_handler_for_server = Arc::clone(&ipc_handler);
+
+    // Start IPC server connection handler in background
+    std::thread::spawn(move || {
+        let handler_fn = Arc::new(Mutex::new(
+            move |request: keyrx_daemon::ipc::IpcRequest| -> Result<keyrx_daemon::ipc::IpcResponse, String> {
+                // Create a new runtime for this handler call
+                let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+                let handler = Arc::clone(&ipc_handler_for_server);
+                Ok(rt.block_on(async move { handler.handle(request).await }))
+            },
+        ));
+
+        if let Err(e) = ipc_server.handle_connections(handler_fn) {
+            log::error!("IPC server error: {}", e);
+        }
+    });
+
+    // Create broadcast channel for event streaming
+    let (event_tx, _event_rx) = tokio::sync::broadcast::channel(1000);
+
+    // Create services for web API
+    let macro_recorder = Arc::new(keyrx_daemon::macro_recorder::MacroRecorder::new());
+    let profile_manager_for_service =
+        Arc::new(ProfileManager::new(config_dir.clone()).map_err(|e| {
+            (
+                exit_codes::CONFIG_ERROR,
+                format!("Failed to initialize ProfileManager: {}", e),
+            )
+        })?);
+    let profile_service = Arc::new(keyrx_daemon::services::ProfileService::new(Arc::clone(
+        &profile_manager_for_service,
+    )));
+    let device_service = Arc::new(keyrx_daemon::services::DeviceService::new(
+        config_dir.clone(),
+    ));
+    let config_service = Arc::new(keyrx_daemon::services::ConfigService::new(
+        profile_manager_for_service,
+    ));
+    let settings_service = Arc::new(keyrx_daemon::services::SettingsService::new(
+        config_dir.clone(),
+    ));
+    let subscription_manager =
+        Arc::new(keyrx_daemon::web::subscriptions::SubscriptionManager::new());
+
+    // Create RPC event broadcaster
+    let (rpc_event_tx, _) = tokio::sync::broadcast::channel(1000);
+
+    let app_state = Arc::new(keyrx_daemon::web::AppState::new(
+        macro_recorder,
+        profile_service,
+        device_service,
+        config_service,
+        settings_service,
+        subscription_manager,
+        rpc_event_tx,
+    ));
+
+    // Start web server
+    let addr: std::net::SocketAddr = ([127, 0, 0, 1], 9867).into();
+    log::info!("Starting web server on http://{}", addr);
+
+    rt.block_on(async {
+        match keyrx_daemon::web::serve(addr, event_tx, app_state).await {
+            Ok(()) => {
+                log::info!("Web server stopped");
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("Web server error: {}", e);
+                Err((
+                    exit_codes::RUNTIME_ERROR,
+                    format!("Web server error: {}", e),
+                ))
+            }
+        }
+    })
+}
+
 /// Handles the `run` subcommand - starts the daemon.
 #[cfg(target_os = "linux")]
 fn handle_run(
@@ -330,6 +476,7 @@ fn handle_run(
 
     if test_mode {
         log::info!("Test mode enabled - running with IPC infrastructure without keyboard capture");
+        return handle_run_test_mode(config_path, debug);
     }
 
     log::info!(
@@ -569,6 +716,152 @@ fn cleanup_pid_file(config_dir: &std::path::Path) {
     let _ = std::fs::remove_file(&pid_file);
 }
 
+/// Handles the `run` subcommand in test mode - starts web server and IPC without keyboard capture.
+#[cfg(target_os = "windows")]
+fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<(), (i32, String)> {
+    use keyrx_daemon::config::ProfileManager;
+    use keyrx_daemon::ipc::commands::IpcCommandHandler;
+    use keyrx_daemon::ipc::server::IpcServer;
+    use std::sync::Arc;
+    use tokio::sync::{Mutex, RwLock};
+
+    log::info!("Starting daemon in test mode (no keyboard capture)");
+
+    // Determine config directory
+    let config_dir = {
+        let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push("keyrx");
+        path
+    };
+
+    // Initialize ProfileManager
+    let profile_manager = match ProfileManager::new(config_dir.clone()) {
+        Ok(mgr) => Arc::new(RwLock::new(mgr)),
+        Err(e) => {
+            return Err((
+                exit_codes::CONFIG_ERROR,
+                format!("Failed to initialize ProfileManager: {}", e),
+            ));
+        }
+    };
+
+    // Create daemon running flag
+    let daemon_running = Arc::new(RwLock::new(true));
+
+    // Create IPC command handler
+    let ipc_handler = Arc::new(IpcCommandHandler::new(
+        Arc::clone(&profile_manager),
+        Arc::clone(&daemon_running),
+    ));
+
+    // Create IPC server with unique socket path (Windows uses named pipes)
+    let pid = std::process::id();
+    let socket_path = PathBuf::from(format!("keyrx-test-{}", pid));
+    let mut ipc_server = IpcServer::new(socket_path.clone()).map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to create IPC server: {}", e),
+        )
+    })?;
+
+    // Start IPC server
+    ipc_server.start().map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to start IPC server: {}", e),
+        )
+    })?;
+
+    log::info!("IPC server started on {}", socket_path.display());
+
+    // Create tokio runtime for async operations
+    let rt = tokio::runtime::Runtime::new().map_err(|e| {
+        (
+            exit_codes::RUNTIME_ERROR,
+            format!("Failed to create tokio runtime: {}", e),
+        )
+    })?;
+
+    // Clone handler for server thread
+    let ipc_handler_for_server = Arc::clone(&ipc_handler);
+
+    // Start IPC server connection handler in background
+    std::thread::spawn(move || {
+        let handler_fn = Arc::new(Mutex::new(
+            move |request: keyrx_daemon::ipc::IpcRequest| -> Result<keyrx_daemon::ipc::IpcResponse, String> {
+                // Create a new runtime for this handler call
+                let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+                let handler = Arc::clone(&ipc_handler_for_server);
+                Ok(rt.block_on(async move { handler.handle(request).await }))
+            },
+        ));
+
+        if let Err(e) = ipc_server.handle_connections(handler_fn) {
+            log::error!("IPC server error: {}", e);
+        }
+    });
+
+    // Create broadcast channel for event streaming
+    let (event_tx, _event_rx) = tokio::sync::broadcast::channel(1000);
+
+    // Create services for web API
+    let macro_recorder = Arc::new(keyrx_daemon::macro_recorder::MacroRecorder::new());
+    let profile_manager_for_service =
+        Arc::new(ProfileManager::new(config_dir.clone()).map_err(|e| {
+            (
+                exit_codes::CONFIG_ERROR,
+                format!("Failed to initialize ProfileManager: {}", e),
+            )
+        })?);
+    let profile_service = Arc::new(keyrx_daemon::services::ProfileService::new(Arc::clone(
+        &profile_manager_for_service,
+    )));
+    let device_service = Arc::new(keyrx_daemon::services::DeviceService::new(
+        config_dir.clone(),
+    ));
+    let config_service = Arc::new(keyrx_daemon::services::ConfigService::new(
+        profile_manager_for_service,
+    ));
+    let settings_service = Arc::new(keyrx_daemon::services::SettingsService::new(
+        config_dir.clone(),
+    ));
+    let subscription_manager =
+        Arc::new(keyrx_daemon::web::subscriptions::SubscriptionManager::new());
+
+    // Create RPC event broadcaster
+    let (rpc_event_tx, _) = tokio::sync::broadcast::channel(1000);
+
+    let app_state = Arc::new(keyrx_daemon::web::AppState::new(
+        macro_recorder,
+        profile_service,
+        device_service,
+        config_service,
+        settings_service,
+        subscription_manager,
+        rpc_event_tx,
+    ));
+
+    // Start web server
+    let addr: std::net::SocketAddr = ([127, 0, 0, 1], 9867).into();
+    log::info!("Starting web server on http://{}", addr);
+
+    rt.block_on(async {
+        match keyrx_daemon::web::serve(addr, event_tx, app_state).await {
+            Ok(()) => {
+                log::info!("Web server stopped");
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("Web server error: {}", e);
+                Err((
+                    exit_codes::RUNTIME_ERROR,
+                    format!("Web server error: {}", e),
+                ))
+            }
+        }
+    })
+}
+
 /// Find an available port starting from the given port.
 /// Tries ports in sequence: port, port+1, port+2, ... up to 10 attempts.
 #[cfg(target_os = "windows")]
@@ -616,6 +909,7 @@ fn handle_run(
 
     if test_mode {
         log::info!("Test mode enabled - running with IPC infrastructure without keyboard capture");
+        return handle_run_test_mode(config_path, debug);
     }
 
     // Determine config directory (always use standard location for profile management)

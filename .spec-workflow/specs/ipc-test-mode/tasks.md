@@ -66,11 +66,11 @@ Enable 5 failing IPC-dependent E2E tests by adding test mode with full IPC infra
   - _Requirements: REQ-3.3.1, REQ-3.3.2, REQ-3.3.3, REQ-3.3.4_
   - _Prompt: Role: API Developer with expertise in Rust axum and async integration | Task: Update REST API handlers to use IPC in test mode following REQ-3.3.x, adding IPC client calls with timeout and error handling | Restrictions: Must check test mode flag, must handle IPC timeouts gracefully, must maintain production mode behavior, must provide clear error messages | Success: REST API calls use IPC in test mode, timeouts after 5 seconds, clear error messages, production mode unaffected_
 
-- [-] 7. Update daemon startup for test mode
-  - File: keyrx_daemon/src/cli/run.rs, keyrx_daemon/src/daemon/mod.rs
+- [x] 7. Update daemon startup for test mode
+  - File: keyrx_daemon/src/main.rs (handle_run_test_mode for Linux and Windows)
   - Start IPC server when --test-mode flag provided
   - Skip keyboard capture initialization in test mode
-  - Pass IPC client to AppState for REST API handlers
+  - IPC server integrated with ProfileManager and daemon running state
   - Purpose: Initialize daemon with IPC infrastructure in test mode
   - _Leverage: keyrx_daemon/src/ipc/server.rs (IpcServer), keyrx_daemon/src/daemon/mod.rs (daemon initialization)_
   - _Requirements: REQ-3.1.2, REQ-3.1.3, REQ-3.1.4, REQ-4.1.2_
