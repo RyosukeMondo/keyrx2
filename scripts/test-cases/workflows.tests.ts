@@ -660,6 +660,14 @@ export const workflow_006: TestCase = {
   category: 'workflows',
   description: 'Macro record → simulate → playback workflow',
   setup: async (client: ApiClient) => {
+    // Create and activate a test profile (required for simulator)
+    try {
+      await client.createProfile('workflow-macro-test', 'blank');
+    } catch (error) {
+      // Profile might already exist, that's ok
+    }
+    await client.activateProfile('workflow-macro-test');
+
     // Clear any existing recorded events
     const clearSchema = z.object({ success: z.boolean() });
     await client.customRequest('POST', '/api/macros/clear', clearSchema, {});
@@ -870,6 +878,12 @@ export const workflow_006: TestCase = {
       await client.customRequest('POST', '/api/macros/clear', clearSchema, {});
     } catch (error) {
       // Events might already be cleared, ignore error
+    }
+    // Clean up test profile
+    try {
+      await client.deleteProfile('workflow-macro-test');
+    } catch (error) {
+      // Profile might not exist, ignore error
     }
   },
   expectedStatus: 200,

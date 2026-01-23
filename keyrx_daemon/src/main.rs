@@ -587,11 +587,8 @@ fn handle_run(
     // Create RPC event broadcaster for WebSocket RPC events (device/profile updates)
     let (rpc_event_tx, _) = tokio::sync::broadcast::channel(1000);
 
-    // Spawn macro recorder event loop
-    let recorder_for_loop = (*macro_recorder).clone();
-    tokio::spawn(async move {
-        recorder_for_loop.run_event_loop(macro_event_rx).await;
-    });
+    // Clone macro recorder for event loop (before moving into app_state)
+    let macro_recorder_for_loop = std::sync::Arc::clone(&macro_recorder);
 
     let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(
         macro_recorder,
@@ -615,6 +612,12 @@ fn handle_run(
             }
         };
         rt.block_on(async {
+            // Spawn macro recorder event loop
+            let recorder_for_loop = (*macro_recorder_for_loop).clone();
+            tokio::spawn(async move {
+                recorder_for_loop.run_event_loop(macro_event_rx).await;
+            });
+
             // Start latency broadcast task with real metrics collection
             tokio::spawn(keyrx_daemon::daemon::start_latency_broadcast_task(
                 event_broadcaster,
@@ -1049,12 +1052,6 @@ fn handle_run(
 
     // Create RPC event broadcaster for WebSocket RPC events (device/profile updates)
     let (rpc_event_tx, _) = tokio::sync::broadcast::channel(1000);
-
-    // Spawn macro recorder event loop
-    let recorder_for_loop = (*macro_recorder).clone();
-    tokio::spawn(async move {
-        recorder_for_loop.run_event_loop(macro_event_rx).await;
-    });
 
     let app_state = std::sync::Arc::new(keyrx_daemon::web::AppState::new(
         macro_recorder,
