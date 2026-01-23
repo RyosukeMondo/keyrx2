@@ -354,8 +354,8 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
 
     // Create IPC server with unique socket path
     let pid = std::process::id();
-    let socket_path = PathBuf::from(format!("/tmp/keyrx-test-{}.sock", pid));
-    let mut ipc_server = IpcServer::new(socket_path.clone()).map_err(|e| {
+    let test_socket_path = PathBuf::from(format!("/tmp/keyrx-test-{}.sock", pid));
+    let mut ipc_server = IpcServer::new(test_socket_path.clone()).map_err(|e| {
         (
             exit_codes::RUNTIME_ERROR,
             format!("Failed to create IPC server: {}", e),
@@ -370,7 +370,7 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
         )
     })?;
 
-    log::info!("IPC server started on {}", socket_path.display());
+    log::info!("IPC server started on {}", test_socket_path.display());
 
     // Create tokio runtime for async operations
     let rt = tokio::runtime::Runtime::new().map_err(|e| {
@@ -429,7 +429,7 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
     // Create RPC event broadcaster
     let (rpc_event_tx, _) = tokio::sync::broadcast::channel(1000);
 
-    let app_state = Arc::new(keyrx_daemon::web::AppState::new(
+    let app_state = Arc::new(keyrx_daemon::web::AppState::new_with_test_mode(
         macro_recorder,
         profile_service,
         device_service,
@@ -437,6 +437,7 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
         settings_service,
         subscription_manager,
         rpc_event_tx,
+        test_socket_path.clone(),
     ));
 
     // Start web server
@@ -756,8 +757,8 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
 
     // Create IPC server with unique socket path (Windows uses named pipes)
     let pid = std::process::id();
-    let socket_path = PathBuf::from(format!("keyrx-test-{}", pid));
-    let mut ipc_server = IpcServer::new(socket_path.clone()).map_err(|e| {
+    let test_socket_path = PathBuf::from(format!("keyrx-test-{}", pid));
+    let mut ipc_server = IpcServer::new(test_socket_path.clone()).map_err(|e| {
         (
             exit_codes::RUNTIME_ERROR,
             format!("Failed to create IPC server: {}", e),
@@ -772,7 +773,7 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
         )
     })?;
 
-    log::info!("IPC server started on {}", socket_path.display());
+    log::info!("IPC server started on {}", test_socket_path.display());
 
     // Create tokio runtime for async operations
     let rt = tokio::runtime::Runtime::new().map_err(|e| {
@@ -831,7 +832,7 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
     // Create RPC event broadcaster
     let (rpc_event_tx, _) = tokio::sync::broadcast::channel(1000);
 
-    let app_state = Arc::new(keyrx_daemon::web::AppState::new(
+    let app_state = Arc::new(keyrx_daemon::web::AppState::new_with_test_mode(
         macro_recorder,
         profile_service,
         device_service,
@@ -839,6 +840,7 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
         settings_service,
         subscription_manager,
         rpc_event_tx,
+        test_socket_path.clone(),
     ));
 
     // Start web server

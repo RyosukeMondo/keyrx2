@@ -1,6 +1,10 @@
 //! Health check and metrics endpoints.
 
-use axum::{extract::Query, routing::get, Json, Router};
+use axum::{
+    extract::{Query, State},
+    routing::get,
+    Json, Router,
+};
 
 // Needed for route chaining: .route("/metrics/events", get(...).delete(...))
 #[allow(unused_imports)]
@@ -69,23 +73,73 @@ struct StatusResponse {
     device_count: Option<usize>,
 }
 
-async fn get_status() -> Result<Json<StatusResponse>, DaemonError> {
-    // Try to query daemon via IPC
-    let daemon_info = query_daemon_status();
+async fn get_status(
+    State(state): State<Arc<crate::web::AppState>>,
+) -> Result<Json<StatusResponse>, DaemonError> {
+    // Check if test mode is enabled
+    if let Some(socket_path) = &state.test_mode_socket {
+        // Test mode: use IPC to query daemon status with timeout
+        use crate::ipc::{unix_socket::UnixSocketIpc, DaemonIpc, IpcRequest, IpcResponse};
+        use std::time::Duration;
 
-    let (daemon_running, uptime_secs, active_profile, device_count) = match daemon_info {
-        Ok((uptime, profile, count)) => (true, Some(uptime), profile, Some(count)),
-        Err(_) => (false, None, None, None),
-    };
+        let socket_path = socket_path.clone();
+        let result = tokio::time::timeout(Duration::from_secs(5), async move {
+            tokio::task::spawn_blocking(move || {
+                let mut ipc = UnixSocketIpc::new(socket_path);
+                ipc.send_request(&IpcRequest::GetStatus)
+            })
+            .await
+        })
+        .await;
 
-    Ok(Json(StatusResponse {
-        status: "running".to_string(),
-        version: env!("CARGO_PKG_VERSION").to_string(),
-        daemon_running,
-        uptime_secs,
-        active_profile,
-        device_count,
-    }))
+        let (daemon_running, uptime_secs, active_profile, device_count) = match result {
+            Ok(Ok(Ok(IpcResponse::Status {
+                running,
+                uptime_secs: uptime,
+                active_profile: profile,
+                device_count: count,
+            }))) => (running, Some(uptime), profile, Some(count)),
+            Ok(Ok(Err(e))) => {
+                log::warn!("IPC error querying daemon status: {}", e);
+                (false, None, None, None)
+            }
+            Ok(Err(e)) => {
+                log::warn!("Failed to join IPC task: {}", e);
+                (false, None, None, None)
+            }
+            Err(_) => {
+                log::warn!("IPC timeout querying daemon status");
+                (false, None, None, None)
+            }
+            _ => (false, None, None, None),
+        };
+
+        Ok(Json(StatusResponse {
+            status: "running".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            daemon_running,
+            uptime_secs,
+            active_profile,
+            device_count,
+        }))
+    } else {
+        // Production mode: try to query daemon via IPC
+        let daemon_info = query_daemon_status();
+
+        let (daemon_running, uptime_secs, active_profile, device_count) = match daemon_info {
+            Ok((uptime, profile, count)) => (true, Some(uptime), profile, Some(count)),
+            Err(_) => (false, None, None, None),
+        };
+
+        Ok(Json(StatusResponse {
+            status: "running".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            daemon_running,
+            uptime_secs,
+            active_profile,
+            device_count,
+        }))
+    }
 }
 
 #[derive(Serialize)]

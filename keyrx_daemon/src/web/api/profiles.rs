@@ -166,40 +166,95 @@ async fn activate_profile(
 ) -> Result<Json<Value>, DaemonError> {
     use crate::error::ConfigError;
 
-    let config_dir = get_config_dir()?;
-    let mut pm =
-        ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
+    // Check if test mode is enabled
+    if let Some(socket_path) = &state.test_mode_socket {
+        // Test mode: use IPC to activate profile
+        use crate::ipc::{unix_socket::UnixSocketIpc, DaemonIpc, IpcRequest, IpcResponse};
+        use std::time::Duration;
 
-    let result = pm
-        .activate(&name)
-        .map_err(|e| ConfigError::Profile(e.to_string()))?;
+        let mut ipc = UnixSocketIpc::new(socket_path.clone());
 
-    if !result.success {
-        return Err(ConfigError::CompilationFailed {
-            reason: result.error.unwrap_or_else(|| "Unknown error".to_string()),
+        // Send activation request with 5 second timeout
+        let request = IpcRequest::ActivateProfile { name: name.clone() };
+
+        let response = tokio::time::timeout(Duration::from_secs(5), async {
+            tokio::task::spawn_blocking(move || ipc.send_request(&request)).await
+        })
+        .await
+        .map_err(|_| {
+            ConfigError::Profile(
+                "IPC timeout: profile activation took longer than 5 seconds".to_string(),
+            )
+        })?
+        .map_err(|e| ConfigError::Profile(format!("Failed to join IPC task: {}", e)))?
+        .map_err(|e| ConfigError::Profile(format!("IPC error: {}", e)))?;
+
+        match response {
+            IpcResponse::ProfileActivated { name: profile_name } => {
+                // Broadcast event to WebSocket subscribers
+                use crate::web::rpc_types::ServerMessage;
+                let event = ServerMessage::Event {
+                    channel: "profiles".to_string(),
+                    data: serde_json::json!({
+                        "action": "activated",
+                        "profile": profile_name.clone()
+                    }),
+                };
+                if let Err(e) = state.event_broadcaster.send(event) {
+                    log::warn!("Failed to broadcast profile activated event: {}", e);
+                }
+
+                Ok(Json(json!({
+                    "success": true,
+                    "profile": profile_name,
+                    "compile_time_ms": 0,
+                    "reload_time_ms": 0,
+                })))
+            }
+            IpcResponse::Error { code, message } => Err(ConfigError::Profile(format!(
+                "Profile activation failed (code {}): {}",
+                code, message
+            ))
+            .into()),
+            _ => Err(ConfigError::Profile("Unexpected IPC response".to_string()).into()),
         }
-        .into());
-    }
+    } else {
+        // Production mode: use ProfileManager directly
+        let config_dir = get_config_dir()?;
+        let mut pm =
+            ProfileManager::new(config_dir).map_err(|e| ConfigError::Profile(e.to_string()))?;
 
-    // Broadcast event to WebSocket subscribers
-    use crate::web::rpc_types::ServerMessage;
-    let event = ServerMessage::Event {
-        channel: "profiles".to_string(),
-        data: serde_json::json!({
-            "action": "activated",
-            "profile": name.clone()
-        }),
-    };
-    if let Err(e) = state.event_broadcaster.send(event) {
-        log::warn!("Failed to broadcast profile activated event: {}", e);
-    }
+        let result = pm
+            .activate(&name)
+            .map_err(|e| ConfigError::Profile(e.to_string()))?;
 
-    Ok(Json(json!({
-        "success": true,
-        "profile": name,
-        "compile_time_ms": result.compile_time_ms,
-        "reload_time_ms": result.reload_time_ms,
-    })))
+        if !result.success {
+            return Err(ConfigError::CompilationFailed {
+                reason: result.error.unwrap_or_else(|| "Unknown error".to_string()),
+            }
+            .into());
+        }
+
+        // Broadcast event to WebSocket subscribers
+        use crate::web::rpc_types::ServerMessage;
+        let event = ServerMessage::Event {
+            channel: "profiles".to_string(),
+            data: serde_json::json!({
+                "action": "activated",
+                "profile": name.clone()
+            }),
+        };
+        if let Err(e) = state.event_broadcaster.send(event) {
+            log::warn!("Failed to broadcast profile activated event: {}", e);
+        }
+
+        Ok(Json(json!({
+            "success": true,
+            "profile": name,
+            "compile_time_ms": result.compile_time_ms,
+            "reload_time_ms": result.reload_time_ms,
+        })))
+    }
 }
 
 /// DELETE /api/profiles/:name - Delete profile

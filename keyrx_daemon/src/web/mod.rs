@@ -46,6 +46,8 @@ pub struct AppState {
     pub subscription_manager: Arc<SubscriptionManager>,
     /// Event broadcaster for sending events to WebSocket clients
     pub event_broadcaster: broadcast::Sender<ServerMessage>,
+    /// Test mode IPC socket path (None in production mode)
+    pub test_mode_socket: Option<std::path::PathBuf>,
 }
 
 impl AppState {
@@ -67,6 +69,31 @@ impl AppState {
             settings_service,
             subscription_manager,
             event_broadcaster,
+            test_mode_socket: None,
+        }
+    }
+
+    /// Creates a new AppState with test mode enabled
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_test_mode(
+        macro_recorder: Arc<MacroRecorder>,
+        profile_service: Arc<ProfileService>,
+        device_service: Arc<DeviceService>,
+        config_service: Arc<ConfigService>,
+        settings_service: Arc<SettingsService>,
+        subscription_manager: Arc<SubscriptionManager>,
+        event_broadcaster: broadcast::Sender<ServerMessage>,
+        test_mode_socket: std::path::PathBuf,
+    ) -> Self {
+        Self {
+            macro_recorder,
+            profile_service,
+            device_service,
+            config_service,
+            settings_service,
+            subscription_manager,
+            event_broadcaster,
+            test_mode_socket: Some(test_mode_socket),
         }
     }
 }
