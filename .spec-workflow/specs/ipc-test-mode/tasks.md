@@ -46,7 +46,7 @@ Enable 5 failing IPC-dependent E2E tests by adding test mode with full IPC infra
   - _Requirements: REQ-3.2.3, REQ-3.3.1, REQ-4.1.1_
   - _Prompt: Role: Backend Developer with expertise in Rust async and state management | Task: Implement profile activation IPC command handler following REQ-3.2.3 and REQ-3.3.1, using ProfileManager to activate profiles with < 50ms latency | Restrictions: Must validate profile exists, must handle activation errors gracefully, must return clear success/failure response | Success: Profile activation works via IPC, response includes profile name, latency < 50ms_
 
-- [ ] 5. Implement daemon status query via IPC
+- [x] 5. Implement daemon status query via IPC
   - File: keyrx_daemon/src/ipc/commands.rs
   - Add IpcCommand::GetStatus variant
   - Implement command handler that queries daemon running state
