@@ -65,7 +65,7 @@
   - _Requirements: 6.1_
   - _Prompt: Implement the task for spec simulation-rest-api, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Test Developer | Task: Update TestApp::new() to create SimulationService using the temp config directory already set up by TestApp. Wrap in Arc and pass to AppState::new(). Follow existing service initialization patterns in the fixture. | Restrictions: Use existing temp directory, do not change TestApp public interface | Success: TestApp compiles, integration tests can call simulation endpoints. Mark task as in-progress [-] before starting in tasks.md, log implementation with log-implementation tool after completion, then mark as complete [x]._
 
-- [ ] 8. Create backend integration tests for simulation endpoints
+- [x] 8. Create backend integration tests for simulation endpoints
   - File: keyrx_daemon/tests/simulator_api_test.rs
   - Test load-profile endpoint
   - Test simulate_events with scenario, DSL, and custom events

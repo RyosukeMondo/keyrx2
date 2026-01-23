@@ -95,7 +95,10 @@ impl SimulationService {
     pub fn load_profile(&self, profile_name: &str) -> Result<(), SimulationError> {
         log::debug!("Loading profile: {}", profile_name);
 
-        let krx_path = self.config_dir.join(format!("{}.krx", profile_name));
+        let krx_path = self
+            .config_dir
+            .join("profiles")
+            .join(format!("{}.krx", profile_name));
         let engine = SimulationEngine::new(&krx_path)?;
 
         let mut guard = self.engine.lock().unwrap();
