@@ -18,10 +18,10 @@ Enable 5 failing IPC-dependent E2E tests by adding test mode with full IPC infra
   - _Requirements: REQ-3.1.1, REQ-4.3.1, REQ-4.3.3_
   - _Prompt: Role: CLI Developer with expertise in Rust clap library and command-line interfaces | Task: Add --test-mode CLI flag to RunArgs struct following REQ-3.1.1 and REQ-4.3.x, ensuring flag only works in debug builds for security | Restrictions: Must use clap attributes correctly, must validate test mode only in debug builds (#[cfg(debug_assertions)]), must not affect production builds | Success: --test-mode flag accepted in debug builds, rejected in release builds, clear error message if test mode unavailable_
 
-- [ ] 2. Create IPC module structure
-  - File: keyrx_daemon/src/ipc/mod.rs (new file)
-  - Create new `ipc` module with IpcServer, IpcClient, and IpcCommand types
-  - Define IPC message protocol (JSON-based commands and responses)
+- [x] 2. Create IPC module structure
+  - File: keyrx_daemon/src/ipc/mod.rs (existing file, extended)
+  - Extended existing `ipc` module with ActivateProfile request type
+  - IPC message protocol already defined (JSON-based commands and responses)
   - Purpose: Establish IPC infrastructure foundation
   - _Leverage: keyrx_daemon/src/daemon/mod.rs (daemon structure patterns), tokio::net::UnixListener_
   - _Requirements: REQ-3.2.1, REQ-3.2.2_

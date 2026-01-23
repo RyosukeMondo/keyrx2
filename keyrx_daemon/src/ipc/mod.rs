@@ -28,6 +28,8 @@ pub enum IpcRequest {
     GetLatencyMetrics,
     /// Get tail of recent events (last N events)
     GetEventsTail { count: usize },
+    /// Activate a profile by name (test mode only)
+    ActivateProfile { name: String },
 }
 
 /// IPC response types sent from daemon to CLI
@@ -53,6 +55,8 @@ pub enum IpcResponse {
     },
     /// Recent events
     Events { events: Vec<String> },
+    /// Profile activation result (test mode only)
+    ProfileActivated { name: String },
     /// Error response
     Error { code: u16, message: String },
 }
