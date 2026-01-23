@@ -453,7 +453,7 @@ export const websocketTestCases: TestCase[] = [
             profiles: z.array(
               z.object({
                 name: z.string(),
-                active: z.boolean(),
+                isActive: z.boolean(),
               })
             ),
           })
