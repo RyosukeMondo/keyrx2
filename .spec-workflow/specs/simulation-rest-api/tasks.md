@@ -18,7 +18,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 5.1_
   - _Prompt: Implement the task for spec simulation-rest-api, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Rust Backend Developer with expertise in service layer patterns | Task: Create SimulationService struct with methods: load_profile(name), replay(sequence), run_scenario(scenario), run_all_scenarios(), replay_dsl(dsl, seed), reset(). Use Mutex<Option<SimulationEngine>> for state. Config directory path passed at construction. Follow existing service patterns in the codebase. | Restrictions: Do not modify SimulationEngine, maintain thread safety via Mutex, return proper SimulationError types | Success: Service compiles, all methods delegate to SimulationEngine correctly, reset clears state. Mark task as in-progress [-] before starting in tasks.md, log implementation with log-implementation tool after completion, then mark as complete [x]._
 
-- [ ] 3. Register SimulationService in services module
+- [x] 3. Register SimulationService in services module
   - File: keyrx_daemon/src/services/mod.rs
   - Add `pub mod simulation_service;` and `pub use simulation_service::SimulationService;`
   - Purpose: Export SimulationService for use in AppState
