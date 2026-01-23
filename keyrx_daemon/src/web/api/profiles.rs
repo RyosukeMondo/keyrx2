@@ -45,6 +45,7 @@ struct ProfileResponse {
     device_count: usize,
     #[serde(rename = "keyCount")]
     key_count: usize,
+    #[serde(rename = "isActive")]
     active: bool,
 }
 
