@@ -9,6 +9,7 @@
 use crate::error::RecorderError;
 use keyrx_core::runtime::KeyEvent;
 use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
 
 /// Maximum number of events to store in the recording buffer
 const MAX_EVENTS: usize = 10_000;
@@ -218,6 +219,52 @@ impl MacroRecorder {
         *start_ts = None;
 
         Ok(())
+    }
+
+    /// Runs the event loop that receives events from the event bus
+    ///
+    /// This async method continuously receives events from the event bus
+    /// and records them when recording is active. It gracefully handles
+    /// channel closure and only records when `is_recording()` returns true.
+    ///
+    /// # Arguments
+    ///
+    /// * `event_rx` - Receiver for KeyEvent from the event bus
+    ///
+    /// # Errors
+    ///
+    /// This method runs until the channel is closed and does not return errors.
+    /// Recording errors are logged but do not stop the event loop.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use keyrx_daemon::macro_recorder::MacroRecorder;
+    /// use tokio::sync::mpsc;
+    ///
+    /// # async fn example() {
+    /// let recorder = MacroRecorder::new();
+    /// let (_tx, rx) = mpsc::channel(1000);
+    ///
+    /// // Spawn event loop as background task
+    /// tokio::spawn(async move {
+    ///     recorder.run_event_loop(rx).await;
+    /// });
+    /// # }
+    /// ```
+    pub async fn run_event_loop(self, mut event_rx: mpsc::Receiver<KeyEvent>) {
+        log::info!("Macro recorder event loop started");
+
+        while let Some(event) = event_rx.recv().await {
+            // Only record if recording is active
+            if self.is_recording() {
+                if let Err(e) = self.capture_event(event) {
+                    log::warn!("Failed to capture event in macro recorder: {}", e);
+                }
+            }
+        }
+
+        log::info!("Macro recorder event loop stopped (channel closed)");
     }
 }
 
@@ -520,5 +567,125 @@ mod tests {
 
         let events2 = recorder.get_recorded_events().unwrap();
         assert_eq!(events2.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_event_loop_records_when_active() {
+        use tokio::sync::mpsc;
+
+        let recorder = MacroRecorder::new();
+        let (tx, rx) = mpsc::channel(10);
+
+        // Start recording
+        recorder.start_recording().unwrap();
+
+        // Clone recorder for event loop
+        let recorder_clone = recorder.clone();
+
+        // Spawn event loop
+        let loop_handle = tokio::spawn(async move {
+            recorder_clone.run_event_loop(rx).await;
+        });
+
+        // Send events
+        tx.send(KeyEvent::press(KeyCode::A).with_timestamp(1000))
+            .await
+            .unwrap();
+        tx.send(KeyEvent::release(KeyCode::A).with_timestamp(1100))
+            .await
+            .unwrap();
+
+        // Give event loop time to process
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        // Check events were recorded
+        let events = recorder.get_recorded_events().unwrap();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0].event.keycode(), KeyCode::A);
+        assert!(events[0].event.is_press());
+
+        // Stop recording
+        recorder.stop_recording().unwrap();
+
+        // Send more events - should not be recorded
+        tx.send(KeyEvent::press(KeyCode::B).with_timestamp(2000))
+            .await
+            .unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        // Should still have only 2 events
+        let events = recorder.get_recorded_events().unwrap();
+        assert_eq!(events.len(), 2);
+
+        // Close channel to stop event loop
+        drop(tx);
+
+        // Wait for event loop to finish
+        loop_handle.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_event_loop_ignores_when_not_recording() {
+        use tokio::sync::mpsc;
+
+        let recorder = MacroRecorder::new();
+        let (tx, rx) = mpsc::channel(10);
+
+        // Don't start recording
+        assert!(!recorder.is_recording());
+
+        // Clone recorder for event loop
+        let recorder_clone = recorder.clone();
+
+        // Spawn event loop
+        let loop_handle = tokio::spawn(async move {
+            recorder_clone.run_event_loop(rx).await;
+        });
+
+        // Send events
+        tx.send(KeyEvent::press(KeyCode::A).with_timestamp(1000))
+            .await
+            .unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        // No events should be recorded
+        let events = recorder.get_recorded_events().unwrap();
+        assert_eq!(events.len(), 0);
+
+        // Close channel
+        drop(tx);
+        loop_handle.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_event_loop_handles_channel_closure() {
+        use tokio::sync::mpsc;
+
+        let recorder = MacroRecorder::new();
+        let (tx, rx) = mpsc::channel(10);
+
+        recorder.start_recording().unwrap();
+
+        let recorder_clone = recorder.clone();
+        let loop_handle = tokio::spawn(async move {
+            recorder_clone.run_event_loop(rx).await;
+        });
+
+        // Send one event
+        tx.send(KeyEvent::press(KeyCode::A).with_timestamp(1000))
+            .await
+            .unwrap();
+
+        // Close channel immediately
+        drop(tx);
+
+        // Event loop should exit gracefully
+        loop_handle.await.unwrap();
+
+        // Event should still be recorded
+        let events = recorder.get_recorded_events().unwrap();
+        assert_eq!(events.len(), 1);
     }
 }

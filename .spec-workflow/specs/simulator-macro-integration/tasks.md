@@ -28,7 +28,7 @@ Connect simulator event output to macro recorder input, enabling macro recording
   - _Requirements: REQ-3.1.1, REQ-3.2.1, REQ-3.2.2, REQ-3.2.3_
   - _Prompt: Role: Rust Developer with expertise in event processing and time handling | Task: Update simulate_events method to send events to event bus following REQ-3.1.x and REQ-3.2.x, converting event format and adding timestamps | Restrictions: Must convert event_type to lowercase, must add timestamp_us field, must handle channel send errors, must not block API response | Success: Simulated events sent to event bus with correct format, timestamps accurate, no blocking_
 
-- [ ] 3. Connect macro recorder to event bus
+- [x] 3. Connect macro recorder to event bus
   - File: keyrx_daemon/src/macro_recorder.rs
   - Add event_rx receiver parameter to macro recorder
   - Create async event loop that receives from event_rx and calls record_event() when recording active
