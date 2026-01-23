@@ -204,6 +204,7 @@ struct UpdateDeviceConfigRequest {
 }
 
 async fn update_device_config(
+    State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
     Json(payload): Json<UpdateDeviceConfigRequest>,
 ) -> Result<Json<Value>, DaemonError> {
@@ -258,6 +259,20 @@ async fn update_device_config(
     }
 
     registry.save()?;
+
+    // Broadcast event to WebSocket subscribers
+    use crate::web::rpc_types::ServerMessage;
+    let event = ServerMessage::Event {
+        channel: "devices".to_string(),
+        data: serde_json::json!({
+            "action": "updated",
+            "id": id,
+            "layout": payload.layout
+        }),
+    };
+    if let Err(e) = state.event_broadcaster.send(event) {
+        log::warn!("Failed to broadcast device updated event: {}", e);
+    }
 
     Ok(Json(json!({ "success": true })))
 }

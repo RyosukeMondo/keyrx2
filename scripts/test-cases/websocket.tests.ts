@@ -466,7 +466,7 @@ export const websocketTestCases: TestCase[] = [
         // Restore original profile if one exists
         if (originalProfile) {
           await client.customRequest(
-            'PUT',
+            'POST',
             `/api/profiles/${originalProfile.name}/activate`,
             z.object({ success: z.boolean() })
           );

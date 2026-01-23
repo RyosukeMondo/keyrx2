@@ -45,7 +45,7 @@ struct ProfileResponse {
     device_count: usize,
     #[serde(rename = "keyCount")]
     key_count: usize,
-    is_active: bool,
+    active: bool,
 }
 
 /// Serialize SystemTime as RFC 3339 / ISO 8601 string
@@ -108,7 +108,7 @@ async fn list_profiles() -> Result<Json<ProfilesListResponse>, DaemonError> {
             layer_count: meta.layer_count,
             device_count: 0, // TODO: Track device count per profile
             key_count: 0,    // TODO: Parse Rhai config to count key mappings
-            is_active: active_profile.as_ref() == Some(&meta.name),
+            active: active_profile.as_ref() == Some(&meta.name),
         })
         .collect();
 
@@ -418,7 +418,7 @@ mod tests {
             layer_count: 1,
             device_count: 0,
             key_count: 0,
-            is_active: false,
+            active: false,
         })
         .unwrap();
 
@@ -461,7 +461,7 @@ mod tests {
             layer_count: 3,
             device_count: 2,
             key_count: 127,
-            is_active: true,
+            active: true,
         };
 
         let json_value = serde_json::to_value(&response).unwrap();
@@ -488,8 +488,8 @@ mod tests {
             "keyCount should be a number"
         );
         assert!(
-            json_value["isActive"].is_boolean(),
-            "isActive should be a boolean"
+            json_value["active"].is_boolean(),
+            "active should be a boolean"
         );
 
         // Verify snake_case fields are NOT present
@@ -505,6 +505,7 @@ mod tests {
             json_value.get("layer_count").is_none(),
             "Should not have snake_case layer_count"
         );
+        // active is the correct field name, not is_active
         assert!(
             json_value.get("is_active").is_none(),
             "Should not have snake_case is_active"
