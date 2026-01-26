@@ -1,7 +1,7 @@
 # KeyRx2 Makefile
 # Provides simple top-level commands for common operations
 
-.PHONY: help build verify test launch clean setup msi e2e-auto
+.PHONY: help build verify test launch clean setup msi e2e-auto package package-deb package-tar release sync-version generate-version
 
 # Default target - show help
 .DEFAULT_GOAL := help
@@ -64,6 +64,33 @@ setup-quick: ## Quick setup (no sudo, Cargo tools only)
 	@echo "Installing git hooks..."
 	@scripts/setup_hooks.sh
 	@echo "Quick setup complete. For full setup (with system dependencies), run: make setup"
+
+package: ## Build all Linux packages (.deb and .tar.gz)
+	@scripts/package/build-all.sh
+
+package-deb: ## Build Debian package only
+	@scripts/package/build-deb.sh
+
+package-tar: ## Build tarball with install script
+	@scripts/package/build-tarball.sh
+
+sync-version: ## Sync version from Cargo.toml to all files (SSOT)
+	@scripts/sync-version.sh
+
+generate-version: ## Generate UI version.ts with build timestamp
+	@node scripts/generate-version.js
+
+release: verify ## Create a new release (prompts for version)
+	@echo "Current version: $$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')"
+	@echo ""
+	@read -p "Enter new version (e.g., 0.2.0): " VERSION && \
+	echo "Creating release v$$VERSION..." && \
+	echo "1. Update version in Cargo.toml to $$VERSION" && \
+	echo "2. Update CHANGELOG.md" && \
+	echo "3. Run: git add Cargo.toml CHANGELOG.md && git commit -m 'chore: bump version to $$VERSION'" && \
+	echo "4. Run: git tag -a v$$VERSION -m 'Release v$$VERSION' && git push && git push origin v$$VERSION" && \
+	echo "" && \
+	echo "See docs/RELEASE.md for detailed instructions"
 
 msi: ## Build Windows MSI installer (Windows only, requires WiX)
 ifeq ($(OS),Windows_NT)

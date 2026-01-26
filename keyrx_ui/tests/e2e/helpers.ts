@@ -7,7 +7,8 @@
  * - Common wait utilities
  */
 
-import { Page, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 // Daemon configuration (must match global-setup)
 const DAEMON_PORT = 9867;

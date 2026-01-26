@@ -1,17 +1,11 @@
 import React, {
   useState,
   useCallback,
-  useRef,
   useEffect,
   useMemo,
 } from 'react';
 import { KeyboardVisualizer } from '../components/KeyboardVisualizer';
-import type { KeyMapping } from '@/types';
-import { StateIndicatorPanel } from '../components/StateIndicatorPanel';
-import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { MonacoEditor } from '../components/MonacoEditor';
-import { WasmStatusBadge } from '../components/WasmStatusBadge';
 import { WasmProvider } from '../contexts/WasmContext';
 import { useProfiles } from '../hooks/useProfiles';
 import { useGetProfileConfig } from '../hooks/useProfileConfig';
@@ -27,7 +21,6 @@ import { SimulatorHeader } from '../components/simulator/SimulatorHeader';
 import { StateInspectorCard } from '../components/simulator/StateInspectorCard';
 
 const MAX_EVENTS = 1000;
-const AUTO_PAUSE_TIMEOUT = 60000; // 60 seconds
 
 export const SimulatorPage: React.FC = () => {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
@@ -46,15 +39,7 @@ export const SimulatorPage: React.FC = () => {
       scrollLock: false,
     },
   });
-  const [isPaused, setIsPaused] = useState(false);
   const [holdTimers, setHoldTimers] = useState<Map<string, number>>(new Map());
-  const autoPauseTimerRef = useRef<NodeJS.Timeout>();
-  const lastActivityRef = useRef<number>(0);
-
-  // Initialize lastActivityRef on mount
-  useEffect(() => {
-    lastActivityRef.current = Date.now();
-  }, []);
 
   // Profile selection
   const { data: profiles, isLoading: isLoadingProfiles } = useProfiles();
@@ -130,10 +115,6 @@ export const SimulatorPage: React.FC = () => {
 
   const handleKeyPress = useCallback(
     async (keyCode: string) => {
-      if (isPaused) return;
-
-      lastActivityRef.current = Date.now();
-
       // Add to pressed keys
       setPressedKeys((prev) => new Set(prev).add(keyCode));
 
@@ -236,7 +217,6 @@ export const SimulatorPage: React.FC = () => {
       }
     },
     [
-      isPaused,
       keyMappings,
       addEvent,
       isUsingProfileConfig,
@@ -248,10 +228,6 @@ export const SimulatorPage: React.FC = () => {
 
   const handleKeyRelease = useCallback(
     async (keyCode: string) => {
-      if (isPaused) return;
-
-      lastActivityRef.current = Date.now();
-
       // Remove from pressed keys
       setPressedKeys((prev) => {
         const next = new Set(prev);
@@ -361,7 +337,6 @@ export const SimulatorPage: React.FC = () => {
       }
     },
     [
-      isPaused,
       holdTimers,
       keyMappings,
       addEvent,
@@ -401,10 +376,8 @@ export const SimulatorPage: React.FC = () => {
       },
     });
     setWasmState(null);
-    setIsPaused(false);
     holdTimers.forEach((timerId) => clearTimeout(timerId));
     setHoldTimers(new Map());
-    lastActivityRef.current = Date.now();
     addEvent('RESET', 'press', 'RESET', 'Simulator reset');
   }, [holdTimers, addEvent]);
 
@@ -421,28 +394,6 @@ export const SimulatorPage: React.FC = () => {
       .join('\n');
     navigator.clipboard.writeText(logText);
   }, [events]);
-
-  // Auto-pause after 60 seconds of inactivity
-  useEffect(() => {
-    autoPauseTimerRef.current = setInterval(() => {
-      const now = Date.now();
-      if (now - lastActivityRef.current > AUTO_PAUSE_TIMEOUT && !isPaused) {
-        setIsPaused(true);
-        addEvent(
-          'PAUSE',
-          'press',
-          'AUTO',
-          'Auto-paused after 60 seconds of inactivity'
-        );
-      }
-    }, 1000);
-
-    return () => {
-      if (autoPauseTimerRef.current) {
-        clearInterval(autoPauseTimerRef.current);
-      }
-    };
-  }, [isPaused, addEvent]);
 
   // Cleanup hold timers on unmount
   useEffect(() => {
@@ -495,19 +446,6 @@ export const SimulatorPage: React.FC = () => {
           <p className="text-xs mt-2 text-red-300">
             The simulator is using mock key mappings. Fix the configuration to
             use real profile logic.
-          </p>
-        </div>
-      )}
-
-      {isPaused && (
-        <div
-          className="bg-yellow-500/10 border border-yellow-500 text-yellow-500 px-4 py-3 rounded-md"
-          role="alert"
-        >
-          <p className="font-medium">Simulator Paused</p>
-          <p className="text-sm mt-1">
-            The simulator has been paused after 60 seconds of inactivity. Click
-            any key to resume.
           </p>
         </div>
       )}

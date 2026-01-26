@@ -314,18 +314,16 @@ const KeySVG: React.FC<KeySVGProps> = React.memo(
     const strokeColor = isPressed ? '#4ade80' : style.stroke;
     const brightness = isHovered ? 1.15 : 1;
 
-    // Build className for simulator mode
-    const className = simulatorMode
-      ? 'key-group opacity-50 cursor-not-allowed'
-      : 'key-group';
+    // In simulator mode, keys should be clickable (for simulating key events)
+    const className = 'key-group';
 
     return (
       <g
         className={className}
-        style={{ cursor: simulatorMode ? 'not-allowed' : 'pointer' }}
+        style={{ cursor: 'pointer' }}
         onClick={handleClick}
-        onMouseEnter={() => !simulatorMode && setIsHovered(true)}
-        onMouseLeave={() => !simulatorMode && setIsHovered(false)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         role="button"
         tabIndex={0}
         aria-label={`Key ${code}. ${tooltipContent}. ${
@@ -512,7 +510,7 @@ export const SVGKeyboard: React.FC<SVGKeyboardProps> = ({
               isPressed={
                 pressedKeys.has(key.code) || pressedKeys.has(normalizedCode)
               }
-              onClick={() => !simulatorMode && onKeyClick(normalizedCode)}
+              onClick={() => onKeyClick(normalizedCode)}
               simulatorMode={simulatorMode}
             />
           );

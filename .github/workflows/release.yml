@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: keyrx_ui_v2/package-lock.json
+          cache-dependency-path: keyrx_ui/package-lock.json
 
       - name: Cache Cargo
         uses: actions/cache@v3
@@ -55,8 +55,8 @@ jobs:
       - name: Cache npm
         uses: actions/cache@v3
         with:
-          path: keyrx_ui_v2/node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('keyrx_ui_v2/package-lock.json') }}
+          path: keyrx_ui/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('keyrx_ui/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-npm-
 
@@ -75,18 +75,25 @@ jobs:
       - name: Build Complete Release (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          chmod +x scripts/build.sh scripts/build_wasm.sh scripts/build_ui.sh
+          chmod +x scripts/build.sh scripts/lib/build-wasm.sh scripts/build_ui.sh
           scripts/build.sh
+
+      - name: Build Linux Packages
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          chmod +x scripts/package/build-deb.sh scripts/package/build-tarball.sh
+          scripts/package/build-deb.sh
+          scripts/package/build-tarball.sh
 
       - name: Build Complete Release (Windows)
         if: matrix.os == 'windows-latest'
         run: |
           # Build WASM
           cd keyrx_core
-          wasm-pack build --target web --out-dir ../keyrx_ui_v2/src/wasm/pkg --release --features wasm
+          wasm-pack build --target web --out-dir ../keyrx_ui/src/wasm/pkg --release --features wasm
           cd ..
           # Build UI
-          cd keyrx_ui_v2
+          cd keyrx_ui
           npm ci
           npm run build
           cd ..
@@ -97,12 +104,22 @@ jobs:
       - name: Prepare Artifacts (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
           mkdir -p artifacts
+
+          # Copy standalone binaries
           cp target/release/keyrx_compiler artifacts/keyrx_compiler-${{ matrix.artifact_name }}
           cp target/release/keyrx_daemon artifacts/keyrx_daemon-${{ matrix.artifact_name }}
-          # Package UI bundle
-          cd keyrx_ui_v2/dist
-          tar -czf ../../artifacts/keyrx-ui-bundle.tar.gz .
+
+          # Copy Debian package
+          cp target/debian/keyrx_${VERSION}_amd64.deb artifacts/
+
+          # Copy tarball
+          cp target/tarball/keyrx-${VERSION}-linux-x86_64.tar.gz artifacts/
+
+          # Package UI bundle (for manual deployment)
+          cd keyrx_ui/dist
+          tar -czf ../../artifacts/keyrx-ui-bundle-${VERSION}.tar.gz .
           cd ../..
 
       - name: Prepare Artifacts (Windows)
@@ -133,12 +150,58 @@ jobs:
         with:
           path: artifacts
 
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          cat > release_notes.md <<EOF
+          # KeyRx $VERSION
+
+          ## Installation
+
+          ### Ubuntu/Debian (.deb)
+          \`\`\`bash
+          wget https://github.com/RyosukeMondo/keyrx/releases/download/v$VERSION/keyrx_${VERSION}_amd64.deb
+          sudo dpkg -i keyrx_${VERSION}_amd64.deb
+          sudo apt-get install -f
+          sudo systemctl start keyrx
+          \`\`\`
+
+          ### Linux (.tar.gz)
+          \`\`\`bash
+          wget https://github.com/RyosukeMondo/keyrx/releases/download/v$VERSION/keyrx-$VERSION-linux-x86_64.tar.gz
+          tar -xzf keyrx-$VERSION-linux-x86_64.tar.gz
+          cd keyrx-$VERSION-linux-x86_64
+          sudo ./install.sh
+          \`\`\`
+
+          ### Windows
+          Download the Windows binaries and extract to your preferred location.
+
+          ## What's Included
+
+          - **keyrx_compiler**: Compile Rhai configs to .krx binaries
+          - **keyrx_daemon**: Keyboard remapping daemon with web server
+          - **Web UI**: Available at http://localhost:7777 after starting daemon
+
+          ## Features
+
+          - Advanced keyboard remapping with layers
+          - Tap-hold dual-function keys
+          - Web-based configuration interface
+          - Systemd integration (Linux)
+          - High-performance DFA-based state machine
+
+          For full documentation, see https://github.com/RyosukeMondo/keyrx
+          EOF
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             artifacts/binaries-linux-x86_64/*
             artifacts/binaries-windows-x86_64/*
+          body_path: release_notes.md
           draft: false
           prerelease: false
         env:

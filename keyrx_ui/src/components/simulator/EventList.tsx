@@ -155,9 +155,9 @@ export const EventList: React.FC<EventListProps> = ({
         </Button>
       </div>
 
-      {/* Event list container */}
+      {/* Event list container - fixed height with scroll */}
       <div
-        className="bg-slate-900 rounded-md p-3 md:p-4 flex-1 min-h-0"
+        className="bg-slate-900 rounded-md p-3 md:p-4 h-64 md:h-80 overflow-hidden"
         role="region"
         aria-label="Key event log"
       >
@@ -173,7 +173,7 @@ export const EventList: React.FC<EventListProps> = ({
           // Virtualized list (for many events)
           <List
             ref={listRef}
-            height={400}
+            height={288}
             itemCount={events.length}
             itemSize={32}
             width="100%"

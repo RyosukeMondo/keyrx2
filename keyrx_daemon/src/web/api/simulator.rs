@@ -64,15 +64,22 @@ struct SimulateEventsRequest {
     seed: Option<u64>,
 }
 
+/// Output event in API response format
+#[derive(Serialize)]
+struct OutputEventResponse {
+    /// Key identifier
+    key: String,
+    /// Event type: "press" or "release"
+    event_type: String,
+    /// Timestamp in microseconds
+    timestamp_us: u64,
+}
+
 #[derive(Serialize)]
 struct SimulateEventsResponse {
     success: bool,
-    /// Number of events generated
-    event_count: usize,
-    /// List of output events as formatted strings
-    outputs: Vec<String>,
-    /// Total duration in microseconds
-    duration_us: u64,
+    /// List of output events
+    outputs: Vec<OutputEventResponse>,
 }
 
 #[derive(Serialize)]
@@ -128,26 +135,22 @@ async fn simulate_events(
         ));
     };
 
-    // Format outputs as strings and calculate duration
-    let event_count = outputs.len();
-    let duration_us = outputs.iter().map(|e| e.timestamp_us).max().unwrap_or(0);
-
-    let formatted_outputs: Vec<String> = outputs
+    // Convert outputs to API response format
+    let response_outputs: Vec<OutputEventResponse> = outputs
         .iter()
-        .map(|e| {
-            let event_type = match e.event_type {
-                EventType::Press => "Press",
-                EventType::Release => "Release",
-            };
-            format!("{} {} at {}μs", event_type, e.key, e.timestamp_us)
+        .map(|e| OutputEventResponse {
+            key: e.key.clone(),
+            event_type: match e.event_type {
+                EventType::Press => "press".to_string(),
+                EventType::Release => "release".to_string(),
+            },
+            timestamp_us: e.timestamp_us,
         })
         .collect();
 
     Ok(Json(SimulateEventsResponse {
         success: true,
-        event_count,
-        outputs: formatted_outputs,
-        duration_us,
+        outputs: response_outputs,
     }))
 }
 

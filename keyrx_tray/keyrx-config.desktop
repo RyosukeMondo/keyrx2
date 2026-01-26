@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=KeyRx Configuration
+GenericName=Keyboard Remapper Settings
+Comment=Configure keyboard remapping profiles and layers
+Exec=xdg-open http://127.0.0.1:9867
+Icon=preferences-desktop-keyboard
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=keyboard;remap;settings;configuration;
+StartupNotify=true
+MimeType=application/x-keyrx-config;

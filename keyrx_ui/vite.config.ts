@@ -53,6 +53,14 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['@/wasm/pkg/keyrx_core'],
+    // Force Vite to include env-shim so it's available for WASM
+    include: [],
+    esbuildOptions: {
+      // Ensure 'env' resolves to our shim during pre-bundling
+      alias: {
+        'env': './src/wasm/env-shim.js',
+      },
+    },
   },
   build: {
     target: 'esnext',

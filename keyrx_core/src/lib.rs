@@ -14,6 +14,10 @@ pub mod runtime;
 pub mod simulator;
 pub mod state;
 
+// Parser module (only included with wasm feature for rhai dependency)
+#[cfg(feature = "wasm")]
+pub mod parser;
+
 // WASM module (only included when compiling for wasm32 target)
 #[cfg(all(target_arch = "wasm32", feature = "wasm"))]
 pub mod wasm;

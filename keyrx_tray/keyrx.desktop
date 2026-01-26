@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=KeyRx
+GenericName=Keyboard Remapper
+Comment=Advanced keyboard remapping with layers and tap-hold
+Exec=keyrx-tray
+Icon=input-keyboard
+Terminal=false
+Categories=Utility;Settings;System;
+Keywords=keyboard;remap;input;hotkey;macro;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5
+X-KDE-autostart-after=panel

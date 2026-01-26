@@ -82,6 +82,30 @@ fi
 
 cd "$PROJECT_ROOT"
 
+# Post-process: Fix 'env' import to use local env-shim.js
+JS_FILE="$OUTPUT_DIR/keyrx_core.js"
+if [[ -f "$JS_FILE" ]]; then
+    log_info "Patching keyrx_core.js to use local env-shim..."
+    # Change: import * as __wbg_star0 from 'env';
+    # To:     import * as __wbg_star0 from './env-shim.js';
+    if grep -q "from 'env'" "$JS_FILE"; then
+        sed -i "s|from 'env'|from './env-shim.js'|g" "$JS_FILE"
+        log_info "Patched 'env' import to './env-shim.js'"
+    else
+        log_debug "No 'env' import found (may already be patched)"
+    fi
+
+    # Copy env-shim.js to pkg directory so relative import works
+    ENV_SHIM_SRC="$PROJECT_ROOT/keyrx_ui/src/wasm/env-shim.js"
+    ENV_SHIM_DST="$OUTPUT_DIR/env-shim.js"
+    if [[ -f "$ENV_SHIM_SRC" ]]; then
+        cp "$ENV_SHIM_SRC" "$ENV_SHIM_DST"
+        log_info "Copied env-shim.js to $OUTPUT_DIR"
+    else
+        log_warn "env-shim.js not found at $ENV_SHIM_SRC"
+    fi
+fi
+
 # Record build end time
 BUILD_END=$(date +%s)
 BUILD_TIME=$((BUILD_END - BUILD_START))
@@ -209,3 +233,27 @@ if [[ "$JSON_MODE" == "true" ]]; then
 fi
 
 exit 0
+
+# Verify env-shim import is properly patched
+verify_env_shim_import() {
+    local js_file="$1"
+    if grep -q "from 'env'" "$js_file"; then
+        log_error "WASM JS still has unpatched 'env' import!"
+        log_error "This will cause browser loading errors."
+        return 1
+    fi
+    if grep -q "from './env-shim.js'" "$js_file"; then
+        log_debug "env-shim import verified"
+        return 0
+    fi
+    log_warn "Could not verify env-shim import pattern"
+    return 0
+}
+
+# Run verification
+if [[ -f "$JS_FILE" ]]; then
+    verify_env_shim_import "$JS_FILE" || {
+        log_failed
+        exit 1
+    }
+fi

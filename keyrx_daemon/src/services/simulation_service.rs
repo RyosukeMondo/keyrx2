@@ -336,7 +336,9 @@ mod tests {
     use tempfile::TempDir;
 
     fn create_test_profile(dir: &TempDir, name: &str) -> PathBuf {
-        let krx_path = dir.path().join(format!("{}.krx", name));
+        let profiles_dir = dir.path().join("profiles");
+        std::fs::create_dir_all(&profiles_dir).unwrap();
+        let krx_path = profiles_dir.join(format!("{}.krx", name));
         let mut file = std::fs::File::create(&krx_path).unwrap();
         file.write_all(b"test krx data").unwrap();
         krx_path

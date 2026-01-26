@@ -431,14 +431,8 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
     // Create RPC event broadcaster
     let (rpc_event_tx, _) = tokio::sync::broadcast::channel(1000);
 
-    // Spawn macro recorder event loop
-    let recorder_for_loop = (*macro_recorder).clone();
-    tokio::spawn(async move {
-        recorder_for_loop.run_event_loop(macro_event_rx).await;
-    });
-
     let app_state = Arc::new(keyrx_daemon::web::AppState::new_with_test_mode(
-        macro_recorder,
+        macro_recorder.clone(),
         profile_service,
         device_service,
         config_service,
@@ -454,6 +448,12 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
     log::info!("Starting web server on http://{}", addr);
 
     rt.block_on(async {
+        // Spawn macro recorder event loop inside runtime context
+        let recorder_for_loop = (*macro_recorder).clone();
+        tokio::spawn(async move {
+            recorder_for_loop.run_event_loop(macro_event_rx).await;
+        });
+
         match keyrx_daemon::web::serve(addr, event_tx, app_state).await {
             Ok(()) => {
                 log::info!("Web server stopped");
@@ -861,14 +861,8 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
     // Create RPC event broadcaster
     let (rpc_event_tx, _) = tokio::sync::broadcast::channel(1000);
 
-    // Spawn macro recorder event loop
-    let recorder_for_loop = (*macro_recorder).clone();
-    tokio::spawn(async move {
-        recorder_for_loop.run_event_loop(macro_event_rx).await;
-    });
-
     let app_state = Arc::new(keyrx_daemon::web::AppState::new_with_test_mode(
-        macro_recorder,
+        macro_recorder.clone(),
         profile_service,
         device_service,
         config_service,
@@ -884,6 +878,12 @@ fn handle_run_test_mode(_config_path: &std::path::Path, _debug: bool) -> Result<
     log::info!("Starting web server on http://{}", addr);
 
     rt.block_on(async {
+        // Spawn macro recorder event loop inside runtime context
+        let recorder_for_loop = (*macro_recorder).clone();
+        tokio::spawn(async move {
+            recorder_for_loop.run_event_loop(macro_event_rx).await;
+        });
+
         match keyrx_daemon::web::serve(addr, event_tx, app_state).await {
             Ok(()) => {
                 log::info!("Web server stopped");

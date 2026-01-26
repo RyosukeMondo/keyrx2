@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=KeyRx System Tray
+GenericName=Keyboard Remapper Tray
+Comment=KeyRx system tray for quick daemon control
+Exec=keyrx-tray
+Icon=input-keyboard
+Terminal=false
+Categories=Utility;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5
+X-KDE-autostart-after=panel
+StartupWMClass=keyrx-tray

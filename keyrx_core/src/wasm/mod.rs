@@ -24,20 +24,10 @@ extern crate std;
 use once_cell::sync::Lazy;
 use rkyv::Deserialize;
 use serde::Serialize;
-use std::{
-    boxed::Box,
-    format,
-    string::String,
-    sync::Mutex,
-    time::{SystemTime, UNIX_EPOCH},
-    vec,
-    vec::Vec,
-};
+use std::{format, string::String, sync::Mutex, vec, vec::Vec};
 use wasm_bindgen::prelude::*;
 
-use sha2::{Digest, Sha256};
-
-use crate::config::{ConfigRoot, Metadata, Version};
+use crate::config::ConfigRoot;
 use crate::runtime::KeyLookup;
 
 // Re-export simulation types
@@ -235,115 +225,14 @@ pub fn load_config(rhai_source: &str) -> Result<ConfigHandle, JsValue> {
 
 /// Parse Rhai configuration source into ConfigRoot.
 ///
-/// This is a simplified parser that handles the essential Rhai DSL features
-/// needed for browser-based simulation. It uses the Rhai engine to evaluate
-/// the DSL and build a ConfigRoot structure.
+/// Uses the full Rhai parser from keyrx_core::parser which supports all DSL
+/// functions: device_start, device_end, map, tap_hold, when_start, when_end,
+/// with_shift, with_mods, etc.
 fn parse_rhai_config(source: &str) -> Result<ConfigRoot, std::string::String> {
-    use rhai::{Engine, Scope};
-    use std::sync::{Arc, Mutex as StdMutex};
+    use crate::parser::Parser;
 
-    #[derive(Debug, Clone, Default)]
-    struct ParserState {
-        devices: Vec<crate::config::DeviceConfig>,
-        current_device: Option<crate::config::DeviceConfig>,
-        current_mappings: Vec<crate::config::KeyMapping>,
-    }
-
-    let state = Arc::new(StdMutex::new(ParserState::default()));
-    let mut engine = Engine::new();
-    let state_clone = Arc::clone(&state);
-
-    // Register device() function
-    engine.register_fn("device", move |pattern: &str| {
-        let mut s = state_clone
-            .lock()
-            .expect("Parser state mutex should not be poisoned during Rhai parsing");
-        // If there's a current device, save it first
-        if let Some(device) = s.current_device.take() {
-            s.devices.push(device);
-        }
-        s.current_device = Some(crate::config::DeviceConfig {
-            identifier: crate::config::DeviceIdentifier {
-                pattern: pattern.into(),
-            },
-            mappings: Vec::new(),
-        });
-        s.current_mappings.clear();
-    });
-
-    let state_clone2 = Arc::clone(&state);
-    // Register map() function for simple key mapping
-    engine.register_fn("map", move |from: &str, to: &str| {
-        use crate::config::{BaseKeyMapping, KeyCode, KeyMapping};
-
-        let mut s = state_clone2
-            .lock()
-            .expect("Parser state mutex should not be poisoned during Rhai parsing");
-
-        // Simple key parsing - map common names to KeyCode variants
-        // This is a minimal implementation; full parser will be added later
-        let from_key = match from {
-            "A" => KeyCode::A,
-            "B" => KeyCode::B,
-            "VK_A" => KeyCode::A,
-            "VK_B" => KeyCode::B,
-            _ => return Err(format!("Unsupported key name: {}", from).into()),
-        };
-
-        let to_key = match to {
-            "A" => KeyCode::A,
-            "B" => KeyCode::B,
-            "VK_A" => KeyCode::A,
-            "VK_B" => KeyCode::B,
-            _ => return Err(format!("Unsupported key name: {}", to).into()),
-        };
-
-        s.current_mappings
-            .push(KeyMapping::Base(BaseKeyMapping::Simple {
-                from: from_key,
-                to: to_key,
-            }));
-
-        Ok::<(), Box<rhai::EvalAltResult>>(())
-    });
-
-    // Run the Rhai script
-    let mut scope = Scope::new();
-    engine
-        .run_with_scope(&mut scope, source)
-        .map_err(|e| format!("Parse error: {}", e))?;
-
-    // Finalize: save the last device
-    let mut final_state = state
-        .lock()
-        .expect("Parser state mutex should not be poisoned after Rhai execution");
-    if let Some(device) = final_state.current_device.take() {
-        let mut device_with_mappings = device;
-        device_with_mappings.mappings = final_state.current_mappings.clone();
-        final_state.devices.push(device_with_mappings);
-    }
-
-    // Generate metadata
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("System time should be after UNIX epoch (1970-01-01)")
-        .as_secs();
-
-    let mut hasher = Sha256::new();
-    hasher.update(source.as_bytes());
-    let source_hash = format!("{:x}", hasher.finalize());
-
-    let config = ConfigRoot {
-        version: Version::current(),
-        devices: final_state.devices.clone(),
-        metadata: Metadata {
-            compilation_timestamp: timestamp,
-            compiler_version: "wasm-0.1.0".into(),
-            source_hash,
-        },
-    };
-
-    Ok(config)
+    let parser = Parser::new();
+    parser.parse_string(source)
 }
 
 /// Load a pre-compiled .krx binary configuration.
