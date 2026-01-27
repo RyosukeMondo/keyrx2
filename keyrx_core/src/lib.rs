@@ -9,10 +9,12 @@ extern crate alloc;
 
 pub mod config;
 pub mod dfa;
+pub mod domain;
 pub mod error;
 pub mod runtime;
 pub mod simulator;
 pub mod state;
+pub mod testing;
 
 // Parser module (only included with wasm feature for rhai dependency)
 #[cfg(feature = "wasm")]
